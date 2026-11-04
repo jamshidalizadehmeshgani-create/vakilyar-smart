@@ -25,8 +25,8 @@ module.exports = async (req, res) => {
     });
   }
 
-  const endpoint = process.env.AI_API_URL || "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-  const model = process.env.AI_MODEL || "gemini-3.8-flash";
+  const endpoint = process.env.AI_API_URL || "https://api.groq.com/openai/v1/chat/completions";
+  const model = process.env.AI_MODEL || "openai/gpt-oss-20b";
 
   try {
     const upstream = await fetch(endpoint, {
