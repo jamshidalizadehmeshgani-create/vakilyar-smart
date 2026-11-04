@@ -1,0 +1,7 @@
+{
+  "name": "vakilyar-smart",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Persian legal information assistant MVP",
+  "engines": { "node": ">=18" }
+}
