@@ -1,61 +1,83 @@
-const SYSTEM_PROMPT = `تو وکیل‌یار هستی؛ دستیار ارائه‌دهنده اطلاعات عمومی حقوقی به زبان فارسی.
-با زبان روشن، محترمانه و مرحله‌به‌مرحله پاسخ بده.
-اطلاعات عمومی را از مشاوره تخصصی وکیل متمایز کن.
-هرگز ماده قانونی، رأی، شماره پرونده، منبع یا نقل‌قول را جعل نکن.
-اگر از اعتبار یا به‌روز بودن حکم مطمئن نیستی، صریح بگو و کاربر را به بررسی متن رسمی قانون یا وکیل دارای پروانه ارجاع بده.
-برای تصمیم‌های مهم، مهلت‌های قانونی، دعاوی جاری و موضوعات وابسته به جزئیات پرونده توصیه کن با وکیل مشورت شود.
-اطلاعات هویتی، شماره ملی، رمز یا جزئیات محرمانه غیرضروری درخواست نکن.`;
+const BASE_SYSTEM_PROMPT = `تو «وکیل‌یار هوشمند» هستی؛ دستیار ارائه‌دهنده اطلاعات عمومی و آموزشی حقوقی.
+اصول الزامی:
+- با فارسی روشن، دقیق، بی‌طرف و مرحله‌به‌مرحله پاسخ بده.
+- اطلاعات عمومی را از مشاوره حقوقی اختصاصی وکیل متمایز کن؛ درباره نتیجه قطعی دعوا یا تضمین پیروزی وعده نده.
+- هرگز ماده قانونی، شماره ماده، رأی وحدت رویه، نظریه مشورتی، مهلت، مرجع صالح، منبع یا نقل‌قول را حدس نزن یا جعل نکن.
+- فقط وقتی شماره ماده یا عنوان قانون را ذکر کن که از درستی و ارتباط آن با پرسش اطمینان کافی داری. در غیر این صورت صریحاً بنویس که شماره ماده/منبع باید از متن رسمی و به‌روز بررسی شود.
+- اگر پاسخ به تاریخ، اصلاحات جدید، رویه قضایی یا جزئیات پرونده وابسته است، محدودیت خود را اعلام کن و کاربر را به بررسی منبع رسمی و وکیل دارای پروانه ارجاع بده.
+- اگر اطلاعات لازم برای پاسخ دقیق ناقص است، ابتدا مهم‌ترین ابهام را مشخص کن و از ساختن فرضیات پنهان خودداری کن.
+- اطلاعات هویتی، شماره ملی، نشانی دقیق، رمز عبور یا جزئیات محرمانه غیرضروری درخواست نکن. به کاربر یادآوری کن اطلاعات محرمانه را حذف کند.
+- در مسائل کیفری فوری، بازداشت، خشونت، خطر جانی، انقضای قریب‌الوقوع مهلت یا از دست رفتن حق، فوراً مراجعه به وکیل یا مرجع امدادی/قضایی مربوط را توصیه کن.
+- پاسخ را در صورت تناسب با این ساختار ارائه کن: «خلاصه پاسخ»، «مبنای حقوقی و حدود اطمینان»، «اقدام‌های پیشنهادی»، «اطلاعات تکمیلی لازم». از طولانی‌گویی غیرضروری بپرهیز.`;
 
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.setHeader("Cache-Control", "no-store");
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "فقط درخواست POST پذیرفته می‌شود." });
   }
 
   const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
+  const jurisdiction = typeof req.body?.jurisdiction === "string" ? req.body.jurisdiction.trim() : "ایران";
   if (!message) return res.status(400).json({ error: "لطفاً پرسش خود را وارد کنید." });
-  if (message.length > 6000) return res.status(413).json({ error: "متن پرسش بیش از حد طولانی است." });
+  if (message.length > 6000) return res.status(413).json({ error: "متن پرسش بیش از حد طولانی است؛ لطفاً آن را کوتاه‌تر کنید." });
+  if (jurisdiction !== "ایران") return res.status(400).json({ error: "در نسخه آزمایشی فعلاً فقط حوزه قضایی ایران پشتیبانی می‌شود." });
 
   const apiKey = process.env.AI_API_KEY;
   if (!apiKey) {
-    return res.status(200).json({
+    return res.status(503).json({
       configured: false,
-      reply: "نسخه آزمایشی وکیل‌یار فعال است، اما موتور هوش مصنوعی هنوز پیکربندی نشده است. پس از افزودن کلید API معتبر در تنظیمات امن سرور، پاسخ‌گویی هوشمند فعال می‌شود. لطفاً فعلاً این پیام را به‌عنوان تأیید عملکرد رابط کاربری در نظر بگیرید."
+      error: "موتور هوش مصنوعی هنوز پیکربندی نشده است. مدیر سامانه باید کلید API را در متغیرهای محرمانه Vercel ثبت کند."
     });
   }
 
   const endpoint = process.env.AI_API_URL || "https://api.groq.com/openai/v1/chat/completions";
   const model = process.env.AI_MODEL || "openai/gpt-oss-20b";
+  const jurisdictionInstruction = "حوزه قضایی مورد نظر: ایران. پاسخ را فقط بر اساس حقوق ایران تنظیم کن. اگر پرسش صریحاً درباره کشور دیگری است، اعلام کن که نسخه آزمایشی فعلاً فقط حقوق ایران را پشتیبانی می‌کند و قواعد ایران را به‌جای حقوق کشور دیگر اعمال نکن.";
 
   try {
-    const upstream = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0.2,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: message }
-        ]
-      })
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+    let upstream;
+    try {
+      upstream = await fetch(endpoint, {
+        method: "POST",
+        signal: controller.signal,
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model,
+          temperature: 0.15,
+          max_tokens: 1400,
+          messages: [
+            { role: "system", content: BASE_SYSTEM_PROMPT + "\n\n" + jurisdictionInstruction },
+            { role: "user", content: message }
+          ]
+        })
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
 
     const data = await upstream.json().catch(() => ({}));
     if (!upstream.ok) {
       console.error("AI provider error:", upstream.status, data?.error?.message || "unknown");
-      return res.status(502).json({ error: "ارتباط با موتور هوش مصنوعی برقرار نشد. تنظیمات سرویس را بررسی کنید." });
+      return res.status(502).json({ error: "ارتباط با موتور هوش مصنوعی برقرار نشد. تنظیمات سرویس‌دهنده را بررسی کنید." });
     }
 
     const reply = data?.choices?.[0]?.message?.content;
-    if (!reply) return res.status(502).json({ error: "پاسخ معتبری از موتور هوش مصنوعی دریافت نشد." });
-    return res.status(200).json({ configured: true, reply });
+    if (typeof reply !== "string" || !reply.trim()) {
+      return res.status(502).json({ error: "پاسخ معتبری از موتور هوش مصنوعی دریافت نشد." });
+    }
+    return res.status(200).json({ configured: true, jurisdiction, reply: reply.trim() });
   } catch (error) {
-    console.error("Chat API error:", error?.message || error);
-    return res.status(502).json({ error: "در حال حاضر امکان دریافت پاسخ وجود ندارد. کمی بعد دوباره تلاش کنید." });
+    const timedOut = error?.name === "AbortError";
+    console.error("Chat API error:", timedOut ? "upstream timeout" : (error?.message || "unknown"));
+    return res.status(502).json({
+      error: timedOut ? "پاسخ‌گویی بیش از حد طول کشید؛ لطفاً دوباره تلاش کنید." : "در حال حاضر امکان دریافت پاسخ وجود ندارد. کمی بعد دوباره تلاش کنید."
+    });
   }
 };

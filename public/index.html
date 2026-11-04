@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="وکیل‌یار؛ دستیار هوشمند اطلاعات عمومی حقوقی">
+  <meta name="theme-color" content="#14233f">
   <title>وکیل‌یار هوشمند</title>
   <style>
     :root{--navy:#14233f;--blue:#20375d;--gold:#c9a45c;--bg:#f5f3ee;--ink:#202938}
@@ -12,7 +13,9 @@
     header h1{margin:0;font-size:clamp(25px,5vw,38px)}header p{margin:8px 0 0;color:#e8dfce}
     main{max-width:850px;margin:28px auto;padding:0 16px}.panel{background:white;border:1px solid #e5e0d6;border-radius:16px;padding:22px;box-shadow:0 8px 30px #14233f12}
     .notice{background:#fff8e8;border-right:4px solid var(--gold);padding:12px 15px;border-radius:8px;font-size:13px;margin-bottom:18px}
-    label{display:block;font-weight:bold;margin:8px 0}textarea{width:100%;min-height:125px;padding:14px;border:1px solid #ccd2dc;border-radius:10px;font:inherit;resize:vertical}
+    label{display:block;font-weight:bold;margin:8px 0}
+    textarea,select{width:100%;padding:13px;border:1px solid #ccd2dc;border-radius:10px;font:inherit;background:#fff;color:var(--ink)}
+    textarea{min-height:125px;resize:vertical}
     button{background:var(--navy);color:white;border:0;border-radius:9px;padding:12px 24px;font:inherit;cursor:pointer;margin-top:12px}button:disabled{opacity:.6;cursor:wait}
     #status{font-size:13px;color:#596579;margin:10px 0}#answer{white-space:pre-wrap;background:#f7f8fa;border:1px solid #e5e8ee;border-radius:10px;padding:16px;min-height:70px;margin-top:14px}
     footer{text-align:center;color:#687386;font-size:12px;padding:24px}
@@ -22,9 +25,13 @@
 <header><h1>وکیل‌یار هوشمند</h1><p>همراه شما برای فهم روشن‌تر مسائل و اطلاعات عمومی حقوقی</p></header>
 <main>
   <section class="panel">
-    <div class="notice">وکیل‌یار برای ارائه اطلاعات عمومی و آموزشی است و جایگزین وکیل یا مشاوره حقوقی تخصصی نیست. پیش از تصمیم‌گیری مهم، متن رسمی قوانین و نظر وکیل دارای پروانه را بررسی کنید.</div>
+    <div class="notice">این نسخه آزمایشی فعلاً فقط اطلاعات عمومی حقوق ایران را پوشش می‌دهد. برای کشورهای دیگر پاسخ حقوقی ارائه نمی‌کند. وکیل‌یار جایگزین وکیل یا مشاوره حقوقی تخصصی نیست. پیش از تصمیم‌گیری مهم، متن رسمی قوانین و نظر وکیل دارای پروانه را بررسی کنید. از درج نام کامل، شماره ملی، نشانی، رمز یا اطلاعات محرمانه خودداری کنید.</div>
+    <label for="jurisdiction">حوزه قضایی موردنظر</label>
+    <select id="jurisdiction">
+      <option value="ایران" selected>ایران (تنها حوزه پشتیبانی‌شده در نسخه آزمایشی)</option>
+    </select>
     <label for="question">پرسش حقوقی خود را بنویسید</label>
-    <textarea id="question" maxlength="6000" placeholder="موضوع را بدون درج اطلاعات محرمانه یا شماره‌های شناسایی توضیح دهید..."></textarea>
+    <textarea id="question" maxlength="6000" placeholder="موضوع، زمان تقریبی وقوع و اطلاعات ضروری را بدون درج اطلاعات محرمانه توضیح دهید..."></textarea>
     <button id="send">ارسال پرسش</button>
     <div id="status" role="status">در حال بررسی وضعیت سرویس...</div>
     <div id="answer" aria-live="polite">پاسخ وکیل‌یار در این قسمت نمایش داده می‌شود.</div>
@@ -36,18 +43,21 @@ const statusEl=document.getElementById("status");
 const answerEl=document.getElementById("answer");
 const sendBtn=document.getElementById("send");
 fetch("/api/health").then(r=>r.json()).then(d=>{statusEl.textContent=d.ok?"وضعیت سرویس: فعال":"وضعیت سرویس نامشخص";}).catch(()=>{statusEl.textContent="ارتباط با سرویس برقرار نشد.";});
-sendBtn.addEventListener("click",async()=>{
+async function sendQuestion(){
   const message=document.getElementById("question").value.trim();
+  const jurisdiction=document.getElementById("jurisdiction").value;
   if(!message){answerEl.textContent="لطفاً ابتدا پرسش خود را بنویسید.";return;}
   sendBtn.disabled=true;answerEl.textContent="در حال دریافت پاسخ...";
   try{
-    const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message})});
+    const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message,jurisdiction})});
     const data=await response.json();
     if(!response.ok)throw new Error(data.error||"خطا در دریافت پاسخ");
-    answerEl.textContent=data.reply+(data.configured===false?"\n\n(حالت نمایشی؛ موتور هوش مصنوعی هنوز تنظیم نشده است.)":"");
+    answerEl.textContent=data.reply;
   }catch(e){answerEl.textContent=e.message||"خطای ارتباطی رخ داد.";}
   finally{sendBtn.disabled=false;}
-});
+}
+sendBtn.addEventListener("click",sendQuestion);
+document.getElementById("question").addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key==="Enter")sendQuestion();});
 </script>
 </body>
 </html>
