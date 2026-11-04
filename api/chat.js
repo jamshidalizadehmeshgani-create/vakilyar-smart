@@ -55,7 +55,7 @@ module.exports = async (req, res) => {
           temperature: 0.15,
           max_tokens: 1400,
           messages: [
-            { role: "system", content: BASE_SYSTEM_PROMPT + "\\n\\n" + jurisdictionInstruction },
+            { role: "system", content: BASE_SYSTEM_PROMPT + "\n\n" + jurisdictionInstruction },
             { role: "user", content: message }
           ]
         })
