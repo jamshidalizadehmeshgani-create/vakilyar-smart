@@ -22,7 +22,7 @@ module.exports = async (req, res) => {
   const jurisdiction = typeof req.body?.jurisdiction === "string" ? req.body.jurisdiction.trim() : "ایران";
   if (!message) return res.status(400).json({ error: "لطفاً پرسش خود را وارد کنید." });
   if (message.length > 6000) return res.status(413).json({ error: "متن پرسش بیش از حد طولانی است؛ لطفاً آن را کوتاه‌تر کنید." });
-  if (jurisdiction.length > 80) return res.status(400).json({ error: "حوزه قضایی واردشده معتبر نیست." });
+  if (jurisdiction !== "ایران") return res.status(400).json({ error: "در نسخه آزمایشی فعلاً فقط حوزه قضایی ایران پشتیبانی می‌شود." });
 
   const apiKey = process.env.AI_API_KEY;
   if (!apiKey) {
@@ -34,9 +34,7 @@ module.exports = async (req, res) => {
 
   const endpoint = process.env.AI_API_URL || "https://api.groq.com/openai/v1/chat/completions";
   const model = process.env.AI_MODEL || "openai/gpt-oss-20b";
-  const jurisdictionInstruction = jurisdiction === "ایران"
-    ? "حوزه قضایی مورد نظر: ایران. پاسخ را بر اساس حقوق ایران تنظیم کن. اگر پرسش صریحاً درباره کشور دیگری است، پیش از تحلیل آن را روشن کن."
-    : `حوزه قضایی اعلام‌شده از سوی کاربر: ${jurisdiction}. اگر دانش کافی و قابل اتکا درباره حقوق این حوزه نداری، این محدودیت را روشن بگو و قواعد حقوق ایران را به‌جای آن اعمال نکن.`;
+  const jurisdictionInstruction = "حوزه قضایی مورد نظر: ایران. پاسخ را فقط بر اساس حقوق ایران تنظیم کن. اگر پرسش صریحاً درباره کشور دیگری است، اعلام کن که نسخه آزمایشی فعلاً فقط حقوق ایران را پشتیبانی می‌کند و قواعد ایران را به‌جای حقوق کشور دیگر اعمال نکن.";
 
   try {
     const controller = new AbortController();
