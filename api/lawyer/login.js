@@ -24,6 +24,15 @@ module.exports = async (req, res) => {
     const attempts = Number(await redis(["INCR", rateKey]));
     if (attempts === 1) await redis(["EXPIRE", rateKey, "900"]);
     if (attempts > 8) return res.status(429).json({ error: "تلاش‌های ورود بیش از حد است؛ ۱۵ دقیقه بعد دوباره تلاش کنید." });
+    const secret = process.env.APP_SECRET;
+    const ip = String(req.headers["x-real-ip"] || req.headers["x-forwarded-for"] || "").split(",")[0].trim();
+    if (secret && ip && ip.length <= 100) {
+      const ipId = crypto.createHmac("sha256", secret).update(ip).digest("hex");
+      const ipKey = "vy:lawyer:login-ip-attempts:" + ipId;
+      const ipAttempts = Number(await redis(["INCR", ipKey]));
+      if (ipAttempts === 1) await redis(["EXPIRE", ipKey, "900"]);
+      if (ipAttempts > 30) return res.status(429).json({ error: "تلاش‌های ورود از این اتصال بیش از حد است؛ ۱۵ دقیقه بعد دوباره تلاش کنید." });
+    }
     const emailKey = "vy:lawyer:email:" + rateId;
     const id = await redis(["GET", emailKey]);
     const raw = id ? await redis(["GET", "vy:lawyer:" + id]) : null;
