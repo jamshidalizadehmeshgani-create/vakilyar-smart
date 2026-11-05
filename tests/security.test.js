@@ -16,7 +16,9 @@ global.fetch = async (_url, options) => {
   const [op, ...args] = command;
   let result = null;
 
-  if (op === "PING") {\n    result = "PONG";\n  } else if (op === "GET") {
+  if (op === "PING") {
+    result = "PONG";
+  } else if (op === "GET") {
     result = values.has(args[0]) ? values.get(args[0]) : null;
   } else if (op === "SET") {
     values.set(args[0], String(args[1]));
