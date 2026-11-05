@@ -36,7 +36,8 @@ module.exports = async (req, res) => {
         if (!raw) return null;
         try { return JSON.parse(raw); } catch { return null; }
       }));
-      return res.status(200).json({ ok: true, lawyers: lawyers.filter(Boolean) });
+      const safeLawyers = lawyers.filter(Boolean).map(({ password_hash, ...lawyer }) => lawyer);
+      return res.status(200).json({ ok: true, lawyers: safeLawyers });
     }
     if (action === "create") {
       const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
@@ -90,7 +91,8 @@ module.exports = async (req, res) => {
       lawyer.access_updated_at = new Date().toISOString();
       await redis(["SET", key, JSON.stringify(lawyer)]);
       const audited = await audit({ action: enabled ? "lawyer_access_enabled" : "lawyer_access_disabled", lawyer_id: id, at: new Date().toISOString() });
-      return res.status(200).json({ ok: true, lawyer, audit_warning: !audited, message: enabled ? "دسترسی وکیل فعال شد." : "دسترسی پاسخ‌گویی وکیل قطع شد." });
+      const { password_hash, ...safeLawyer } = lawyer;
+      return res.status(200).json({ ok: true, lawyer: safeLawyer, audit_warning: !audited, message: enabled ? "دسترسی وکیل فعال شد." : "دسترسی پاسخ‌گویی وکیل قطع شد." });
     }
     return res.status(400).json({ error: "عملیات شناخته‌شده نیست." });
   } catch (error) {
