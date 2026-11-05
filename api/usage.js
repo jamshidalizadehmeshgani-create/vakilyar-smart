@@ -11,7 +11,6 @@ module.exports = async (req, res) => {
     const account = await getAccount(req, res);
     return res.status(200).json({
       ok: true,
-      account_id: account.uid,
       plan: account.isPro ? "pro" : "free",
       legal_scope_default: "iran",
       credits_remaining: (account.isPro || account.isUnlimited) ? null : account.credits,
