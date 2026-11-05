@@ -22,6 +22,7 @@ button.gold{background:#b18b42;color:#fff}button.danger{background:#8a3434}
 <label for="userId">شناسه کاربر (از مسیر /api/usage)</label><input id="userId" placeholder="شناسه ۴۸ رقمی هگز">
 <label for="amount">مقدار اعتبار هدیه</label><input id="amount" type="number" min="1" max="10000000" value="500">
 <div>
+<button id="lookup">نمایش وضعیت کاربر</button>
 <button class="gold" id="gift">افزودن اعتبار</button>
 <button id="unlimited">فعال‌سازی نامحدود</button>
 <button class="danger" id="revoke">لغو نامحدود</button>
@@ -38,10 +39,11 @@ async function send(data){
  try{
   const r=await fetch("/api/admin/grant-credits",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify({...data,user_id})});
   const d=await r.json();
-  result.textContent=d.message||d.error||"پاسخ نامشخص";
+  result.textContent=d.action==="lookup" ? `موجودی اعتبار: ${d.credits_balance}\\nاعتبار نامحدود هدیه: ${d.unlimited ? "فعال" : "غیرفعال"}\\nاشتراک Pro: ${d.pro ? "فعال" : "غیرفعال"}\\nشناسه: ${d.user_id}` : (d.message||d.error||"پاسخ نامشخص");
   if(!r.ok) result.textContent+=" (کد "+r.status+")";
  }catch(e){result.textContent="ارتباط با سرور برقرار نشد.";}
 }
+document.getElementById("lookup").onclick=()=>send({action:"lookup"});
 document.getElementById("gift").onclick=()=>send({credits:Number(document.getElementById("amount").value)});
 document.getElementById("unlimited").onclick=()=>{if(confirm("دسترسی نامحدود برای این کاربر فعال شود؟"))send({unlimited:true});};
 document.getElementById("revoke").onclick=()=>{if(confirm("دسترسی نامحدود این کاربر لغو شود؟"))send({unlimited:false});};
