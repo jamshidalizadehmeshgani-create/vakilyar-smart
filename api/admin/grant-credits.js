@@ -46,6 +46,7 @@ module.exports = async (req, res) => {
       ]);
       return res.status(200).json({
         ok: true,
+        action: "lookup",
         user_id: userId,
         credits_balance: creditsRaw === null ? Number(process.env.FREE_CREDITS_INITIAL || 1000) : Number(creditsRaw),
         unlimited: unlimitedRaw === "active",
