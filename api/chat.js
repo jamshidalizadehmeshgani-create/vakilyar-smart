@@ -42,7 +42,7 @@ module.exports = async (req, res) => {
     if (foreignRequest && !account.isPro) {
       return res.status(403).json({ code: "PRO_REQUIRED", error: "بررسی حقوق بین‌الملل و قوانین سایر کشورها در وکیل‌یار پرو ارائه می‌شود." });
     }
-    if (!account.isPro) {
+    if (!account.isPro && !account.isUnlimited) {
       charged = classifyRequest(message);
       remainingCredits = await consume(account.key, charged);
       if (remainingCredits < 0) return res.status(402).json({ code: "CREDITS_EXHAUSTED", error: "اعتبار رایگان شما به پایان رسیده است. برای ادامه، وکیل‌یار پرو را فعال کنید." });
@@ -73,7 +73,7 @@ module.exports = async (req, res) => {
 
     const reply = data?.choices?.[0]?.message?.content;
     if (!reply) { if (charged) await refund(account.key, charged); return res.status(502).json({ error: "پاسخ معتبری دریافت نشد؛ اعتبار رزروشده بازگردانده شد." }); }
-    return res.status(200).json({ configured: true, reply, plan: account.isPro ? "pro" : "free", credits_used: charged, credits_remaining: account.isPro ? null : remainingCredits });
+    return res.status(200).json({ configured: true, reply, plan: account.isPro ? "pro" : "free", unlimited: account.isUnlimited, credits_used: charged, credits_remaining: (account.isPro || account.isUnlimited) ? null : remainingCredits });
   } catch (error) {
     if (account && charged) { try { await refund(account.key, charged); } catch (refundError) { console.error("Credit refund error:", refundError.message); } }
     console.error("Chat API error:", error?.message || error);
