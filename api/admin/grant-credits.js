@@ -1,5 +1,5 @@
 const crypto = require("crypto");
-const { redis } = require("../lib/quota");
+const { redis } = require("../../lib/quota");
 
 async function recordAudit(event) {
   try {
