@@ -24,7 +24,7 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: "فقط درخواست POST پذیرفته می‌شود." });
   }
   const adminKey = process.env.ADMIN_API_KEY;
-  if (!adminKey || !safeEqual(req.headers.authorization?.replace(/^Bearer\\s+/i, ""), adminKey)) {
+  if (!adminKey || !safeEqual(req.headers.authorization?.replace(/^Bearer\s+/i, ""), adminKey)) {
     return res.status(401).json({ error: "دسترسی مدیر تأیید نشد." });
   }
   try {
@@ -43,7 +43,7 @@ module.exports = async (req, res) => {
       const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
       const license = typeof req.body?.license_number === "string" ? req.body.license_number.trim() : "";
       if (name.length < 2 || name.length > 100) return res.status(400).json({ error: "نام و نام خانوادگی وکیل را وارد کنید." });
-      if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 190) return res.status(400).json({ error: "ایمیل معتبر وارد کنید." });
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 190) return res.status(400).json({ error: "ایمیل معتبر وارد کنید." });
       if (license.length > 80) return res.status(400).json({ error: "شماره پروانه بیش از حد طولانی است." });
       const id = crypto.randomBytes(16).toString("hex");
       const lawyer = { id, name, email, license_number: license, access: "disabled", created_at: new Date().toISOString() };
