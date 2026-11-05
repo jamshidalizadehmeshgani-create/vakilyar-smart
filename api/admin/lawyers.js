@@ -54,6 +54,26 @@ module.exports = async (req, res) => {
       const audited = await audit({ action: "lawyer_created", lawyer_id: id, at: new Date().toISOString() });
       return res.status(201).json({ ok: true, lawyer, audit_warning: !audited, message: "پرونده وکیل ایجاد شد؛ دسترسی پاسخ‌گویی به‌صورت پیش‌فرض غیرفعال است." });
     }
+    if (action === "set_password") {
+      const id = typeof req.body?.lawyer_id === "string" ? req.body.lawyer_id.trim() : "";
+      const password = typeof req.body?.password === "string" ? req.body.password : "";
+      if (!/^[a-f0-9]{32}$/.test(id) || password.length < 12 || password.length > 200) {
+        return res.status(400).json({ error: "شناسه معتبر و رمز حداقل ۱۲ کاراکتری لازم است." });
+      }
+      const key = `vy:lawyer:${id}`;
+      const raw = await redis(["GET", key]);
+      if (!raw) return res.status(404).json({ error: "حساب وکیل یافت نشد." });
+      let lawyer;
+      try { lawyer = JSON.parse(raw); } catch { return res.status(500).json({ error: "اطلاعات حساب وکیل مخدوش است." }); }
+      if (!lawyer || lawyer.id !== id) return res.status(500).json({ error: "ساختار حساب معتبر نیست." });
+      const salt = crypto.randomBytes(16).toString("hex");
+      const hash = await new Promise((resolve, reject) => crypto.scrypt(password, salt, 64, (err, keyBytes) => err ? reject(err) : resolve(keyBytes.toString("hex"))));
+      lawyer.password_hash = salt + ":" + hash;
+      lawyer.password_updated_at = new Date().toISOString();
+      await redis(["SET", key, JSON.stringify(lawyer)]);
+      const audited = await audit({ action: "lawyer_password_set", lawyer_id: id, at: new Date().toISOString() });
+      return res.status(200).json({ ok: true, audit_warning: !audited, message: "رمز ورود به‌صورت امن ثبت شد. آن را فقط از مسیر امن به وکیل تحویل دهید." });
+    }
     if (action === "set_access") {
       const id = typeof req.body?.lawyer_id === "string" ? req.body.lawyer_id.trim() : "";
       const enabled = req.body?.enabled;
