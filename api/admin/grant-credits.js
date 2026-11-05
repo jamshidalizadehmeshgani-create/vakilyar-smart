@@ -53,6 +53,32 @@ module.exports = async (req, res) => {
         pro: proRaw === "active"
       });
     }
+    if (req.body?.action === "set_pro") {
+      if (typeof req.body?.active !== "boolean") {
+        return res.status(400).json({ error: "برای فعال‌سازی یا لغو پرو، مقدار active باید true یا false باشد." });
+      }
+      const proKey = `vy:user:${userId}:pro`;
+      if (req.body.active) {
+        await redis(["SET", proKey, "active"]);
+      } else {
+        await redis(["DEL", proKey]);
+      }
+      const audited = await recordAudit({
+        action: req.body.active ? "activate_pro" : "revoke_pro",
+        user_id: userId,
+        at: new Date().toISOString()
+      });
+      return res.status(200).json({
+        ok: true,
+        action: "set_pro",
+        user_id: userId,
+        pro: req.body.active,
+        audit_warning: !audited,
+        message: req.body.active
+          ? "وکیل‌یار پرو برای این کاربر فعال شد."
+          : "دسترسی وکیل‌یار پرو برای این کاربر لغو شد."
+      });
+    }
     const amount = req.body?.credits;
     const key = `vy:user:${userId}:credits`;
     if (req.body?.unlimited === false) {
