@@ -30,6 +30,7 @@ module.exports = async (req, res) => {
 
   let account;
   let charged = 0;
+  let remainingCredits = null;
   const endpoint = process.env.AI_API_URL || "https://api.groq.com/openai/v1/chat/completions";
   const model = process.env.AI_MODEL || "openai/gpt-oss-20b";
 
@@ -43,8 +44,8 @@ module.exports = async (req, res) => {
     }
     if (!account.isPro) {
       charged = classifyRequest(message);
-      const remaining = await consume(account.key, charged);
-      if (remaining < 0) return res.status(402).json({ code: "CREDITS_EXHAUSTED", error: "اعتبار رایگان شما به پایان رسیده است. برای ادامه، وکیل‌یار پرو را فعال کنید." });
+      remainingCredits = await consume(account.key, charged);
+      if (remainingCredits < 0) return res.status(402).json({ code: "CREDITS_EXHAUSTED", error: "اعتبار رایگان شما به پایان رسیده است. برای ادامه، وکیل‌یار پرو را فعال کنید." });
     }
     const scopeLabel = foreignRequest ? (req.body?.country || "حوزه حقوقی انتخاب‌شده") : "قوانین جمهوری اسلامی ایران";
     const upstream = await fetch(endpoint, {
@@ -57,7 +58,7 @@ module.exports = async (req, res) => {
         model,
         temperature: 0.2,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT + "\\nحوزه حقوقی این درخواست: " + scopeLabel },
+          { role: "system", content: SYSTEM_PROMPT + "\nحوزه حقوقی این درخواست: " + scopeLabel },
           { role: "user", content: message }
         ]
       })
@@ -72,8 +73,7 @@ module.exports = async (req, res) => {
 
     const reply = data?.choices?.[0]?.message?.content;
     if (!reply) { if (charged) await refund(account.key, charged); return res.status(502).json({ error: "پاسخ معتبری دریافت نشد؛ اعتبار رزروشده بازگردانده شد." }); }
-    const current = account.isPro ? null : await getAccount(req, res);
-    return res.status(200).json({ configured: true, reply, plan: account.isPro ? "pro" : "free", credits_used: charged, credits_remaining: current ? current.credits : null });
+    return res.status(200).json({ configured: true, reply, plan: account.isPro ? "pro" : "free", credits_used: charged, credits_remaining: account.isPro ? null : remainingCredits });
   } catch (error) {
     if (account && charged) { try { await refund(account.key, charged); } catch (refundError) { console.error("Credit refund error:", refundError.message); } }
     console.error("Chat API error:", error?.message || error);
