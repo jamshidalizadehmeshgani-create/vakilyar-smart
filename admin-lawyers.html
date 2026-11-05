@@ -12,12 +12,28 @@ body{font-family:Tahoma,Arial,sans-serif;background:#f4f2ed;color:#17243d;margin
 <label for="name">نام و نام خانوادگی</label><input id="name" maxlength="100">
 <label for="email">ایمیل اختصاصی</label><input id="email" type="email" maxlength="190">
 <label for="license">شماره پروانه (اختیاری)</label><input id="license" maxlength="80">
-<button class="gold" id="create">ایجاد حساب وکیل</button><button id="refresh">نمایش فهرست وکلا</button><button id="auditBtn">گزارش ۱۰۰ رویداد اخیر مدیر</button>
+<button class="gold" id="create">ایجاد حساب وکیل</button><button id="refresh">نمایش فهرست وکلا</button><button id="auditBtn">گزارش ۱۰۰ رویداد اخیر مدیر</button><button id="configBtn">بررسی تنظیمات سرور</button>
 <div id="result" role="status">آماده انجام عملیات.</div><section id="list"></section><h2>گزارش فعالیت‌های مدیریتی</h2><section id="audit" aria-live="polite"></section>
 <script>
 const $=id=>document.getElementById(id), result=$("result");
 async function call(data){const key=$("key").value.trim();if(!key){result.textContent="کلید مدیر را وارد کنید.";return null;}result.textContent="در حال ارتباط با سرور...";
 try{const r=await fetch("/api/admin/lawyers",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify(data)});const d=await r.json();result.textContent=d.message||d.error||"پاسخ نامشخص";if(!r.ok)result.textContent+=" (کد "+r.status+")";return r.ok?d:null;}catch(e){result.textContent="ارتباط با سرور برقرار نشد.";return null;}}
+async function showConfig(){
+ const d=await call({action:"config"});if(!d)return;
+ const c=d.configuration;
+ const mark=v=>v?"آماده":"نیازمند بررسی";
+ result.textContent=[
+  "کلید مدیر: "+mark(c.admin_api_key_present),
+  "قدرت کلید مدیر (حداقل ۳۲ نویسه): "+mark(c.admin_api_key_strength_ok),
+  "APP_SECRET: "+mark(c.app_secret_present),
+  "قدرت APP_SECRET (حداقل ۳۲ نویسه): "+mark(c.app_secret_strength_ok),
+  "نشانی Upstash: "+mark(c.upstash_url_present),
+  "توکن Upstash: "+mark(c.upstash_token_present),
+  "اتصال واقعی Redis: "+mark(c.redis_connection),
+  "کلید موتور هوش مصنوعی: "+mark(c.ai_api_key_present),
+  "اعتبار اولیه رایگان: "+mark(c.free_credits_initial_valid)
+ ].join("\\n");
+}
 async function showAudit(){
  const d=await call({action:"audit"});if(!d)return;
  const area=$("audit");area.textContent="";
@@ -33,5 +49,5 @@ for(const w of d.lawyers){const box=document.createElement("div");box.className=
 const pass=document.createElement("input");pass.type="password";pass.autocomplete="new-password";pass.placeholder="رمز اولیه وکیل (حداقل ۱۲ نویسه)";pass.maxLength=200;pass.style.marginTop="10px";
 const setPass=document.createElement("button");setPass.className="gold";setPass.textContent="ثبت/بازنشانی رمز ورود";setPass.onclick=async()=>{if(pass.value.length<12){result.textContent="رمز باید حداقل ۱۲ نویسه باشد.";return;}if(!confirm("رمز این وکیل ثبت یا بازنشانی شود؟"))return;const done=await call({action:"set_password",lawyer_id:w.id,password:pass.value});if(done)pass.value="";};box.append(title,detail,btn,pass,setPass);$("list").append(box);}}
 $("create").onclick=async()=>{const d=await call({action:"create",name:$("name").value,email:$("email").value,license_number:$("license").value});if(d){$("name").value="";$("email").value="";$("license").value="";load();}};
-$("refresh").onclick=load;\n$("auditBtn").onclick=showAudit;
+$("refresh").onclick=load;\n$("auditBtn").onclick=showAudit;\n$("configBtn").onclick=showConfig;
 </script></main></body></html>
