@@ -39,7 +39,7 @@ async function send(data){
  try{
   const r=await fetch("/api/admin/grant-credits",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify({...data,user_id})});
   const d=await r.json();
-  result.textContent=d.action==="lookup" ? `موجودی اعتبار: ${d.credits_balance}\\nاعتبار نامحدود هدیه: ${d.unlimited ? "فعال" : "غیرفعال"}\\nاشتراک Pro: ${d.pro ? "فعال" : "غیرفعال"}\\nشناسه: ${d.user_id}` : (d.message||d.error||"پاسخ نامشخص");
+  result.textContent=d.action==="lookup" ? `موجودی اعتبار: ${d.credits_balance}\nاعتبار نامحدود هدیه: ${d.unlimited ? "فعال" : "غیرفعال"}\nاشتراک Pro: ${d.pro ? "فعال" : "غیرفعال"}\nشناسه: ${d.user_id}` : (d.message||d.error||"پاسخ نامشخص");
   if(!r.ok) result.textContent+=" (کد "+r.status+")";
  }catch(e){result.textContent="ارتباط با سرور برقرار نشد.";}
 }
