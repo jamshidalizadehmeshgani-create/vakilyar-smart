@@ -14,6 +14,12 @@ module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return res.status(405).json({ error: "فقط POST مجاز است." }); }
+  const host = req.headers.host || "";
+  let originHost = "";
+  try { originHost = new URL(req.headers.origin || "").host; } catch {}
+  const fetchSite = String(req.headers["sec-fetch-site"] || "").toLowerCase();
+  if (!host || !originHost || originHost !== host || (fetchSite && fetchSite !== "same-origin"))
+    return res.status(403).json({ error: "مبدأ درخواست معتبر نیست؛ صفحه را تازه‌سازی و دوباره تلاش کنید." });
   const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
   const password = typeof req.body?.password === "string" ? req.body.password : "";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 1 || password.length > 200)
