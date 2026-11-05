@@ -42,7 +42,7 @@ module.exports = async (req, res) => {
         app_secret_strength_ok: Boolean(process.env.APP_SECRET && process.env.APP_SECRET.length >= 32),
         upstash_url_present: Boolean(process.env.UPSTASH_REDIS_REST_URL),
         upstash_token_present: Boolean(process.env.UPSTASH_REDIS_REST_TOKEN),
-        redis_connection,
+        redis_connection: redisConnection,
         ai_api_key_present: Boolean(process.env.AI_API_KEY),
         free_credits_initial_valid: Number.isSafeInteger(initialCredits) && initialCredits >= 0 && initialCredits <= 10000000
       };
