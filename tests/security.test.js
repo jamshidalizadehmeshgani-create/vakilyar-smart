@@ -94,6 +94,7 @@ global.fetch = async (_url, options) => {
 
 const { reserveCredits, refundReservation, commitReservation } = require("../lib/quota");
 const adminLawyers = require("../api/admin/lawyers");
+const grantCredits = require("../api/admin/grant-credits");
 const createQuestion = require("../api/questions/create");
 const { getLawyerSession, hashToken } = require("../lib/lawyer-auth");
 
@@ -196,6 +197,53 @@ test("configuration diagnostics expose readiness flags without secret values", a
   assert.equal(res.body.configuration.redis_connection, true);
   assert.equal(res.body.configuration.ai_api_key_present, false);
   assert.equal(JSON.stringify(res.body).includes("test-admin-key"), false);
+});
+
+test("unlimited gift and Pro access remain independent", async () => {
+  const userId = "f".repeat(48);
+  const headers = { authorization: "Bearer test-admin-key" };
+  const unlimitedRes = responseMock();
+  await grantCredits({ method: "POST", headers, body: { user_id: userId, unlimited: true } }, unlimitedRes);
+  assert.equal(unlimitedRes.statusCode, 200);
+  assert.equal(values.get("vy:user:" + userId + ":unlimited"), "active");
+  assert.equal(values.has("vy:user:" + userId + ":pro"), false);
+
+  const proRes = responseMock();
+  await grantCredits({ method: "POST", headers, body: { user_id: userId, action: "set_pro", active: true } }, proRes);
+  assert.equal(proRes.statusCode, 200);
+  assert.equal(values.get("vy:user:" + userId + ":pro"), "active");
+
+  const revokeProRes = responseMock();
+  await grantCredits({ method: "POST", headers, body: { user_id: userId, action: "set_pro", active: false } }, revokeProRes);
+  assert.equal(revokeProRes.statusCode, 200);
+  assert.equal(values.has("vy:user:" + userId + ":pro"), false);
+  assert.equal(values.get("vy:user:" + userId + ":unlimited"), "active");
+});
+
+test("unlimited credits do not bypass the foreign-law Pro gate", async () => {
+  const quota = require("../lib/quota");
+  const originalGetAccount = quota.getAccount;
+  quota.getAccount = async () => ({
+    uid: "1".repeat(48), key: "vy:user:" + "1".repeat(48) + ":credits",
+    credits: 1000, isPro: false, isUnlimited: true
+  });
+  process.env.AI_API_KEY = "test-ai-key";
+  delete require.cache[require.resolve("../api/chat")];
+  const chat = require("../api/chat");
+  const res = responseMock();
+  try {
+    await chat({
+      method: "POST",
+      headers: { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "same-origin" },
+      body: { consent: true, message: "قوانین آلمان را توضیح بده" }
+    }, res);
+  } finally {
+    quota.getAccount = originalGetAccount;
+    delete require.cache[require.resolve("../api/chat")];
+    delete process.env.AI_API_KEY;
+  }
+  assert.equal(res.statusCode, 403);
+  assert.equal(res.body.code, "PRO_REQUIRED");
 });
 
 test("admin lawyer endpoint rejects an invalid manager key", async () => {
