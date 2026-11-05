@@ -69,7 +69,12 @@ module.exports = async (req, res) => {
     if (!Number.isSafeInteger(amount) || amount < 1 || amount > 10000000) {
       return res.status(400).json({ error: "مقدار هدیه باید عدد صحیح بین ۱ تا ۱۰٬۰۰۰٬۰۰۰ باشد یا گزینه نامحدود انتخاب شود." });
     }
-    const balance = Number(await redis(["INCRBY", key, String(amount)]));
+    const initialCredits = Number(process.env.FREE_CREDITS_INITIAL || 1000);
+    if (!Number.isSafeInteger(initialCredits) || initialCredits < 0 || initialCredits > 10000000) {
+      throw new Error("FREE_CREDITS_INITIAL must be a safe non-negative integer");
+    }
+    const grantScript = "local v=redis.call('GET',KEYS[1]); if not v then v=ARGV[1]; redis.call('SET',KEYS[1],v); end; return redis.call('INCRBY',KEYS[1],ARGV[2])";
+    const balance = Number(await redis(["EVAL", grantScript, "1", key, String(initialCredits), String(amount)]));
     const audited = await recordAudit({ action: "gift_credits", user_id: userId, amount, at: new Date().toISOString() });
     return res.status(200).json({ ok: true, audit_warning: !audited, credits_added: amount, credits_balance: balance, message: audited ? "اعتبار هدیه با موفقیت اضافه شد." : "اعتبار اضافه شد، اما ثبت گزارش ممیزی ناموفق بود." });
   } catch (error) {
