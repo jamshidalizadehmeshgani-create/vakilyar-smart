@@ -24,6 +24,8 @@ module.exports = async (req, res) => {
     return res.status(403).json({ error: "مبدأ درخواست معتبر نیست؛ صفحه را تازه‌سازی و دوباره تلاش کنید." });
   }
 
+  if (req.body?.consent !== true) return res.status(400).json({ error: "برای ارسال متن پرسش به سرویس هوش مصنوعی، رضایت صریح شما لازم است." });
+
   const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
   if (!message) return res.status(400).json({ error: "لطفاً پرسش خود را وارد کنید." });
   if (message.length > 6000) return res.status(413).json({ error: "متن پرسش بیش از حد طولانی است." });
