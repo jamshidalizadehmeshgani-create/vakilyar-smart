@@ -1,0 +1,24 @@
+name: Validate VakilYar
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - feature/volume-credits-pro-gating
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate package metadata
+        run: node -e "JSON.parse(require('fs').readFileSync('package.json','utf8'))"
+      - name: Check all API and library JavaScript syntax
+        run: |
+          find api lib -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
