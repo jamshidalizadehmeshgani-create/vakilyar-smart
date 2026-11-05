@@ -29,6 +29,25 @@ module.exports = async (req, res) => {
   }
   try {
     const action = req.body?.action;
+    if (action === "config") {
+      const initialCredits = Number(process.env.FREE_CREDITS_INITIAL || 1000);
+      let redisConnection = false;
+      if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+        try { redisConnection = (await redis(["PING"])) === "PONG"; } catch { redisConnection = false; }
+      }
+      const configuration = {
+        admin_api_key_present: Boolean(adminKey),
+        admin_api_key_strength_ok: Boolean(adminKey && adminKey.length >= 32),
+        app_secret_present: Boolean(process.env.APP_SECRET),
+        app_secret_strength_ok: Boolean(process.env.APP_SECRET && process.env.APP_SECRET.length >= 32),
+        upstash_url_present: Boolean(process.env.UPSTASH_REDIS_REST_URL),
+        upstash_token_present: Boolean(process.env.UPSTASH_REDIS_REST_TOKEN),
+        redis_connection,
+        ai_api_key_present: Boolean(process.env.AI_API_KEY),
+        free_credits_initial_valid: Number.isSafeInteger(initialCredits) && initialCredits >= 0 && initialCredits <= 10000000
+      };
+      return res.status(200).json({ ok: true, configuration });
+    }
     if (action === "audit") {
       const rows = await redis(["LRANGE", "vy:admin:audit", "0", "99"]) || [];
       const events = rows.map(row => {
