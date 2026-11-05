@@ -2,8 +2,14 @@ const crypto = require("crypto");
 const { redis } = require("../lib/quota");
 
 async function recordAudit(event) {
-  await redis(["LPUSH", "vy:admin:audit", JSON.stringify(event)]);
-  await redis(["LTRIM", "vy:admin:audit", "0", "499"]);
+  try {
+    await redis(["LPUSH", "vy:admin:audit", JSON.stringify(event)]);
+    await redis(["LTRIM", "vy:admin:audit", "0", "499"]);
+    return true;
+  } catch (error) {
+    console.error("Admin audit error:", error.message);
+    return false;
+  }
 }
 
 function safeEqual(a, b) {
@@ -50,21 +56,21 @@ module.exports = async (req, res) => {
     const key = `vy:user:${userId}:credits`;
     if (req.body?.unlimited === false) {
       await redis(["DEL", `vy:user:${userId}:unlimited`]);
-      await recordAudit({ action: "revoke_unlimited", user_id: userId, at: new Date().toISOString() });
-      return res.status(200).json({ ok: true, message: "دسترسی نامحدود این کاربر لغو شد." });
+      const audited = await recordAudit({ action: "revoke_unlimited", user_id: userId, at: new Date().toISOString() });
+      return res.status(200).json({ ok: true, audit_warning: !audited, message: audited ? "دسترسی نامحدود این کاربر لغو شد." : "دسترسی نامحدود لغو شد، اما ثبت گزارش ممیزی ناموفق بود." });
     }
     if (unlimited) {
       await redis(["SET", `vy:user:${userId}:unlimited`, "active"]);
-      await recordAudit({ action: "gift_unlimited", user_id: userId, at: new Date().toISOString() });
-      return res.status(200).json({ ok: true, message: "دسترسی نامحدود برای این کاربر فعال شد." });
+      const audited = await recordAudit({ action: "gift_unlimited", user_id: userId, at: new Date().toISOString() });
+      return res.status(200).json({ ok: true, audit_warning: !audited, message: audited ? "دسترسی نامحدود برای این کاربر فعال شد." : "دسترسی نامحدود فعال شد، اما ثبت گزارش ممیزی ناموفق بود." });
     }
 
     if (!Number.isSafeInteger(amount) || amount < 1 || amount > 10000000) {
       return res.status(400).json({ error: "مقدار هدیه باید عدد صحیح بین ۱ تا ۱۰٬۰۰۰٬۰۰۰ باشد یا گزینه نامحدود انتخاب شود." });
     }
     const balance = Number(await redis(["INCRBY", key, String(amount)]));
-    await recordAudit({ action: "gift_credits", user_id: userId, amount, at: new Date().toISOString() });
-    return res.status(200).json({ ok: true, credits_added: amount, credits_balance: balance, message: "اعتبار هدیه با موفقیت اضافه شد." });
+    const audited = await recordAudit({ action: "gift_credits", user_id: userId, amount, at: new Date().toISOString() });
+    return res.status(200).json({ ok: true, audit_warning: !audited, credits_added: amount, credits_balance: balance, message: audited ? "اعتبار هدیه با موفقیت اضافه شد." : "اعتبار اضافه شد، اما ثبت گزارش ممیزی ناموفق بود." });
   } catch (error) {
     console.error("Admin credit grant error:", error.message);
     return res.status(503).json({ error: "افزودن اعتبار انجام نشد؛ تنظیمات پایگاه داده را بررسی کنید." });
