@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>مدیریت هدیه اعتبار | وکیل‌یار</title>
+<style>
+body{font-family:Tahoma,Arial,sans-serif;background:#f4f2ed;color:#17243d;margin:0;padding:24px}
+main{max-width:620px;margin:30px auto;background:#fff;padding:24px;border-radius:16px;box-shadow:0 8px 28px #14233f12}
+h1{font-size:22px;color:#14233f}p{line-height:1.9;color:#586174}
+label{display:block;margin:16px 0 7px;font-size:14px}
+input{box-sizing:border-box;width:100%;padding:13px;border:1px solid #ccd2dc;border-radius:9px;font:inherit}
+button{border:0;border-radius:9px;padding:12px 18px;margin:10px 5px 0 0;font:inherit;cursor:pointer;background:#20375d;color:white}
+button.gold{background:#b18b42;color:#fff}button.danger{background:#8a3434}
+#result{white-space:pre-wrap;background:#f5f3ee;padding:14px;border-radius:9px;margin-top:18px;line-height:1.8}
+.note{font-size:12px;background:#fff7e6;padding:12px;border-radius:8px}
+</style></head>
+<body><main>
+<h1>پنل هدیه اعتبار وکیل‌یار</h1>
+<p>مدیر می‌تواند به شناسه یک کاربر اعتبار حجمی اضافه کند یا برای او دسترسی نامحدود هدیه دهد.</p>
+<p class="note">این صفحه به‌تنهایی مجوز مدیریت نیست. کلید مدیر فقط در درخواست امن به سرور ارسال می‌شود؛ آن را در اختیار دیگران نگذارید و در مرورگر ذخیره نکنید.</p>
+<label for="adminKey">کلید مدیر (ADMIN_API_KEY)</label><input id="adminKey" type="password" autocomplete="off">
+<label for="userId">شناسه کاربر (از مسیر /api/usage)</label><input id="userId" placeholder="شناسه ۴۸ رقمی هگز">
+<label for="amount">مقدار اعتبار هدیه</label><input id="amount" type="number" min="1" max="10000000" value="500">
+<div>
+<button class="gold" id="gift">افزودن اعتبار</button>
+<button id="unlimited">فعال‌سازی نامحدود</button>
+<button class="danger" id="revoke">لغو نامحدود</button>
+</div>
+<div id="result" role="status">نتیجه عملیات در این قسمت نمایش داده می‌شود.</div>
+</main>
+<script>
+const result=document.getElementById("result");
+async function send(data){
+ const key=document.getElementById("adminKey").value.trim();
+ const user_id=document.getElementById("userId").value.trim();
+ if(!key||!user_id){result.textContent="کلید مدیر و شناسه کاربر را وارد کنید.";return;}
+ result.textContent="در حال ارسال درخواست...";
+ try{
+  const r=await fetch("/api/admin/grant-credits",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify({...data,user_id})});
+  const d=await r.json();
+  result.textContent=d.message||d.error||"پاسخ نامشخص";
+  if(!r.ok) result.textContent+=" (کد "+r.status+")";
+ }catch(e){result.textContent="ارتباط با سرور برقرار نشد.";}
+}
+document.getElementById("gift").onclick=()=>send({credits:Number(document.getElementById("amount").value)});
+document.getElementById("unlimited").onclick=()=>{if(confirm("دسترسی نامحدود برای این کاربر فعال شود؟"))send({unlimited:true});};
+document.getElementById("revoke").onclick=()=>{if(confirm("دسترسی نامحدود این کاربر لغو شود؟"))send({unlimited:false});};
+</script></body></html>
