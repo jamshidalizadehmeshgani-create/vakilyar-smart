@@ -16,7 +16,7 @@ button.gold{background:#b18b42;color:#fff}button.danger{background:#8a3434}
 </style></head>
 <body><main>
 <h1>پنل هدیه اعتبار وکیل‌یار</h1>
-<p>مدیر می‌تواند به شناسه یک کاربر اعتبار حجمی اضافه کند یا برای او دسترسی نامحدود هدیه دهد.</p>
+<p>مدیر می‌تواند اعتبار حجمی، دسترسی نامحدود یا اشتراک آزمایشی Pro را برای یک کاربر مدیریت کند. فعال‌سازی Pro در این نسخه دستی است و به معنی پرداخت یا تمدید خودکار نیست.</p>
 <p class="note">این صفحه به‌تنهایی مجوز مدیریت نیست. کلید مدیر فقط در درخواست امن به سرور ارسال می‌شود؛ آن را در اختیار دیگران نگذارید و در مرورگر ذخیره نکنید.</p>
 <label for="adminKey">کلید مدیر (ADMIN_API_KEY)</label><input id="adminKey" type="password" autocomplete="off">
 <label for="userId">شناسه کاربر (از مسیر /api/usage)</label><input id="userId" placeholder="شناسه ۴۸ رقمی هگز">
@@ -26,6 +26,8 @@ button.gold{background:#b18b42;color:#fff}button.danger{background:#8a3434}
 <button class="gold" id="gift">افزودن اعتبار</button>
 <button id="unlimited">فعال‌سازی نامحدود</button>
 <button class="danger" id="revoke">لغو نامحدود</button>
+<button class="gold" id="activatePro">فعال‌سازی وکیل‌یار پرو</button>
+<button class="danger" id="revokePro">لغو وکیل‌یار پرو</button>
 </div>
 <div id="result" role="status">نتیجه عملیات در این قسمت نمایش داده می‌شود.</div>
 </main>
@@ -47,4 +49,6 @@ document.getElementById("lookup").onclick=()=>send({action:"lookup"});
 document.getElementById("gift").onclick=()=>send({credits:Number(document.getElementById("amount").value)});
 document.getElementById("unlimited").onclick=()=>{if(confirm("دسترسی نامحدود برای این کاربر فعال شود؟"))send({unlimited:true});};
 document.getElementById("revoke").onclick=()=>{if(confirm("دسترسی نامحدود این کاربر لغو شود؟"))send({unlimited:false});};
+document.getElementById("activatePro").onclick=()=>{if(confirm("اشتراک آزمایشی Pro برای این کاربر فعال شود؟"))send({action:"set_pro",active:true});};
+document.getElementById("revokePro").onclick=()=>{if(confirm("دسترسی Pro این کاربر لغو شود؟"))send({action:"set_pro",active:false});};
 </script></body></html>
