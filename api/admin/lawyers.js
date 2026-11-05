@@ -47,8 +47,10 @@ module.exports = async (req, res) => {
       if (license.length > 80) return res.status(400).json({ error: "شماره پروانه بیش از حد طولانی است." });
       const id = crypto.randomBytes(16).toString("hex");
       const lawyer = { id, name, email, license_number: license, access: "disabled", created_at: new Date().toISOString() };
-      await redis(["SET", `vy:lawyer:${id}`, JSON.stringify(lawyer)]);
-      await redis(["SADD", "vy:lawyers:index", id]);
+      const emailKey = "vy:lawyer:email:" + crypto.createHash("sha256").update(email).digest("hex");
+      const createScript = "if redis.call('EXISTS',KEYS[1])==1 then return 0 end; redis.call('SET',KEYS[1],ARGV[1]); redis.call('SET',KEYS[2],ARGV[2]); redis.call('SADD',KEYS[3],ARGV[1]); return 1";
+      const created = Number(await redis(["EVAL", createScript, "3", emailKey, `vy:lawyer:${id}`, "vy:lawyers:index", id, JSON.stringify(lawyer)]));
+      if (created !== 1) return res.status(409).json({ error: "برای این ایمیل قبلاً حساب وکیل ثبت شده است." });
       const audited = await audit({ action: "lawyer_created", lawyer_id: id, at: new Date().toISOString() });
       return res.status(201).json({ ok: true, lawyer, audit_warning: !audited, message: "پرونده وکیل ایجاد شد؛ دسترسی پاسخ‌گویی به‌صورت پیش‌فرض غیرفعال است." });
     }
@@ -59,7 +61,11 @@ module.exports = async (req, res) => {
       const key = `vy:lawyer:${id}`;
       const raw = await redis(["GET", key]);
       if (!raw) return res.status(404).json({ error: "حساب وکیل یافت نشد." });
-      const lawyer = JSON.parse(raw);
+      let lawyer;
+      try { lawyer = JSON.parse(raw); } catch {
+        return res.status(500).json({ error: "اطلاعات این حساب وکیل در پایگاه داده مخدوش است؛ وضعیت تغییر نکرد." });
+      }
+      if (!lawyer || lawyer.id !== id) return res.status(500).json({ error: "ساختار اطلاعات حساب وکیل معتبر نیست." });
       lawyer.access = enabled ? "active" : "disabled";
       lawyer.access_updated_at = new Date().toISOString();
       await redis(["SET", key, JSON.stringify(lawyer)]);
