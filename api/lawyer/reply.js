@@ -4,6 +4,7 @@ module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return res.status(405).json({ error: "فقط POST مجاز است." }); }
+  if (req.headers.origin) { const host = req.headers.host || ""; let originHost = ""; try { originHost = new URL(req.headers.origin).host; } catch {} if (!host || originHost !== host) return res.status(403).json({ error: "درخواست از مبدأ غیرمجاز رد شد." }); }
   try {
     const session = await getLawyerSession(req, res);
     if (!session) return res.status(401).json({ error: "نشست معتبر نیست یا دسترسی شما غیرفعال است." });
