@@ -50,5 +50,7 @@ for(const w of d.lawyers){const box=document.createElement("div");box.className=
 const pass=document.createElement("input");pass.type="password";pass.autocomplete="new-password";pass.placeholder="رمز اولیه وکیل (حداقل ۱۲ نویسه)";pass.maxLength=200;pass.style.marginTop="10px";
 const setPass=document.createElement("button");setPass.className="gold";setPass.textContent="ثبت/بازنشانی رمز ورود";setPass.onclick=async()=>{if(pass.value.length<12){result.textContent="رمز باید حداقل ۱۲ نویسه باشد.";return;}if(!confirm("رمز این وکیل ثبت یا بازنشانی شود؟"))return;const done=await call({action:"set_password",lawyer_id:w.id,password:pass.value});if(done)pass.value="";};box.append(title,detail,btn,pass,setPass);$("list").append(box);}}
 $("create").onclick=async()=>{const d=await call({action:"create",name:$("name").value,email:$("email").value,license_number:$("license").value});if(d){$("name").value="";$("email").value="";$("license").value="";load();}};
-$("refresh").onclick=load;\n$("auditBtn").onclick=showAudit;\n$("configBtn").onclick=showConfig;
+$("refresh").onclick=load;
+$("auditBtn").onclick=showAudit;
+$("configBtn").onclick=showConfig;
 </script></main></body></html>
