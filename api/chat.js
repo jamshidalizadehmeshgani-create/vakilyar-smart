@@ -1,5 +1,5 @@
 const crypto = require("crypto");
-const { getAccount, classifyRequest, consume, refundOnce } = require("../lib/quota");
+const { getAccount, classifyRequest, reserveCredits, refundReservation, commitReservation } = require("../lib/quota");
 
 const SYSTEM_PROMPT = `تو «وکیل‌یار هوشمند» هستی؛ دستیار ارائه‌دهنده اطلاعات عمومی و آموزشی حقوقی.
 اصول الزامی:
@@ -49,7 +49,6 @@ module.exports = async (req, res) => {
 
   let account;
   let charged = 0;
-  let creditsReserved = false;
   let reservationId = null;
   let remainingCredits = null;
   const endpoint = process.env.AI_API_URL || "https://api.groq.com/openai/v1/chat/completions";
@@ -86,9 +85,8 @@ module.exports = async (req, res) => {
     if (!account.isPro && !account.isUnlimited) {
       charged = classifyRequest(message);
       reservationId = crypto.randomBytes(16).toString("hex");
-      remainingCredits = await consume(account.key, charged);
+      remainingCredits = await reserveCredits(account.key, charged, reservationId);
       if (remainingCredits < 0) return res.status(402).json({ code: "CREDITS_EXHAUSTED", error: "اعتبار رایگان شما به پایان رسیده است. برای ادامه، وکیل‌یار پرو را فعال کنید." });
-      creditsReserved = true;
     }
     const scopeLabel = foreignRequest ? (req.body?.country || "حوزه حقوقی انتخاب‌شده") : "قوانین جمهوری اسلامی ایران";
     const upstream = await fetch(endpoint, {
@@ -111,15 +109,20 @@ module.exports = async (req, res) => {
     const data = await upstream.json().catch(() => ({}));
     if (!upstream.ok) {
       console.error("AI provider error:", upstream.status, data?.error?.message || "unknown");
-      if (creditsReserved) { await refundOnce(account.key, charged, reservationId); creditsReserved = false; }
+      if (reservationId) { await refundReservation(account.key, reservationId); reservationId = null; }
       return res.status(502).json({ error: "ارتباط با موتور هوش مصنوعی برقرار نشد؛ اعتبار رزروشده بازگردانده شد." });
     }
 
     const reply = data?.choices?.[0]?.message?.content;
-    if (!reply) { if (creditsReserved) { await refundOnce(account.key, charged, reservationId); creditsReserved = false; } return res.status(502).json({ error: "پاسخ معتبری دریافت نشد؛ اعتبار رزروشده بازگردانده شد." }); }
+    if (!reply) { if (reservationId) { await refundReservation(account.key, reservationId); reservationId = null; } return res.status(502).json({ error: "پاسخ معتبری دریافت نشد؛ اعتبار رزروشده بازگردانده شد." }); }
+    if (reservationId) {
+      const committed = await commitReservation(reservationId);
+      if (committed !== 1) throw new Error("Credit reservation could not be committed");
+      reservationId = null;
+    }
     return res.status(200).json({ configured: true, reply, plan: account.isPro ? "pro" : "free", unlimited: account.isUnlimited, credits_used: charged, credits_remaining: (account.isPro || account.isUnlimited) ? null : remainingCredits });
   } catch (error) {
-    if (account && creditsReserved) { try { await refundOnce(account.key, charged, reservationId); creditsReserved = false; } catch (refundError) { console.error("Credit refund error:", refundError.message); } }
+    if (account && reservationId) { try { await refundReservation(account.key, reservationId); reservationId = null; } catch (refundError) { console.error("Credit refund error:", refundError.message); } }
     console.error("Chat API error:", error?.message || error);
     return res.status(502).json({ error: "در حال حاضر امکان دریافت پاسخ وجود ندارد. کمی بعد دوباره تلاش کنید." });
   }
