@@ -1,7 +1,79 @@
-<!doctype html><html lang="fa" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ارتباط با وکیل</title><style>body{font:16px Tahoma;background:#f4f2ed;color:#17243d;padding:20px}main{max-width:620px;margin:auto;background:white;padding:24px;border-radius:14px}label{display:block;margin:14px 0}select,textarea{box-sizing:border-box;width:100%;padding:12px;font:inherit}textarea{min-height:140px}button{padding:12px;background:#20375d;color:white;border:0;border-radius:8px}</style><main><h1>ارسال پرسش به وکیل</h1><p>پرسش شما به وکیل منتخب ارسال می‌شود. از نوشتن اطلاعات هویتی یا محرمانه غیرضروری خودداری کنید.</p><form id="f"><label>وکیل<select id="lawyer" required></select></label><label>پرسش<textarea id="question" minlength="5" maxlength="5000" required></textarea></label><label><input type="checkbox" id="consent" required> رضایت می‌دهم متن پرسش من برای پاسخ‌گویی در اختیار وکیل منتخب قرار گیرد.</label><button id="send">ارسال پرسش</button></form><p id="msg"></p><h2>پرسش‌ها و پاسخ‌ها</h2><div id="mine">در حال دریافت...</div></main><script>
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ارتباط با وکیل | وکیل‌یار</title>
+<style>
+body{font:16px Tahoma,Arial,sans-serif;background:#f4f2ed;color:#17243d;padding:20px}
+main{max-width:680px;margin:auto;background:white;padding:24px;border-radius:14px}
+label{display:block;margin:14px 0}
+select,textarea{box-sizing:border-box;width:100%;padding:12px;font:inherit}
+textarea{min-height:140px}
+button{padding:11px 15px;background:#20375d;color:white;border:0;border-radius:8px;cursor:pointer}
+button:disabled{opacity:.6;cursor:wait}
+.delete{background:#8a3434;margin-top:10px}
+.question-card{border-top:1px solid #d8dce4;padding:14px 0;line-height:1.9}
+.reply{background:#f5f3ee;padding:10px;border-radius:8px;margin:8px 0}
+#msg{line-height:1.9}
+</style>
+</head>
+<body><main>
+<h1>ارسال پرسش به وکیل</h1>
+<p>پرسش شما به وکیل منتخب ارسال می‌شود. از نوشتن اطلاعات هویتی یا محرمانه غیرضروری خودداری کنید.</p>
+<form id="f">
+<label>وکیل<select id="lawyer" required></select></label>
+<label>پرسش<textarea id="question" minlength="5" maxlength="5000" required></textarea></label>
+<label><input type="checkbox" id="consent" required> رضایت می‌دهم متن پرسش من برای پاسخ‌گویی در اختیار وکیل منتخب قرار گیرد.</label>
+<button id="send">ارسال پرسش</button>
+</form>
+<p id="msg" role="status"></p>
+<h2>پرسش‌ها و پاسخ‌ها</h2>
+<div id="mine">در حال دریافت...</div>
+</main>
+<script>
 const $=id=>document.getElementById(id);
-async function loadLawyers(){const r=await fetch("/api/lawyers/active",{cache:"no-store"}),d=await r.json();$("lawyer").replaceChildren(new Option("انتخاب وکیل",""));for(const w of d.lawyers||[])$("lawyer").add(new Option(w.name,w.id));}
-async function loadMine(){try{const r=await fetch("/api/questions/mine",{credentials:"same-origin",cache:"no-store"}),d=await r.json();$("mine").replaceChildren();if(!r.ok){$("mine").textContent=d.error||"فعلاً قابل دریافت نیست";return;}if(!d.questions.length){$("mine").textContent="هنوز پرسشی ثبت نکرده‌اید.";return;}for(const q of d.questions){const box=document.createElement("section"),h=document.createElement("h3"),p=document.createElement("p");h.textContent=q.lawyer_name+" | "+(q.status==="answered"?"پاسخ داده شده":"در انتظار پاسخ");p.textContent=q.question;box.append(h,p);for(const a of q.replies||[]){const x=document.createElement("p");x.textContent="پاسخ وکیل: "+a.message;box.append(x);} $("mine").append(box);}}catch{$("mine").textContent="خطا در ارتباط با سرور";}}
-$("f").onsubmit=async e=>{e.preventDefault();if(!$("consent").checked)return;const b=$("send");b.disabled=true;try{const r=await fetch("/api/questions/create",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({lawyer_id:$("lawyer").value,question:$("question").value,consent:true})}),d=await r.json();$("msg").textContent=d.message||d.error||"نتیجه نامشخص";if(r.ok){$("question").value="";$("consent").checked=false;await loadMine();}}catch{$("msg").textContent="ارتباط با سرور برقرار نشد";}finally{b.disabled=false;}};
-loadLawyers().catch(()=>$("msg").textContent="فهرست وکلا در دسترس نیست");loadMine();
-</script></html>
+async function loadLawyers(){
+  const r=await fetch("/api/lawyers/active",{cache:"no-store"}),d=await r.json();
+  $("lawyer").replaceChildren(new Option("انتخاب وکیل",""));
+  for(const w of d.lawyers||[]) $("lawyer").add(new Option(w.name,w.id));
+}
+async function loadMine(){
+  try{
+    const r=await fetch("/api/questions/mine",{credentials:"same-origin",cache:"no-store"}),d=await r.json();
+    $("mine").replaceChildren();
+    if(!r.ok){$("mine").textContent=d.error||"فعلاً قابل دریافت نیست";return;}
+    if(!d.questions.length){$("mine").textContent="هنوز پرسشی ثبت نکرده‌اید.";return;}
+    for(const q of d.questions){
+      const box=document.createElement("section");box.className="question-card";
+      const h=document.createElement("h3");h.textContent=q.lawyer_name+" | "+(q.status==="answered"?"پاسخ داده شده":"در انتظار پاسخ");
+      const p=document.createElement("p");p.textContent=q.question;box.append(h,p);
+      for(const a of q.replies||[]){const x=document.createElement("p");x.className="reply";x.textContent="پاسخ وکیل: "+a.message;box.append(x);}
+      const del=document.createElement("button");del.className="delete";del.textContent="حذف این پرسش و پاسخ‌ها";
+      del.onclick=async()=>{
+        if(!confirm("این پرسش و تمام پاسخ‌های ثبت‌شده آن از پرونده شما حذف شود؟"))return;
+        del.disabled=true;
+        try{
+          const rr=await fetch("/api/questions/mine",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({question_id:q.id})});
+          const dd=await rr.json();$("msg").textContent=dd.message||dd.error||"نتیجه نامشخص";
+          if(rr.ok)await loadMine();
+        }catch{$("msg").textContent="ارتباط با سرور برقرار نشد.";}
+        finally{del.disabled=false;}
+      };
+      box.append(del);$("mine").append(box);
+    }
+  }catch{$("mine").textContent="خطا در ارتباط با سرور";}
+}
+$("f").onsubmit=async e=>{
+  e.preventDefault();if(!$("consent").checked)return;
+  const b=$("send");b.disabled=true;
+  try{
+    const r=await fetch("/api/questions/create",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({lawyer_id:$("lawyer").value,question:$("question").value,consent:true})});
+    const d=await r.json();$("msg").textContent=d.message||d.error||"نتیجه نامشخص";
+    if(r.ok){$("question").value="";$("consent").checked=false;await loadMine();}
+  }catch{$("msg").textContent="ارتباط با سرور برقرار نشد";}
+  finally{b.disabled=false;}
+};
+loadLawyers().catch(()=>$("msg").textContent="فهرست وکلا در دسترس نیست");
+loadMine();
+</script>
+</body></html>
