@@ -16,7 +16,7 @@ global.fetch = async (_url, options) => {
   const [op, ...args] = command;
   let result = null;
 
-  if (op === "GET") {
+  if (op === "PING") {\n    result = "PONG";\n  } else if (op === "GET") {
     result = values.has(args[0]) ? values.get(args[0]) : null;
   } else if (op === "SET") {
     values.set(args[0], String(args[1]));
@@ -130,6 +130,19 @@ test("admin can disable a lawyer and the existing session and new questions are 
     body: { consent: true, lawyer_id: lawyerId, question: "پرسش آزمایشی برای وکیل" }
   }, questionRes);
   assert.equal(questionRes.statusCode, 403);
+});
+
+test("configuration diagnostics expose readiness flags without secret values", async () => {
+  const res = responseMock();
+  await adminLawyers({
+    method: "POST",
+    headers: { authorization: "Bearer test-admin-key" },
+    body: { action: "config" }
+  }, res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.configuration.redis_connection, true);
+  assert.equal(res.body.configuration.ai_api_key_present, false);
+  assert.equal(JSON.stringify(res.body).includes("test-admin-key"), false);
 });
 
 test("admin lawyer endpoint rejects an invalid manager key", async () => {
