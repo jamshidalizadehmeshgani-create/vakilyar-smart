@@ -16,6 +16,14 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: "فقط درخواست POST پذیرفته می‌شود." });
   }
 
+  const host = req.headers.host || "";
+  let originHost = "";
+  try { originHost = new URL(req.headers.origin || "").host; } catch {}
+  const fetchSite = String(req.headers["sec-fetch-site"] || "").toLowerCase();
+  if (!host || !originHost || originHost !== host || (fetchSite && fetchSite !== "same-origin")) {
+    return res.status(403).json({ error: "مبدأ درخواست معتبر نیست؛ صفحه را تازه‌سازی و دوباره تلاش کنید." });
+  }
+
   const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
   if (!message) return res.status(400).json({ error: "لطفاً پرسش خود را وارد کنید." });
   if (message.length > 6000) return res.status(413).json({ error: "متن پرسش بیش از حد طولانی است." });
@@ -50,6 +58,7 @@ module.exports = async (req, res) => {
     const scopeLabel = foreignRequest ? (req.body?.country || "حوزه حقوقی انتخاب‌شده") : "قوانین جمهوری اسلامی ایران";
     const upstream = await fetch(endpoint, {
       method: "POST",
+      signal: AbortSignal.timeout(25000),
       headers: {
         "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json"
