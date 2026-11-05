@@ -3,6 +3,10 @@ module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return res.status(405).json({ error: "فقط POST مجاز است." }); }
+  const host = req.headers.host || "";
+  let originHost = "";
+  try { originHost = new URL(req.headers.origin || "").host; } catch {}
+  if (!host || !originHost || originHost !== host) return res.status(403).json({ error: "مبدأ درخواست معتبر نیست." });
   try {
     const token = cookieValue(req, COOKIE);
     if (token) await redis(["DEL", "vy:lawyer:session:" + hashToken(token)]);
