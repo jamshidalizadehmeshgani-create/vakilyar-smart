@@ -26,7 +26,8 @@
     <label for="question">پرسش حقوقی خود را بنویسید</label>
     <textarea id="question" maxlength="6000" placeholder="موضوع را بدون درج اطلاعات محرمانه یا شماره‌های شناسایی توضیح دهید..."></textarea>
     <button id="send">ارسال پرسش</button>
-    <div id="status" role="status">در حال بررسی وضعیت سرویس...</div>
+    <p><a href="/ask-lawyer.html">ارسال پرسش به وکیل و مشاهده پاسخ‌ها</a></p>
+    <div id="status" role="status">نسخه آزمایشی؛ وضعیت پاسخ‌گویی با ارسال پرسش مشخص می‌شود.</div>
     <div id="answer" aria-live="polite">پاسخ وکیل‌یار در این قسمت نمایش داده می‌شود.</div>
   </section>
 </main>
@@ -35,7 +36,6 @@
 const statusEl=document.getElementById("status");
 const answerEl=document.getElementById("answer");
 const sendBtn=document.getElementById("send");
-fetch("/api/health").then(r=>r.json()).then(d=>{statusEl.textContent=d.ok?"وضعیت سرویس: فعال":"وضعیت سرویس نامشخص";}).catch(()=>{statusEl.textContent="ارتباط با سرویس برقرار نشد.";});
 sendBtn.addEventListener("click",async()=>{
   const message=document.getElementById("question").value.trim();
   if(!message){answerEl.textContent="لطفاً ابتدا پرسش خود را بنویسید.";return;}
