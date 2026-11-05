@@ -4,6 +4,8 @@ module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return res.status(405).json({ error: "فقط POST مجاز است." }); }
+  if (req.body?.consent !== true) return res.status(400).json({ error: "برای ارسال پرسش به وکیل، رضایت صریح شما لازم است." });
+  if (req.headers.origin) { const host = req.headers.host || ""; let originHost = ""; try { originHost = new URL(req.headers.origin).host; } catch {} if (!host || originHost !== host) return res.status(403).json({ error: "درخواست از مبدأ غیرمجاز رد شد." }); }
   const lawyerId = typeof req.body?.lawyer_id === "string" ? req.body.lawyer_id.trim() : "";
   const question = typeof req.body?.question === "string" ? req.body.question.trim() : "";
   if (!/^[a-f0-9]{32}$/.test(lawyerId) || question.length < 5 || question.length > 5000)
