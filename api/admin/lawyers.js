@@ -29,6 +29,23 @@ module.exports = async (req, res) => {
   }
   try {
     const action = req.body?.action;
+    if (action === "audit") {
+      const rows = await redis(["LRANGE", "vy:admin:audit", "0", "99"]) || [];
+      const events = rows.map(row => {
+        try {
+          const event = JSON.parse(row);
+          if (!event || typeof event !== "object") return null;
+          return {
+            action: typeof event.action === "string" ? event.action.slice(0, 80) : "unknown",
+            user_id: typeof event.user_id === "string" ? event.user_id : null,
+            lawyer_id: typeof event.lawyer_id === "string" ? event.lawyer_id : null,
+            amount: Number.isSafeInteger(event.amount) ? event.amount : null,
+            at: typeof event.at === "string" ? event.at : null
+          };
+        } catch { return null; }
+      }).filter(Boolean);
+      return res.status(200).json({ ok: true, events });
+    }
     if (action === "list") {
       const ids = await redis(["SMEMBERS", "vy:lawyers:index"]) || [];
       const lawyers = await Promise.all(ids.map(async id => {
