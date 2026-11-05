@@ -25,6 +25,7 @@
     <div class="notice">وکیل‌یار برای ارائه اطلاعات عمومی و آموزشی است و جایگزین وکیل یا مشاوره حقوقی تخصصی نیست. پیش از تصمیم‌گیری مهم، متن رسمی قوانین و نظر وکیل دارای پروانه را بررسی کنید.</div>
     <label for="question">پرسش حقوقی خود را بنویسید</label>
     <textarea id="question" maxlength="6000" placeholder="موضوع را بدون درج اطلاعات محرمانه یا شماره‌های شناسایی توضیح دهید..."></textarea>
+    <label style="display:flex;align-items:flex-start;gap:9px;font-weight:normal;font-size:13px;margin-top:14px"><input id="consent" type="checkbox" style="margin-top:8px"> موافقم متن پرسش من برای تولید پاسخ به سرویس هوش مصنوعی ارسال شود. از درج نام، شماره ملی، نشانی، رمز و اطلاعات محرمانه خودداری می‌کنم.</label>
     <button id="send">ارسال پرسش</button>
     <p><a href="/ask-lawyer.html">ارسال پرسش به وکیل و مشاهده پاسخ‌ها</a></p>
     <div id="status" role="status">نسخه آزمایشی؛ وضعیت پاسخ‌گویی با ارسال پرسش مشخص می‌شود.</div>
@@ -36,17 +37,33 @@
 const statusEl=document.getElementById("status");
 const answerEl=document.getElementById("answer");
 const sendBtn=document.getElementById("send");
+const consentEl=document.getElementById("consent");
+
+async function loadUsage(){
+  try{
+    const response=await fetch("/api/usage",{cache:"no-store"});
+    const data=await response.json();
+    if(!response.ok) throw new Error(data.error||"وضعیت سهمیه در دسترس نیست.");
+    statusEl.textContent=data.unlimited?"وضعیت حساب: اعتبار نامحدود آزمایشی":data.plan==="pro"?"وضعیت حساب: وکیل‌یار پرو":"اعتبار باقی‌مانده: "+data.credits_remaining+" واحد";
+  }catch(e){
+    statusEl.textContent="وضعیت سهمیه هنوز قابل دریافت نیست؛ ممکن است تنظیمات پایگاه داده کامل نشده باشد.";
+  }
+}
+loadUsage();
+
 sendBtn.addEventListener("click",async()=>{
   const message=document.getElementById("question").value.trim();
   if(!message){answerEl.textContent="لطفاً ابتدا پرسش خود را بنویسید.";return;}
+  if(!consentEl.checked){answerEl.textContent="برای ارسال پرسش، لطفاً رضایت خود را تأیید کنید.";return;}
   sendBtn.disabled=true;answerEl.textContent="در حال دریافت پاسخ...";
   try{
-    const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message})});
+    const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message,consent:true,legal_scope:"iran"})});
     const data=await response.json();
-    if(!response.ok)throw new Error(data.error||"خطا در دریافت پاسخ");
-    answerEl.textContent=data.reply+(data.configured===false?"\n\n(حالت نمایشی؛ موتور هوش مصنوعی هنوز تنظیم نشده است.)":"");
+    if(!response.ok) throw new Error(data.error||"خطا در دریافت پاسخ");
+    answerEl.textContent=data.reply;
+    if(typeof data.credits_remaining==="number") statusEl.textContent="اعتبار باقی‌مانده: "+data.credits_remaining+" واحد";
   }catch(e){answerEl.textContent=e.message||"خطای ارتباطی رخ داد.";}
-  finally{sendBtn.disabled=false;}
+  finally{sendBtn.disabled=false;loadUsage();}
 });
 </script>
 </body>
