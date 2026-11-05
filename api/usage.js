@@ -14,7 +14,8 @@ module.exports = async (req, res) => {
       account_id: account.uid,
       plan: account.isPro ? "pro" : "free",
       legal_scope_default: "iran",
-      credits_remaining: account.isPro ? null : account.credits,
+      credits_remaining: (account.isPro || account.isUnlimited) ? null : account.credits,
+      unlimited: account.isUnlimited,
       free_credits_initial: Number(process.env.FREE_CREDITS_INITIAL || 1000)
     });
   } catch (error) {
