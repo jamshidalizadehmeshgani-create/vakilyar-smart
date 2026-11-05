@@ -29,6 +29,11 @@ module.exports = async (req, res) => {
     const unlimited = req.body?.unlimited === true;
     const amount = req.body?.credits;
     const key = `vy:user:${userId}:credits`;
+    if (req.body?.unlimited === false) {
+      await redis(["DEL", `vy:user:${userId}:unlimited`]);
+      await redis(["LPUSH", "vy:admin:audit", JSON.stringify({ action: "revoke_unlimited", user_id: userId, at: new Date().toISOString() })]);
+      return res.status(200).json({ ok: true, message: "دسترسی نامحدود این کاربر لغو شد." });
+    }
     if (unlimited) {
       await redis(["SET", `vy:user:${userId}:unlimited`, "active"]);
       await redis(["LPUSH", "vy:admin:audit", JSON.stringify({ action: "gift_unlimited", user_id: userId, at: new Date().toISOString() })]);
