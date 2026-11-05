@@ -67,7 +67,7 @@ module.exports = async (req, res) => {
     const foreignCountryMention = foreignCountryNames.some(name =>
       new RegExp("(^|[^\\p{L}])" + name.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&") + "([^\\p{L}]|$)", "iu").test(message)
     );
-    const explicitForeignLaw = /حقوق بین.?الملل|قوانین بین.?الملل|قانون بین.?الملل|قوانین? (?:کشور|دولت) دیگر|قانون (?:کشور|دولت) دیگر/i.test(message);
+    const explicitForeignLaw = /حقوق بین.?الملل|قوانین بین.?الملل|قانون بین.?الملل|حقوق خارجی|قوانین? خارجی|کشورهای خارجی|کشور خارجی|قوانین? (?:کشور|دولت) دیگر|قانون (?:کشور|دولت) دیگر/i.test(message);
     const scopeRequestsForeign = (requestedScope && !iranAliases.has(requestedScope)) ||
       (requestedCountry && !iranAliases.has(requestedCountry));
     const foreignRequest = scopeRequestsForeign || explicitForeignLaw || foreignCountryMention;
