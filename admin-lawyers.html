@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>مدیریت وکلا | وکیل‌یار</title>
+<style>
+body{font-family:Tahoma,Arial,sans-serif;background:#f4f2ed;color:#17243d;margin:0;padding:20px}main{max-width:850px;margin:20px auto;background:#fff;padding:22px;border-radius:16px;box-shadow:0 8px 28px #14233f12}h1,h2{color:#14233f}p{line-height:1.9;color:#586174}label{display:block;margin:12px 0 6px}input{box-sizing:border-box;width:100%;padding:12px;border:1px solid #ccd2dc;border-radius:8px;font:inherit}button{border:0;border-radius:8px;padding:10px 15px;margin:8px 4px 0 0;font:inherit;cursor:pointer;background:#20375d;color:white}.gold{background:#a98642}.danger{background:#8a3434}.card{border:1px solid #e0e3e9;border-radius:10px;padding:14px;margin:12px 0}.muted{font-size:12px;color:#697386;word-break:break-all}#result{white-space:pre-wrap;background:#f5f3ee;padding:12px;border-radius:8px;margin:14px 0;line-height:1.8}.note{background:#fff7e6;padding:12px;border-radius:8px;font-size:13px}
+</style></head><body><main>
+<h1>مدیریت حساب و دسترسی وکلا</h1>
+<p class="note">در این مرحله مدیر می‌تواند پرونده اختصاصی هر وکیل را ایجاد و دسترسی پاسخ‌گویی او را فعال یا قطع کند. ورود امن وکیل و اتصال به سامانه گفت‌وگوی کاربران هنوز باید در مرحله احراز هویت و پنل وکیل پیاده‌سازی شود. کلید مدیر را در اختیار دیگران نگذارید.</p>
+<label for="key">کلید مدیر</label><input id="key" type="password" autocomplete="off">
+<h2>ایجاد حساب وکیل</h2>
+<label for="name">نام و نام خانوادگی</label><input id="name" maxlength="100">
+<label for="email">ایمیل اختصاصی</label><input id="email" type="email" maxlength="190">
+<label for="license">شماره پروانه (اختیاری)</label><input id="license" maxlength="80">
+<button class="gold" id="create">ایجاد حساب وکیل</button><button id="refresh">نمایش فهرست وکلا</button>
+<div id="result" role="status">آماده انجام عملیات.</div><section id="list"></section>
+<script>
+const $=id=>document.getElementById(id), result=$("result");
+async function call(data){const key=$("key").value.trim();if(!key){result.textContent="کلید مدیر را وارد کنید.";return null;}result.textContent="در حال ارتباط با سرور...";
+try{const r=await fetch("/api/admin/lawyers",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify(data)});const d=await r.json();result.textContent=d.message||d.error||"پاسخ نامشخص";if(!r.ok)result.textContent+=" (کد "+r.status+")";return r.ok?d:null;}catch(e){result.textContent="ارتباط با سرور برقرار نشد.";return null;}}
+async function load(){const d=await call({action:"list"});if(!d)return;$("list").innerHTML="";if(!d.lawyers.length){$("list").textContent="هنوز حساب وکیلی ثبت نشده است.";return;}
+for(const w of d.lawyers){const box=document.createElement("div");box.className="card";const title=document.createElement("strong");title.textContent=w.name+" — "+(w.access==="active"?"دسترسی فعال":"دسترسی غیرفعال");const detail=document.createElement("div");detail.className="muted";detail.textContent="ایمیل: "+w.email+" | شناسه: "+w.id+(w.license_number?" | پروانه: "+w.license_number:"");const btn=document.createElement("button");btn.className=w.access==="active"?"danger":"gold";btn.textContent=w.access==="active"?"قطع دسترسی پاسخ‌گویی":"فعال‌سازی پاسخ‌گویی";btn.onclick=async()=>{if(!confirm("وضعیت دسترسی این وکیل تغییر کند؟"))return;const updated=await call({action:"set_access",lawyer_id:w.id,enabled:w.access!=="active"});if(updated)load();};box.append(title,detail,btn);$("list").append(box);}}
+$("create").onclick=async()=>{const d=await call({action:"create",name:$("name").value,email:$("email").value,license_number:$("license").value});if(d){$("name").value="";$("email").value="";$("license").value="";load();}};
+$("refresh").onclick=load;
+</script></main></body></html>
