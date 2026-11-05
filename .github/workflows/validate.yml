@@ -30,7 +30,7 @@ jobs:
           const fs = require('node:fs');
           for (const file of ['admin-credits.html', 'admin-lawyers.html']) {
             const html = fs.readFileSync(file, 'utf8');
-            const scripts = [...html.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi)];
+            const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)];
             if (!scripts.length) throw new Error('No inline script found in ' + file);
             scripts.forEach((match, index) => new Function(match[1]));
             console.log(file + ': ' + scripts.length + ' inline script(s) valid');
