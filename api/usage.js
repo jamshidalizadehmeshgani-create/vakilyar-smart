@@ -20,9 +20,17 @@ module.exports = async (req, res) => {
     });
   } catch (error) {
     console.error("Usage API error:", error.message);
+    const missing = [];
+    if (!process.env.APP_SECRET) missing.push("APP_SECRET");
+    if (!process.env.UPSTASH_REDIS_REST_URL) missing.push("UPSTASH_REDIS_REST_URL");
+    if (!process.env.UPSTASH_REDIS_REST_TOKEN) missing.push("UPSTASH_REDIS_REST_TOKEN");
     return res.status(503).json({
       ok: false,
-      error: "سامانه سهمیه هنوز پیکربندی نشده است."
+      code: missing.length ? "QUOTA_CONFIGURATION_MISSING" : "QUOTA_STORAGE_UNAVAILABLE",
+      missing_configuration: missing,
+      error: missing.length
+        ? "تنظیمات لازم برای سهمیه‌بندی در محیط استقرار کامل نیست."
+        : "پایگاه داده سهمیه در دسترس نیست؛ اتصال Upstash را بررسی کنید."
     });
   }
 };
