@@ -32,14 +32,13 @@ module.exports = async (req, res) => {
       "if q.user_id~=ARGV[1] then return -3 end",
       "redis.call('DEL',KEYS[1])",
       "redis.call('LREM',KEYS[2],0,ARGV[2])",
-      "redis.call('LREM',KEYS[3],0,ARGV[2])",
+      "if type(q.lawyer_id)=='string' then redis.call('LREM','vy:lawyer:'..q.lawyer_id..':questions',0,ARGV[2]) end",
       "return 1"
     ].join("; ");
     const result = Number(await redis([
-      "EVAL", script, "3",
+      "EVAL", script, "2",
       "vy:question:" + id,
       "vy:user:" + account.uid + ":questions",
-      "vy:lawyer:" + (typeof req.body?.lawyer_id === "string" && /^[a-f0-9]{32}$/.test(req.body.lawyer_id) ? req.body.lawyer_id : "invalid") + ":questions",
       account.uid, id
     ]));
     if (result === -1) return res.status(404).json({ error: "پرسش یافت نشد یا قبلاً حذف شده است." });
