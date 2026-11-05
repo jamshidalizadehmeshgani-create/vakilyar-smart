@@ -8,7 +8,7 @@ process.env.ADMIN_API_KEY = "test-admin-key";
 
 const values = new Map();
 const lists = new Map();
-const sets = new Map();
+let throwAfterReserve = false;
 let throwAfterRefund = false;
 
 global.fetch = async (_url, options) => {
@@ -42,22 +42,49 @@ global.fetch = async (_url, options) => {
     const start = Number(args[1]);
     const end = Number(args[2]);
     result = list.slice(start, end < 0 ? undefined : end + 1);
-  } else if (op === "EVAL" && String(args[0]).includes("KEYS[2]")) {
-    const keyCount = Number(args[1]);
-    const balanceKey = args[2];
-    const markerKey = args[3];
-    const amount = Number(args[4]);
+  } else if (op === "EVAL" && String(args[0]).includes("DECRBY")) {
+    const balanceKey = args[2], reservationKey = args[3], commitKey = args[4], refundKey = args[5];
+    const cost = Number(args[6]);
     let balance = Number(values.get(balanceKey) || 0);
-    if (!values.has(markerKey)) {
-      values.set(markerKey, "1");
-      balance += amount;
+    if (values.has(commitKey) || values.has(refundKey)) result = -3;
+    else if (values.has(reservationKey)) result = balance;
+    else if (!values.has(balanceKey)) result = -2;
+    else if (balance < cost) result = -1;
+    else {
+      balance -= cost;
       values.set(balanceKey, String(balance));
+      values.set(reservationKey, String(cost));
+      result = balance;
+      if (throwAfterReserve) {
+        throwAfterReserve = false;
+        throw new Error("simulated timeout after Redis applied reservation");
+      }
+    }
+  } else if (op === "EVAL" && String(args[0]).includes("INCRBY")) {
+    const balanceKey = args[2], reservationKey = args[3], refundKey = args[4], commitKey = args[5];
+    if (values.has(commitKey)) result = 0;
+    else if (!values.has(reservationKey)) result = 0;
+    else if (!values.has(refundKey)) {
+      const balance = Number(values.get(balanceKey) || 0) + Number(values.get(reservationKey));
+      values.set(refundKey, "1");
+      values.set(balanceKey, String(balance));
+      values.delete(reservationKey);
+      result = balance;
       if (throwAfterRefund) {
         throwAfterRefund = false;
         throw new Error("simulated timeout after Redis applied refund");
       }
+    } else result = Number(values.get(balanceKey) || 0);
+  } else if (op === "EVAL") {
+    const reservationKey = args[2], commitKey = args[3], refundKey = args[4];
+    if (values.has(refundKey)) result = 0;
+    else if (values.has(commitKey)) result = 1;
+    else if (!values.has(reservationKey)) result = 0;
+    else {
+      values.set(commitKey, "1");
+      values.delete(reservationKey);
+      result = 1;
     }
-    result = balance;
   } else {
     throw new Error("Unsupported test Redis command: " + op);
   }
@@ -65,7 +92,7 @@ global.fetch = async (_url, options) => {
   return { ok: true, json: async () => ({ result }) };
 };
 
-const { refundOnce } = require("../lib/quota");
+const { reserveCredits, refundReservation, commitReservation } = require("../lib/quota");
 const adminLawyers = require("../api/admin/lawyers");
 const createQuestion = require("../api/questions/create");
 const { getLawyerSession, hashToken } = require("../lib/lawyer-auth");
@@ -80,21 +107,45 @@ function responseMock() {
   };
 }
 
-test("refundOnce is idempotent after an ambiguous Redis timeout", async () => {
+test("an ambiguous reservation timeout can be safely refunded", async () => {
   values.set("test:credits", "100");
-  throwAfterRefund = true;
+  throwAfterReserve = true;
   const id = "a".repeat(32);
 
-  await assert.rejects(refundOnce("test:credits", 10, id), /simulated timeout/);
-  const retryBalance = await refundOnce("test:credits", 10, id);
+  await assert.rejects(reserveCredits("test:credits", 10, id), /simulated timeout after Redis applied reservation/);
+  assert.equal(values.get("test:credits"), "90");
+  await refundReservation("test:credits", id);
+  await refundReservation("test:credits", id);
 
-  assert.equal(retryBalance, 110);
-  assert.equal(values.get("test:credits"), "110");
+  assert.equal(values.get("test:credits"), "100");
 });
 
-test("refundOnce rejects invalid reservation identifiers and amounts", async () => {
-  await assert.rejects(refundOnce("test:credits", 10, "bad-id"), /Invalid refund reservation/);
-  await assert.rejects(refundOnce("test:credits", 0, "b".repeat(32)), /Invalid refund reservation/);
+test("an ambiguous refund timeout cannot credit the same reservation twice", async () => {
+  values.set("test:credits", "100");
+  const id = "b".repeat(32);
+  assert.equal(await reserveCredits("test:credits", 10, id), 90);
+  throwAfterRefund = true;
+
+  await assert.rejects(refundReservation("test:credits", id), /simulated timeout after Redis applied refund/);
+  await refundReservation("test:credits", id);
+
+  assert.equal(values.get("test:credits"), "100");
+});
+
+test("committed reservations cannot later be refunded", async () => {
+  values.set("test:credits", "100");
+  const id = "e".repeat(32);
+  assert.equal(await reserveCredits("test:credits", 10, id), 90);
+  assert.equal(await commitReservation(id), 1);
+  assert.equal(await commitReservation(id), 1);
+  assert.equal(await refundReservation("test:credits", id), 0);
+  assert.equal(values.get("test:credits"), "90");
+});
+
+test("reservation helpers reject invalid identifiers and amounts", async () => {
+  await assert.rejects(reserveCredits("test:credits", 10, "bad-id"), /Invalid credit reservation/);
+  await assert.rejects(reserveCredits("test:credits", 0, "f".repeat(32)), /Invalid credit reservation/);
+  await assert.rejects(refundReservation("test:credits", "bad-id"), /Invalid credit reservation/);
 });
 
 test("admin can disable a lawyer and the existing session and new questions are blocked", async () => {
