@@ -1,6 +1,11 @@
 const crypto = require("crypto");
 const { redis } = require("../lib/quota");
 
+async function recordAudit(event) {
+  await redis(["LPUSH", "vy:admin:audit", JSON.stringify(event)]);
+  await redis(["LTRIM", "vy:admin:audit", "0", "499"]);
+}
+
 function safeEqual(a, b) {
   const x = Buffer.from(String(a || ""));
   const y = Buffer.from(String(b || ""));
@@ -27,16 +32,30 @@ module.exports = async (req, res) => {
 
   try {
     const unlimited = req.body?.unlimited === true;
+    if (req.body?.action === "lookup") {
+      const [creditsRaw, unlimitedRaw, proRaw] = await Promise.all([
+        redis(["GET", `vy:user:${userId}:credits`]),
+        redis(["GET", `vy:user:${userId}:unlimited`]),
+        redis(["GET", `vy:user:${userId}:pro`])
+      ]);
+      return res.status(200).json({
+        ok: true,
+        user_id: userId,
+        credits_balance: creditsRaw === null ? Number(process.env.FREE_CREDITS_INITIAL || 1000) : Number(creditsRaw),
+        unlimited: unlimitedRaw === "active",
+        pro: proRaw === "active"
+      });
+    }
     const amount = req.body?.credits;
     const key = `vy:user:${userId}:credits`;
     if (req.body?.unlimited === false) {
       await redis(["DEL", `vy:user:${userId}:unlimited`]);
-      await redis(["LPUSH", "vy:admin:audit", JSON.stringify({ action: "revoke_unlimited", user_id: userId, at: new Date().toISOString() })]);
+      await recordAudit({ action: "revoke_unlimited", user_id: userId, at: new Date().toISOString() });
       return res.status(200).json({ ok: true, message: "دسترسی نامحدود این کاربر لغو شد." });
     }
     if (unlimited) {
       await redis(["SET", `vy:user:${userId}:unlimited`, "active"]);
-      await redis(["LPUSH", "vy:admin:audit", JSON.stringify({ action: "gift_unlimited", user_id: userId, at: new Date().toISOString() })]);
+      await recordAudit({ action: "gift_unlimited", user_id: userId, at: new Date().toISOString() });
       return res.status(200).json({ ok: true, message: "دسترسی نامحدود برای این کاربر فعال شد." });
     }
 
@@ -44,7 +63,7 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: "مقدار هدیه باید عدد صحیح بین ۱ تا ۱۰٬۰۰۰٬۰۰۰ باشد یا گزینه نامحدود انتخاب شود." });
     }
     const balance = Number(await redis(["INCRBY", key, String(amount)]));
-    await redis(["LPUSH", "vy:admin:audit", JSON.stringify({ action: "gift_credits", user_id: userId, amount, at: new Date().toISOString() })]);
+    await recordAudit({ action: "gift_credits", user_id: userId, amount, at: new Date().toISOString() });
     return res.status(200).json({ ok: true, credits_added: amount, credits_balance: balance, message: "اعتبار هدیه با موفقیت اضافه شد." });
   } catch (error) {
     console.error("Admin credit grant error:", error.message);
