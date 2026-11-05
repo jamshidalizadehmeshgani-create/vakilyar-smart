@@ -113,6 +113,11 @@ test("admin can disable a lawyer and the existing session and new questions are 
   assert.equal(adminRes.statusCode, 200);
   assert.equal(adminRes.body.lawyer.access, "disabled");
 
+  const auditRes = responseMock();
+  await adminLawyers({ method: "POST", headers: { authorization: "Bearer test-admin-key" }, body: { action: "audit" } }, auditRes);
+  assert.equal(auditRes.statusCode, 200);
+  assert.ok(auditRes.body.events.some(event => event.action === "lawyer_access_disabled" && event.lawyer_id === lawyerId));
+
   const sessionRes = responseMock();
   const session = await getLawyerSession({ headers: { cookie: "vy_lawyer_session=" + token } }, sessionRes);
   assert.equal(session, null);
