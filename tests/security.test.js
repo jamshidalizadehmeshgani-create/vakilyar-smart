@@ -159,7 +159,7 @@ global.fetch = async (_url, options) => {
   return { ok: true, json: async () => ({ result }) };
 };
 
-const { reserveCredits, refundReservation, commitReservation } = require("../lib/quota");
+const { reserveCredits, refundReservation, commitReservation, redis } = require("../lib/quota");
 const adminLawyers = require("../api/admin/lawyers");
 const grantCredits = require("../api/admin/grant-credits");
 const createQuestion = require("../api/questions/create");
@@ -430,4 +430,23 @@ test("invalid retention configuration is checked before daily quota mutation", (
   assert.ok(validation >= 0 && quotaMutation > validation,
     "retention configuration must be validated before incrementing the daily question counter");
   assert.match(source, /String\(retentionSeconds\)/);
+});
+
+
+test("Redis transport exceptions never expose Authorization credentials", async () => {
+  const originalFetch = global.fetch;
+  const originalToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const secret = "sensitive-test-token";
+  process.env.UPSTASH_REDIS_REST_TOKEN = secret;
+  global.fetch = async () => { throw new Error("invalid Authorization header: " + secret); };
+  try {
+    await assert.rejects(redis(["PING"]), error => {
+      assert.equal(error.message, "Redis transport failed");
+      assert.equal(error.message.includes(secret), false);
+      return true;
+    });
+  } finally {
+    global.fetch = originalFetch;
+    process.env.UPSTASH_REDIS_REST_TOKEN = originalToken;
+  }
 });
