@@ -16,6 +16,13 @@ end
 return 1
 `;
 
+async function pruneQuestionIndex(listKey, staleIds) {
+  const ids = [...new Set((Array.isArray(staleIds) ? staleIds : []).filter(id => typeof id === "string" && /^[a-f0-9]{32}$/.test(id)))];
+  if (!listKey || ids.length === 0) return 0;
+  const results = await Promise.all(ids.map(id => redis(["LREM", listKey, "0", id])));
+  return results.reduce((sum, count) => sum + Number(count || 0), 0);
+}
+
 async function deleteOwnedQuestion({ questionKey, userListKey, lawyerListKey, userId, questionId, removeLawyer }) {
   const result = await redis([
     "EVAL",
@@ -85,16 +92,19 @@ module.exports = async (req, res) => {
     }
 
     const ids = await redis(["LRANGE", "vy:user:" + account.uid + ":questions", "0", "99"]) || [];
-    const questions = await Promise.all(ids.map(async id => {
+    const checked = await Promise.all(ids.map(async id => {
+      if (typeof id !== "string" || !/^[a-f0-9]{32}$/.test(id)) return { id, question: null };
       const raw = await redis(["GET", "vy:question:" + id]);
-      if (!raw) return null;
+      if (!raw) return { id, question: null };
       try {
         const q = JSON.parse(raw);
-        if (!q || q.user_id !== account.uid) return null;
-        return { id: q.id, lawyer_name: q.lawyer_name, question: q.question, status: q.status, created_at: q.created_at, updated_at: q.updated_at || null, replies: Array.isArray(q.replies) ? q.replies.map(a => ({ lawyer_name: a.lawyer_name, message: a.message, created_at: a.created_at })) : [] };
-      } catch { return null; }
+        if (!q || q.user_id !== account.uid) return { id, question: null };
+        return { id, question: { id: q.id, lawyer_name: q.lawyer_name, question: q.question, status: q.status, created_at: q.created_at, updated_at: q.updated_at || null, replies: Array.isArray(q.replies) ? q.replies.map(a => ({ lawyer_name: a.lawyer_name, message: a.message, created_at: a.created_at })) : [] } };
+      } catch { return { id, question: null }; }
     }));
-    return res.status(200).json({ ok: true, questions: questions.filter(Boolean) });
+    const staleIds = checked.filter(item => !item.question).map(item => item.id);
+    await pruneQuestionIndex("vy:user:" + account.uid + ":questions", staleIds);
+    return res.status(200).json({ ok: true, questions: checked.map(item => item.question).filter(Boolean) });
   } catch (e) {
     console.error("User questions error:", e.message);
     return res.status(503).json({ error: "عملیات پرسش‌ها موقتاً ممکن نیست." });
@@ -102,3 +112,4 @@ module.exports = async (req, res) => {
 };
 
 module.exports.deleteOwnedQuestion = deleteOwnedQuestion;
+module.exports.pruneQuestionIndex = pruneQuestionIndex;
