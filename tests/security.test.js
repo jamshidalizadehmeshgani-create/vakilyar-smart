@@ -181,7 +181,7 @@ test("an ambiguous reservation timeout can be safely refunded", async () => {
   throwAfterReserve = true;
   const id = "a".repeat(32);
 
-  await assert.rejects(reserveCredits("test:credits", 10, id), /simulated timeout after Redis applied reservation/);
+  await assert.rejects(reserveCredits("test:credits", 10, id), /Redis transport failed/);
   assert.equal(values.get("test:credits"), "90");
   await refundReservation("test:credits", id);
   await refundReservation("test:credits", id);
@@ -195,7 +195,7 @@ test("an ambiguous refund timeout cannot credit the same reservation twice", asy
   assert.equal(await reserveCredits("test:credits", 10, id), 90);
   throwAfterRefund = true;
 
-  await assert.rejects(refundReservation("test:credits", id), /simulated timeout after Redis applied refund/);
+  await assert.rejects(refundReservation("test:credits", id), /Redis transport failed/);
   await refundReservation("test:credits", id);
 
   assert.equal(values.get("test:credits"), "100");
