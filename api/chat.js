@@ -38,7 +38,8 @@ module.exports = async (req, res) => {
   if (!message) return res.status(400).json({ error: "لطفاً پرسش خود را وارد کنید." });
   if (message.length > 6000) return res.status(413).json({ error: "متن پرسش بیش از حد طولانی است." });
 
-  const apiKey = process.env.AI_API_KEY;
+  // Support the earlier lowercase Vercel variable name as a backward-compatible fallback.
+  const apiKey = process.env.AI_API_KEY || process.env.ai_api_key;
   if (!apiKey) {
     return res.status(503).json({
       configured: false,
