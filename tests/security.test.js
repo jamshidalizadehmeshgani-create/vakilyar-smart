@@ -43,6 +43,18 @@ global.fetch = async (_url, options) => {
     const start = Number(args[1]);
     const end = Number(args[2]);
     result = list.slice(start, end < 0 ? undefined : end + 1);
+  } else if (op === "LREM") {
+    const list = lists.get(args[0]) || [];
+    const count = Number(args[1]);
+    const value = String(args[2]);
+    let removed = 0;
+    const next = [];
+    for (const item of list) {
+      if (item === value && (count === 0 || removed < Math.abs(count))) removed++;
+      else next.push(item);
+    }
+    lists.set(args[0], next);
+    result = removed;
   } else if (op === "EVAL" && String(args[0]).includes("lawyer.password_hash=ARGV[2]")) {
     const key = args[2], id = args[3], passwordHash = args[4], updatedAt = args[5];
     const raw = values.get(key);
@@ -396,4 +408,16 @@ test("admin lawyer endpoint rejects an invalid manager key", async () => {
     body: { action: "list" }
   }, res);
   assert.equal(res.statusCode, 401);
+});
+
+
+test("stale and expired question IDs are pruned from the user index", async () => {
+  const { pruneQuestionIndex } = require("../api/questions/mine");
+  const key = "vy:user:" + "6".repeat(48) + ":questions";
+  const stale = "a".repeat(32);
+  const live = "b".repeat(32);
+  lists.set(key, [stale, live, stale]);
+  assert.equal(await pruneQuestionIndex(key, [stale, stale, "invalid"]), 2);
+  assert.deepEqual(lists.get(key), [live]);
+  assert.equal(await pruneQuestionIndex(key, []), 0);
 });
