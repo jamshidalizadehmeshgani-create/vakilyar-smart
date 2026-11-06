@@ -1,5 +1,36 @@
 const { getAccount, redis } = require("../../lib/quota");
 
+const DELETE_OWNED_QUESTION_SCRIPT = `
+-- DELETE_OWNED_QUESTION
+local raw = redis.call("GET", KEYS[1])
+if not raw then return 0 end
+local ok, question = pcall(cjson.decode, raw)
+if not ok or type(question) ~= "table" or question.user_id ~= ARGV[1] then
+  return -1
+end
+redis.call("DEL", KEYS[1])
+redis.call("LREM", KEYS[2], 0, ARGV[2])
+if ARGV[3] == "1" then
+  redis.call("LREM", KEYS[3], 0, ARGV[2])
+end
+return 1
+`;
+
+async function deleteOwnedQuestion({ questionKey, userListKey, lawyerListKey, userId, questionId, removeLawyer }) {
+  const result = await redis([
+    "EVAL",
+    DELETE_OWNED_QUESTION_SCRIPT,
+    "3",
+    questionKey,
+    userListKey,
+    lawyerListKey || "",
+    userId,
+    questionId,
+    removeLawyer ? "1" : "0"
+  ]);
+  return Number(result);
+}
+
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
@@ -38,11 +69,18 @@ module.exports = async (req, res) => {
         return res.status(403).json({ error: "اجازه حذف این پرسش را ندارید." });
       }
 
-      await redis(["DEL", questionKey]);
-      await redis(["LREM", "vy:user:" + account.uid + ":questions", "0", id]);
-      if (typeof question.lawyer_id === "string" && /^[a-f0-9]{32}$/.test(question.lawyer_id)) {
-        await redis(["LREM", "vy:lawyer:" + question.lawyer_id + ":questions", "0", id]);
-      }
+      const hasLawyer = typeof question.lawyer_id === "string" && /^[a-f0-9]{32}$/.test(question.lawyer_id);
+      const deleted = await deleteOwnedQuestion({
+        questionKey,
+        userListKey: "vy:user:" + account.uid + ":questions",
+        lawyerListKey: hasLawyer ? "vy:lawyer:" + question.lawyer_id + ":questions" : "",
+        userId: account.uid,
+        questionId: id,
+        removeLawyer: hasLawyer
+      });
+      if (deleted === 0) return res.status(404).json({ error: "پرسش یافت نشد یا قبلاً حذف شده است." });
+      if (deleted === -1) return res.status(403).json({ error: "اجازه حذف این پرسش را ندارید." });
+      if (deleted !== 1) throw new Error("Unexpected atomic question deletion result");
       return res.status(200).json({ ok: true, message: "پرسش و پاسخ‌های وابسته از پرونده شما حذف شد." });
     }
 
@@ -62,3 +100,5 @@ module.exports = async (req, res) => {
     return res.status(503).json({ error: "عملیات پرسش‌ها موقتاً ممکن نیست." });
   }
 };
+
+module.exports.deleteOwnedQuestion = deleteOwnedQuestion;
