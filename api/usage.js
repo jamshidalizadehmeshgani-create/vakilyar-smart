@@ -29,6 +29,11 @@ module.exports = async (req, res) => {
       code: missing.length ? "QUOTA_CONFIGURATION_MISSING" : "QUOTA_STORAGE_UNAVAILABLE",
       missing_configuration: missing,
       storage_diagnostic: missing.length ? null : (/^Redis (?:transport|request) failed \\(([A-Z0-9_]{2,40})\\)$/.exec(error.message || "")?.[1] || /^Redis response was invalid \\(HTTP_([0-9]{3})\\)$/.exec(error.message || "")?.[1] && "INVALID_RESPONSE_HTTP_" + /^Redis response was invalid \\(HTTP_([0-9]{3})\\)$/.exec(error.message || "")[1] || (error.message === "Redis command failed" ? "REDIS_COMMAND_FAILED" : error.message === "Redis response was invalid" ? "REDIS_INVALID_RESPONSE" : /^[A-Za-z]+$/.test(error.name || "") ? "UNEXPECTED_" + error.name.toUpperCase() : "REDIS_INTERNAL_ERROR")),
+      storage_detail: missing.length ? null : String(error.message || "Unknown error")
+        .replace(/https?:\\/\\/[^\\s"'\x60]+/gi, "[url]")
+        .replace(/Bearer\\s+[^\\s]+/gi, "Bearer [redacted]")
+        .replace(/[A-Za-z0-9_-]{32,}/g, "[redacted]")
+        .slice(0, 120),
       error: missing.length
         ? "تنظیمات لازم برای سهمیه‌بندی در محیط استقرار کامل نیست."
         : "پایگاه داده سهمیه در دسترس نیست؛ اتصال Upstash را بررسی کنید."
