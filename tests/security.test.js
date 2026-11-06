@@ -43,6 +43,36 @@ global.fetch = async (_url, options) => {
     const start = Number(args[1]);
     const end = Number(args[2]);
     result = list.slice(start, end < 0 ? undefined : end + 1);
+  } else if (op === "EVAL" && String(args[0]).includes("lawyer.password_hash=ARGV[2]")) {
+    const key = args[2], id = args[3], passwordHash = args[4], updatedAt = args[5];
+    const raw = values.get(key);
+    if (!raw) result = -1;
+    else {
+      let lawyer;
+      try { lawyer = JSON.parse(raw); } catch { lawyer = null; }
+      if (!lawyer || lawyer.id !== id) result = -2;
+      else {
+        lawyer.password_hash = passwordHash;
+        lawyer.password_updated_at = updatedAt;
+        values.set(key, JSON.stringify(lawyer));
+        result = 1;
+      }
+    }
+  } else if (op === "EVAL" && String(args[0]).includes("lawyer.access=ARGV[2]")) {
+    const key = args[2], id = args[3], access = args[4], updatedAt = args[5];
+    const raw = values.get(key);
+    if (!raw) result = -1;
+    else {
+      let lawyer;
+      try { lawyer = JSON.parse(raw); } catch { lawyer = null; }
+      if (!lawyer || lawyer.id !== id) result = -2;
+      else {
+        lawyer.access = access;
+        lawyer.access_updated_at = updatedAt;
+        values.set(key, JSON.stringify(lawyer));
+        result = 1;
+      }
+    }
   } else if (op === "EVAL" && String(args[0]).includes("DELETE_OWNED_QUESTION")) {
     const questionKey = args[2], userListKey = args[3], lawyerListKey = args[4];
     const userId = args[5], questionId = args[6], removeLawyer = args[7] === "1";
@@ -210,6 +240,24 @@ test("admin can disable a lawyer and the existing session and new questions are 
     body: { consent: true, lawyer_id: lawyerId, question: "پرسش آزمایشی برای وکیل" }
   }, questionRes);
   assert.equal(questionRes.statusCode, 403);
+});
+
+test("admin password reset atomically preserves concurrent lawyer profile fields", async () => {
+  const lawyerId = "2".repeat(32);
+  values.set("vy:lawyer:" + lawyerId, JSON.stringify({
+    id: lawyerId, name: "وکیل آزمایشی", email: "lawyer2@example.test", access: "active"
+  }));
+  const res = responseMock();
+  await adminLawyers({
+    method: "POST",
+    headers: { authorization: "Bearer test-admin-key" },
+    body: { action: "set_password", lawyer_id: lawyerId, password: "a-strong-test-password" }
+  }, res);
+  assert.equal(res.statusCode, 200);
+  const saved = JSON.parse(values.get("vy:lawyer:" + lawyerId));
+  assert.equal(saved.access, "active");
+  assert.match(saved.password_hash, /^[a-f0-9]{32}:[a-f0-9]{128}$/);
+  assert.ok(saved.password_updated_at);
 });
 
 test("configuration diagnostics expose readiness flags without secret values", async () => {
