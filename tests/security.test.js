@@ -42,6 +42,11 @@ global.fetch = async (_url, options) => {
     const start = Number(args[1]);
     const end = Number(args[2]);
     result = list.slice(start, end < 0 ? undefined : end + 1);
+  } else if (op === "EVAL" && String(args[0]).includes("INCR") && String(args[0]).includes("EXPIRE")) {
+    const key = args[2];
+    const count = Number(values.get(key) || 0) + 1;
+    values.set(key, String(count));
+    result = count;
   } else if (op === "EVAL" && String(args[0]).includes("DECRBY")) {
     const balanceKey = args[2], reservationKey = args[3], commitKey = args[4], refundKey = args[5];
     const cost = Number(args[6]);
@@ -244,6 +249,14 @@ test("unlimited credits do not bypass the foreign-law Pro gate", async () => {
   }
   assert.equal(res.statusCode, 403);
   assert.equal(res.body.code, "PRO_REQUIRED");
+});
+
+test("daily lawyer-question counter increments through one atomic Redis operation", async () => {
+  const { incrementDailyQuestionCount } = require("../api/questions/create");
+  const key = "vy:user:" + "9".repeat(48) + ":question-limit";
+  assert.equal(await incrementDailyQuestionCount(key), 1);
+  assert.equal(await incrementDailyQuestionCount(key), 2);
+  assert.equal(values.get(key), "2");
 });
 
 test("admin lawyer endpoint rejects an invalid manager key", async () => {
