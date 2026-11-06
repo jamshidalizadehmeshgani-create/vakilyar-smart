@@ -1,6 +1,14 @@
 const crypto = require("crypto");
 const { redis, COOKIE, SESSION_SECONDS, cookieHeader, hashToken } = require("../../lib/lawyer-auth");
 
+async function incrementLoginAttempts(key, ttlSeconds = 900) {
+  if (typeof key !== "string" || !key || !Number.isSafeInteger(ttlSeconds) || ttlSeconds < 1) {
+    throw new Error("Invalid login rate-limit configuration");
+  }
+  const script = "local count=redis.call('INCR',KEYS[1]); if count==1 then redis.call('EXPIRE',KEYS[1],ARGV[1]); end; return count";
+  return Number(await redis(["EVAL", script, "1", key, String(ttlSeconds)]));
+}
+
 function verifyPassword(password, stored) {
   if (typeof stored !== "string" || !/^[a-f0-9]{32}:[a-f0-9]{128}$/.test(stored)) return Promise.resolve(false);
   const [salt, expectedHex] = stored.split(":");
@@ -27,16 +35,14 @@ module.exports = async (req, res) => {
   try {
     const rateId = crypto.createHash("sha256").update(email).digest("hex");
     const rateKey = "vy:lawyer:login-attempts:" + rateId;
-    const attempts = Number(await redis(["INCR", rateKey]));
-    if (attempts === 1) await redis(["EXPIRE", rateKey, "900"]);
+    const attempts = await incrementLoginAttempts(rateKey);
     if (attempts > 8) return res.status(429).json({ error: "تلاش‌های ورود بیش از حد است؛ ۱۵ دقیقه بعد دوباره تلاش کنید." });
     const secret = process.env.APP_SECRET;
     const ip = String(req.headers["x-real-ip"] || req.headers["x-forwarded-for"] || "").split(",")[0].trim();
     if (secret && ip && ip.length <= 100) {
       const ipId = crypto.createHmac("sha256", secret).update(ip).digest("hex");
       const ipKey = "vy:lawyer:login-ip-attempts:" + ipId;
-      const ipAttempts = Number(await redis(["INCR", ipKey]));
-      if (ipAttempts === 1) await redis(["EXPIRE", ipKey, "900"]);
+      const ipAttempts = await incrementLoginAttempts(ipKey);
       if (ipAttempts > 30) return res.status(429).json({ error: "تلاش‌های ورود از این اتصال بیش از حد است؛ ۱۵ دقیقه بعد دوباره تلاش کنید." });
     }
     const emailKey = "vy:lawyer:email:" + rateId;
@@ -56,3 +62,5 @@ module.exports = async (req, res) => {
     return res.status(503).json({ error: "سامانه ورود موقتاً در دسترس نیست." });
   }
 };
+
+module.exports.incrementLoginAttempts = incrementLoginAttempts;
