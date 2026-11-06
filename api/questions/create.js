@@ -1,5 +1,12 @@
 const crypto = require("crypto");
 const { getAccount, redis } = require("../../lib/quota");
+async function incrementDailyQuestionCount(key) {
+  // Increment and set the first-request TTL atomically to avoid a permanent
+  // counter if the function stops between INCR and EXPIRE.
+  const script = "local count=redis.call('INCR',KEYS[1]); if count==1 then redis.call('EXPIRE',KEYS[1],ARGV[1]); end; return count";
+  return Number(await redis(["EVAL", script, "1", key, "86400"]));
+}
+
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
@@ -25,8 +32,7 @@ module.exports = async (req, res) => {
       return res.status(403).json({ error: "این وکیل در حال حاضر پرسش جدید نمی‌پذیرد." });
     const account = await getAccount(req, res);
     const limitKey = "vy:user:" + account.uid + ":question-limit";
-    const count = Number(await redis(["INCR", limitKey]));
-    if (count === 1) await redis(["EXPIRE", limitKey, "86400"]);
+    const count = await incrementDailyQuestionCount(limitKey);
     if (count > 5) return res.status(429).json({ error: "سقف ارسال پرسش روزانه (۵ پرسش) رسیده است." });
     const id = crypto.randomBytes(16).toString("hex");
     const now = new Date().toISOString();
@@ -39,3 +45,5 @@ module.exports = async (req, res) => {
     return res.status(503).json({ error: "ارسال پرسش موقتاً ممکن نیست." });
   }
 };
+
+module.exports.incrementDailyQuestionCount = incrementDailyQuestionCount;
