@@ -101,6 +101,7 @@ const { reserveCredits, refundReservation, commitReservation } = require("../lib
 const adminLawyers = require("../api/admin/lawyers");
 const grantCredits = require("../api/admin/grant-credits");
 const createQuestion = require("../api/questions/create");
+const loginLawyer = require("../api/lawyer/login");
 const { getLawyerSession, hashToken } = require("../lib/lawyer-auth");
 
 function responseMock() {
@@ -257,6 +258,19 @@ test("daily lawyer-question counter increments through one atomic Redis operatio
   assert.equal(await incrementDailyQuestionCount(key), 1);
   assert.equal(await incrementDailyQuestionCount(key), 2);
   assert.equal(values.get(key), "2");
+});
+
+test("lawyer login rate limits increment atomically with a bounded TTL", async () => {
+  const { incrementLoginAttempts } = loginLawyer;
+  const emailKey = "vy:lawyer:login-attempts:" + "a".repeat(64);
+  const ipKey = "vy:lawyer:login-ip-attempts:" + "b".repeat(64);
+  assert.equal(await incrementLoginAttempts(emailKey, 900), 1);
+  assert.equal(await incrementLoginAttempts(emailKey, 900), 2);
+  assert.equal(await incrementLoginAttempts(ipKey, 900), 1);
+  assert.equal(values.get(emailKey), "2");
+  assert.equal(values.get(ipKey), "1");
+  await assert.rejects(incrementLoginAttempts("", 900), /Invalid login rate-limit configuration/);
+  await assert.rejects(incrementLoginAttempts("valid:key", 0), /Invalid login rate-limit configuration/);
 });
 
 test("admin lawyer endpoint rejects an invalid manager key", async () => {
