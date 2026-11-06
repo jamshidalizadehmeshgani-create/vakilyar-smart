@@ -254,6 +254,16 @@ test("unlimited credits do not bypass the foreign-law Pro gate", async () => {
   assert.equal(res.body.code, "PRO_REQUIRED");
 });
 
+test("lawyer question retention uses a validated default and preserves expiry on replies", async () => {
+  const { questionRetentionSeconds } = require("../api/questions/create");
+  assert.equal(questionRetentionSeconds(undefined), 90 * 86400);
+  assert.equal(questionRetentionSeconds("30"), 30 * 86400);
+  assert.throws(() => questionRetentionSeconds("0"), /QUESTION_RETENTION_DAYS/);
+  assert.throws(() => questionRetentionSeconds("3651"), /QUESTION_RETENTION_DAYS/);
+  const replySource = require("fs").readFileSync(require.resolve("../api/lawyer/reply"), "utf8");
+  assert.match(replySource, /'KEEPTTL'/);
+});
+
 test("daily lawyer-question counter increments through one atomic Redis operation", async () => {
   const { incrementDailyQuestionCount } = require("../api/questions/create");
   const key = "vy:user:" + "9".repeat(48) + ":question-limit";
