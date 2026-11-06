@@ -28,7 +28,7 @@ module.exports = async (req, res) => {
       ok: false,
       code: missing.length ? "QUOTA_CONFIGURATION_MISSING" : "QUOTA_STORAGE_UNAVAILABLE",
       missing_configuration: missing,
-      storage_diagnostic: missing.length ? null : (/^Redis transport failed(?: \\(([A-Z0-9_]{2,40})\\))?$/.exec(error.message || "")?.[1] || "REDIS_REQUEST_FAILED"),
+      storage_diagnostic: missing.length ? null : (/^Redis (?:transport|request) failed(?: \\(([A-Z0-9_]{2,40})\\))?$/.exec(error.message || "")?.[1] || (error.message === "Redis command failed" ? "REDIS_COMMAND_FAILED" : "REDIS_REQUEST_FAILED")),
       error: missing.length
         ? "تنظیمات لازم برای سهمیه‌بندی در محیط استقرار کامل نیست."
         : "پایگاه داده سهمیه در دسترس نیست؛ اتصال Upstash را بررسی کنید."
