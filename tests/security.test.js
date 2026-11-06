@@ -8,6 +8,7 @@ process.env.ADMIN_API_KEY = "test-admin-key";
 
 const values = new Map();
 const lists = new Map();
+const expirations = new Map();
 let throwAfterReserve = false;
 let throwAfterRefund = false;
 
@@ -46,6 +47,7 @@ global.fetch = async (_url, options) => {
     const key = args[2];
     const count = Number(values.get(key) || 0) + 1;
     values.set(key, String(count));
+    if (count === 1) expirations.set(key, Number(args[3]));
     result = count;
   } else if (op === "EVAL" && String(args[0]).includes("DECRBY")) {
     const balanceKey = args[2], reservationKey = args[3], commitKey = args[4], refundKey = args[5];
@@ -269,6 +271,8 @@ test("lawyer login rate limits increment atomically with a bounded TTL", async (
   assert.equal(await incrementLoginAttempts(ipKey, 900), 1);
   assert.equal(values.get(emailKey), "2");
   assert.equal(values.get(ipKey), "1");
+  assert.equal(expirations.get(emailKey), 900);
+  assert.equal(expirations.get(ipKey), 900);
   await assert.rejects(incrementLoginAttempts("", 900), /Invalid login rate-limit configuration/);
   await assert.rejects(incrementLoginAttempts("valid:key", 0), /Invalid login rate-limit configuration/);
 });
