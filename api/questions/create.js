@@ -1,5 +1,13 @@
 const crypto = require("crypto");
 const { getAccount, redis } = require("../../lib/quota");
+function questionRetentionSeconds(days = process.env.QUESTION_RETENTION_DAYS) {
+  const parsed = days === undefined || days === "" ? 90 : Number(days);
+  if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > 3650) {
+    throw new Error("QUESTION_RETENTION_DAYS must be an integer between 1 and 3650");
+  }
+  return parsed * 86400;
+}
+
 async function incrementDailyQuestionCount(key) {
   // Increment and set the first-request TTL atomically to avoid a permanent
   // counter if the function stops between INCR and EXPIRE.
@@ -37,8 +45,8 @@ module.exports = async (req, res) => {
     const id = crypto.randomBytes(16).toString("hex");
     const now = new Date().toISOString();
     const item = { id, lawyer_id: lawyerId, lawyer_name: lawyer.name, user_id: account.uid, question, status: "open", created_at: now, replies: [] };
-    const script = "redis.call('SET',KEYS[1],ARGV[1]); redis.call('LPUSH',KEYS[2],ARGV[2]); redis.call('LPUSH',KEYS[3],ARGV[2]); redis.call('LTRIM',KEYS[2],0,499); redis.call('LTRIM',KEYS[3],0,499); return 1";
-    await redis(["EVAL", script, "3", "vy:question:" + id, "vy:lawyer:" + lawyerId + ":questions", "vy:user:" + account.uid + ":questions", JSON.stringify(item), id]);
+    const script = "redis.call('SET',KEYS[1],ARGV[1],'EX',ARGV[3]); redis.call('LPUSH',KEYS[2],ARGV[2]); redis.call('LPUSH',KEYS[3],ARGV[2]); redis.call('LTRIM',KEYS[2],0,499); redis.call('LTRIM',KEYS[3],0,499); return 1";
+    await redis(["EVAL", script, "3", "vy:question:" + id, "vy:lawyer:" + lawyerId + ":questions", "vy:user:" + account.uid + ":questions", JSON.stringify(item), id, String(questionRetentionSeconds() )]);
     return res.status(201).json({ ok: true, question_id: id, message: "پرسش برای وکیل منتخب ارسال شد." });
   } catch (e) {
     console.error("Question create error:", e.message);
@@ -47,3 +55,4 @@ module.exports = async (req, res) => {
 };
 
 module.exports.incrementDailyQuestionCount = incrementDailyQuestionCount;
+module.exports.questionRetentionSeconds = questionRetentionSeconds;
