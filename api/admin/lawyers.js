@@ -98,16 +98,14 @@ module.exports = async (req, res) => {
         return res.status(400).json({ error: "شناسه معتبر و رمز حداقل ۱۲ کاراکتری لازم است." });
       }
       const key = `vy:lawyer:${id}`;
-      const raw = await redis(["GET", key]);
-      if (!raw) return res.status(404).json({ error: "حساب وکیل یافت نشد." });
-      let lawyer;
-      try { lawyer = JSON.parse(raw); } catch { return res.status(500).json({ error: "اطلاعات حساب وکیل مخدوش است." }); }
-      if (!lawyer || lawyer.id !== id) return res.status(500).json({ error: "ساختار حساب معتبر نیست." });
       const salt = crypto.randomBytes(16).toString("hex");
       const hash = await new Promise((resolve, reject) => crypto.scrypt(password, salt, 64, (err, keyBytes) => err ? reject(err) : resolve(keyBytes.toString("hex"))));
-      lawyer.password_hash = salt + ":" + hash;
-      lawyer.password_updated_at = new Date().toISOString();
-      await redis(["SET", key, JSON.stringify(lawyer)]);
+      const passwordHash = salt + ":" + hash;
+      const updatedAt = new Date().toISOString();
+      const updatePasswordScript = "local raw=redis.call('GET',KEYS[1]); if not raw then return -1 end; local ok,lawyer=pcall(cjson.decode,raw); if not ok or type(lawyer)~='table' or lawyer.id~=ARGV[1] then return -2 end; lawyer.password_hash=ARGV[2]; lawyer.password_updated_at=ARGV[3]; redis.call('SET',KEYS[1],cjson.encode(lawyer)); return 1";
+      const updated = Number(await redis(["EVAL", updatePasswordScript, "1", key, id, passwordHash, updatedAt]));
+      if (updated === -1) return res.status(404).json({ error: "حساب وکیل یافت نشد." });
+      if (updated !== 1) return res.status(500).json({ error: "ساختار حساب معتبر نیست؛ رمز تغییر نکرد." });
       const audited = await audit({ action: "lawyer_password_set", lawyer_id: id, at: new Date().toISOString() });
       return res.status(200).json({ ok: true, audit_warning: !audited, message: "رمز ورود به‌صورت امن ثبت شد. آن را فقط از مسیر امن به وکیل تحویل دهید." });
     }
@@ -116,17 +114,15 @@ module.exports = async (req, res) => {
       const enabled = req.body?.enabled;
       if (!/^[a-f0-9]{32}$/.test(id) || typeof enabled !== "boolean") return res.status(400).json({ error: "شناسه و وضعیت دسترسی معتبر نیست." });
       const key = `vy:lawyer:${id}`;
-      const raw = await redis(["GET", key]);
-      if (!raw) return res.status(404).json({ error: "حساب وکیل یافت نشد." });
-      let lawyer;
-      try { lawyer = JSON.parse(raw); } catch {
-        return res.status(500).json({ error: "اطلاعات این حساب وکیل در پایگاه داده مخدوش است؛ وضعیت تغییر نکرد." });
-      }
-      if (!lawyer || lawyer.id !== id) return res.status(500).json({ error: "ساختار اطلاعات حساب وکیل معتبر نیست." });
-      lawyer.access = enabled ? "active" : "disabled";
-      lawyer.access_updated_at = new Date().toISOString();
-      await redis(["SET", key, JSON.stringify(lawyer)]);
-      const audited = await audit({ action: enabled ? "lawyer_access_enabled" : "lawyer_access_disabled", lawyer_id: id, at: new Date().toISOString() });
+      const updatedAt = new Date().toISOString();
+      const access = enabled ? "active" : "disabled";
+      const updateAccessScript = "local raw=redis.call('GET',KEYS[1]); if not raw then return -1 end; local ok,lawyer=pcall(cjson.decode,raw); if not ok or type(lawyer)~='table' or lawyer.id~=ARGV[1] then return -2 end; lawyer.access=ARGV[2]; lawyer.access_updated_at=ARGV[3]; redis.call('SET',KEYS[1],cjson.encode(lawyer)); return 1";
+      const updated = Number(await redis(["EVAL", updateAccessScript, "1", key, id, access, updatedAt]));
+      if (updated === -1) return res.status(404).json({ error: "حساب وکیل یافت نشد." });
+      if (updated !== 1) return res.status(500).json({ error: "ساختار اطلاعات حساب وکیل معتبر نیست؛ وضعیت تغییر نکرد." });
+      const updatedRaw = await redis(["GET", key]);
+      const lawyer = JSON.parse(updatedRaw);
+      const audited = await audit({ action: enabled ? "lawyer_access_enabled" : "lawyer_access_disabled", lawyer_id: id, at: updatedAt });
       const { password_hash, ...safeLawyer } = lawyer;
       return res.status(200).json({ ok: true, lawyer: safeLawyer, audit_warning: !audited, message: enabled ? "دسترسی وکیل فعال شد." : "دسترسی پاسخ‌گویی وکیل قطع شد." });
     }
