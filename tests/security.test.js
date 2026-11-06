@@ -421,3 +421,13 @@ test("stale and expired question IDs are pruned from the user index", async () =
   assert.deepEqual(lists.get(key), [live]);
   assert.equal(await pruneQuestionIndex(key, []), 0);
 });
+
+
+test("invalid retention configuration is checked before daily quota mutation", () => {
+  const source = require("fs").readFileSync(require.resolve("../api/questions/create"), "utf8");
+  const validation = source.indexOf("const retentionSeconds = questionRetentionSeconds();");
+  const quotaMutation = source.indexOf("const count = await incrementDailyQuestionCount(limitKey);");
+  assert.ok(validation >= 0 && quotaMutation > validation,
+    "retention configuration must be validated before incrementing the daily question counter");
+  assert.match(source, /String\(retentionSeconds\)/);
+});
