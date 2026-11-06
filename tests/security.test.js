@@ -43,6 +43,24 @@ global.fetch = async (_url, options) => {
     const start = Number(args[1]);
     const end = Number(args[2]);
     result = list.slice(start, end < 0 ? undefined : end + 1);
+  } else if (op === "EVAL" && String(args[0]).includes("DELETE_OWNED_QUESTION")) {
+    const questionKey = args[2], userListKey = args[3], lawyerListKey = args[4];
+    const userId = args[5], questionId = args[6], removeLawyer = args[7] === "1";
+    const raw = values.get(questionKey);
+    if (!raw) result = 0;
+    else {
+      let question;
+      try { question = JSON.parse(raw); } catch { question = null; }
+      if (!question || question.user_id !== userId) result = -1;
+      else {
+        values.delete(questionKey);
+        for (const key of [userListKey, ...(removeLawyer ? [lawyerListKey] : [])]) {
+          const list = lists.get(key) || [];
+          lists.set(key, list.filter(item => item !== questionId));
+        }
+        result = 1;
+      }
+    }
   } else if (op === "EVAL" && String(args[0]).includes("INCR") && String(args[0]).includes("EXPIRE")) {
     const key = args[2];
     const count = Number(values.get(key) || 0) + 1;
@@ -285,6 +303,41 @@ test("lawyer login rate limits increment atomically with a bounded TTL", async (
   assert.equal(expirations.get(ipKey), 900);
   await assert.rejects(incrementLoginAttempts("", 900), /Invalid login rate-limit configuration/);
   await assert.rejects(incrementLoginAttempts("valid:key", 0), /Invalid login rate-limit configuration/);
+});
+
+
+test("question deletion atomically verifies ownership and removes both indexes", async () => {
+  const { deleteOwnedQuestion } = require("../api/questions/mine");
+  const questionId = "7".repeat(32);
+  const userId = "8".repeat(48);
+  const lawyerId = "9".repeat(32);
+  const questionKey = "vy:question:" + questionId;
+  const userListKey = "vy:user:" + userId + ":questions";
+  const lawyerListKey = "vy:lawyer:" + lawyerId + ":questions";
+
+  values.set(questionKey, JSON.stringify({ id: questionId, user_id: userId, lawyer_id: lawyerId }));
+  lists.set(userListKey, [questionId, "a".repeat(32)]);
+  lists.set(lawyerListKey, [questionId, "b".repeat(32)]);
+
+  assert.equal(await deleteOwnedQuestion({
+    questionKey, userListKey, lawyerListKey, userId: "0".repeat(48),
+    questionId, removeLawyer: true
+  }), -1);
+  assert.equal(values.has(questionKey), true);
+  assert.deepEqual(lists.get(userListKey), [questionId, "a".repeat(32)]);
+
+  assert.equal(await deleteOwnedQuestion({
+    questionKey, userListKey, lawyerListKey, userId,
+    questionId, removeLawyer: true
+  }), 1);
+  assert.equal(values.has(questionKey), false);
+  assert.deepEqual(lists.get(userListKey), ["a".repeat(32)]);
+  assert.deepEqual(lists.get(lawyerListKey), ["b".repeat(32)]);
+
+  assert.equal(await deleteOwnedQuestion({
+    questionKey, userListKey, lawyerListKey, userId,
+    questionId, removeLawyer: true
+  }), 0);
 });
 
 test("admin lawyer endpoint rejects an invalid manager key", async () => {
