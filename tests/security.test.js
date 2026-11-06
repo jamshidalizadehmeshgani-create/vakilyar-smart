@@ -438,10 +438,14 @@ test("Redis transport exceptions never expose Authorization credentials", async 
   const originalToken = process.env.UPSTASH_REDIS_REST_TOKEN;
   const secret = "sensitive-test-token";
   process.env.UPSTASH_REDIS_REST_TOKEN = secret;
-  global.fetch = async () => { throw new Error("invalid Authorization header: " + secret); };
+  global.fetch = async () => {
+    const error = new TypeError("request failed: " + secret);
+    error.cause = Object.assign(new Error("socket failure: " + secret), { code: "ECONNRESET" });
+    throw error;
+  };
   try {
     await assert.rejects(redis(["PING"]), error => {
-      assert.equal(error.message, "Redis transport failed");
+      assert.equal(error.message, "Redis transport failed (ECONNRESET)");
       assert.equal(error.message.includes(secret), false);
       return true;
     });
