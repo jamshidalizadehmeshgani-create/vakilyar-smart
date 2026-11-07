@@ -462,6 +462,19 @@ test("lawyer logout rejects a cross-origin request without changing the session"
   assert.equal(values.has(sessionKey), true);
 });
 
+test("lawyer logout rejects cross-site fetch metadata even with a matching Origin", async () => {
+  const token="7".repeat(64), lawyerId="8".repeat(32);
+  const sessionKey="vy:lawyer:session:"+hashToken(token);
+  values.set(sessionKey,lawyerId+":0");
+  const logout=require("../api/lawyer/logout"),res=responseMock();
+  await logout({method:"POST",headers:{
+    host:"app.example.test",origin:"https://app.example.test",
+    "sec-fetch-site":"cross-site",cookie:"vy_lawyer_session="+token
+  }},res);
+  assert.equal(res.statusCode,403);
+  assert.equal(values.has(sessionKey),true);
+});
+
 test("admin can disable a lawyer and the existing session and new questions are blocked", async () => {
   const lawyerId = "c".repeat(32);
   const token = "d".repeat(64);
@@ -808,6 +821,10 @@ test("lawyer replies are idempotent and reject request IDs reused with different
   values.set("vy:question:"+questionId,JSON.stringify({id:questionId,lawyer_id:lawyerId,question:"پرسش آزمایشی",replies:[]}));
   const headers={host:"app.example.test",origin:"https://app.example.test","sec-fetch-site":"same-origin","x-real-ip":"192.0.2.141",cookie:"vy_lawyer_session="+token};
   const requestId="f".repeat(32);
+  const crossSite=responseMock();
+  await replyHandler({method:"POST",headers:{...headers,"sec-fetch-site":"cross-site"},body:{question_id:questionId,message:"پاسخ آزمایشی",request_id:requestId}},crossSite);
+  assert.equal(crossSite.statusCode,403);
+  assert.equal(JSON.parse(values.get("vy:question:"+questionId)).replies.length,0);
   const call=async message=>{
     const res=responseMock();
     await replyHandler({method:"POST",headers,body:{question_id:questionId,message,request_id:requestId}},res);
