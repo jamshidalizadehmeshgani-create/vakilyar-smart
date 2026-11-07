@@ -744,6 +744,27 @@ test("lawyer question submissions have an independent hashed IP limit", async ()
   }
 });
 
+test("lawyer login trusts only a valid platform IP and ignores spoofable forwarding headers", async () => {
+  const { trustedClientIp } = loginLawyer;
+  assert.equal(trustedClientIp({ headers: { "x-real-ip": "203.0.113.10" } }), "203.0.113.10");
+  assert.equal(trustedClientIp({ headers: { "x-real-ip": "not-an-ip", "x-forwarded-for": "203.0.113.10" } }), "");
+  assert.equal(trustedClientIp({ headers: { "x-forwarded-for": "203.0.113.10" } }), "");
+
+  const res = responseMock();
+  await loginLawyer({
+    method: "POST",
+    headers: {
+      host: "app.example.test",
+      origin: "https://app.example.test",
+      "sec-fetch-site": "same-origin",
+      "x-forwarded-for": "203.0.113.10"
+    },
+    body: { email: "not-a-real-account@example.test", password: "test-password" }
+  }, res);
+  assert.equal(res.statusCode, 503);
+  assert.equal(res.body.code, "LOGIN_RATE_LIMIT_UNAVAILABLE");
+});
+
 test("lawyer login rate limits increment atomically with a bounded TTL", async () => {
   const { incrementLoginAttempts } = loginLawyer;
   const emailKey = "vy:lawyer:login-attempts:" + "a".repeat(64);
