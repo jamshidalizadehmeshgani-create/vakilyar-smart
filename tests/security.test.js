@@ -83,7 +83,7 @@ global.fetch = async (_url, options) => {
         lawyer.password_hash = passwordHash;
         lawyer.password_updated_at = updatedAt;
         values.set(key, JSON.stringify(lawyer));
-        result = sessions.length;
+        result = 1;
       }
     }
   } else if (op === "EVAL" && String(args[0]).includes("lawyer.access=ARGV[2]")) {
