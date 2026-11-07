@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const { redis } = require("../../lib/quota");
+const { authorizeAdmin } = require("../../lib/admin-auth");
 
 async function recordAudit(event) {
   try {
@@ -12,11 +13,6 @@ async function recordAudit(event) {
   }
 }
 
-function safeEqual(a, b) {
-  const x = Buffer.from(String(a || ""));
-  const y = Buffer.from(String(b || ""));
-  return x.length === y.length && x.length > 0 && crypto.timingSafeEqual(x, y);
-}
 
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -26,10 +22,7 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: "فقط درخواست POST پذیرفته می‌شود." });
   }
 
-  const adminKey = process.env.ADMIN_API_KEY;
-  if (!adminKey || !safeEqual(req.headers.authorization?.replace(/^Bearer\s+/i, ""), adminKey)) {
-    return res.status(401).json({ error: "دسترسی مدیر تأیید نشد." });
-  }
+  if (!await authorizeAdmin(req, res)) return;
 
   const userId = typeof req.body?.user_id === "string" ? req.body.user_id.trim() : "";
   if (!/^[a-f0-9]{48}$/.test(userId)) {
