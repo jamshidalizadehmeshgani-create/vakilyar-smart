@@ -35,7 +35,7 @@ test("handles non-string provider output safely", () => {
 
 test("preserves following sections even when their heading is not in the known list", () => {
   const result = sanitizeLegalReply(
-    "## مبنای حقوقی\\n- ماده ۲۳۱ قانون نمونه\\n## نکات تکمیلی\\nاین توضیح عمومی باید باقی بماند."
+    "## مبنای حقوقی\n- ماده ۲۳۱ قانون نمونه\n## نکات تکمیلی\nاین توضیح عمومی باید باقی بماند."
   );
   assert.doesNotMatch(result, /ماده ۲۳۱|قانون نمونه/);
   assert.match(result, /نکات تکمیلی/);
