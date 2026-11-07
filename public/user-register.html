@@ -14,11 +14,13 @@ h1{margin-top:0}p{color:#596579}label{display:block;margin:12px 0 5px;font-weigh
 <label style="font-weight:normal"><input id="show" type="checkbox" style="width:auto"> نمایش گذرواژه</label>
 <button id="submit">ایجاد حساب و ارسال پیوند تأیید</button></form>
 <p id="msg" role="status" aria-live="polite"></p>
+<button id="resend" type="button" style="background:#c9a45c;color:#14233f">ارسال دوباره پیوند تأیید</button>
 <p class="small">گذرواژه به ایمیل ارسال نمی‌شود. پیوند تأیید ۲۴ ساعت اعتبار دارد.</p>
 <p class="links"><a href="/user-login.html">قبلاً حساب ساخته‌اید؟ ورود</a> · <a href="/ask-lawyer.html">بازگشت به صفحه پرسش</a></p></main>
 <script>
 const form=document.getElementById("register"),msg=document.getElementById("msg"),btn=document.getElementById("submit");
 document.getElementById("show").onchange=e=>document.getElementById("password").type=e.target.checked?"text":"password";
+document.getElementById("resend").onclick=async()=>{const email=form.email.value.trim();if(!email){msg.textContent="ابتدا ایمیل ثبت‌نام را وارد کنید.";return;}const b=document.getElementById("resend");b.disabled=true;try{const r=await fetch("/api/users/resend-verification",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email})});const d=await r.json();msg.textContent=d.message||d.error||"نتیجه نامشخص";}catch{msg.textContent="ارسال مجدد موقتاً ممکن نیست."}finally{b.disabled=false;}};
 form.onsubmit=async e=>{e.preventDefault();btn.disabled=true;msg.textContent="در حال ثبت اطلاعات...";
 try{const body={first_name:form.first_name.value.trim(),last_name:form.last_name.value.trim(),email:form.email.value.trim(),password:form.password.value};
 const r=await fetch("/api/users/register",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify(body)});
