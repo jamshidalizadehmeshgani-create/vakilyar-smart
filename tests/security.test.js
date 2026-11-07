@@ -1269,6 +1269,9 @@ test("chat commits reserved credits only after a valid AI response", async () =>
 
 test("chat refunds reserved credits when the AI provider rejects the request", async () => {
   const originalFetch = global.fetch;
+  const originalConsoleError = console.error;
+  const capturedLogs = [];
+  console.error = (...args) => capturedLogs.push(args.join(" "));
   const previous = {
     secret: process.env.APP_SECRET, key: process.env.AI_API_KEY,
     url: process.env.AI_API_URL, model: process.env.AI_MODEL
@@ -1300,12 +1303,15 @@ test("chat refunds reserved credits when the AI provider rejects the request", a
       body: { consent: true, message: "یک پرسش حقوقی کوتاه درباره مسئولیت مدنی" }
     }, res);
     assert.equal(res.statusCode, 502);
+    assert.equal(capturedLogs.some(line => line.includes("simulated provider outage")), false);
+    assert.equal(capturedLogs.some(line => line.includes("AI provider returned non-success status: 503")), true);
     assert.equal(values.get("vy:user:" + uid + ":credits"), "1000");
     const refundKeys = [...values.keys()].filter(key => key.startsWith("vy:refund:"));
     assert.ok(refundKeys.length > 0, "provider failure must record an idempotent refund");
     assert.ok(refundKeys.every(key => !values.has(key.replace("vy:refund:", "vy:reservation:"))));
   } finally {
     global.fetch = originalFetch;
+    console.error = originalConsoleError;
     delete require.cache[require.resolve("../api/chat")];
     for (const [key, value] of Object.entries(previous)) {
       const envKey = {secret:"APP_SECRET",key:"AI_API_KEY",url:"AI_API_URL",model:"AI_MODEL"}[key];
