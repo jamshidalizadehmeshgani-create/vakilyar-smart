@@ -122,7 +122,7 @@ module.exports = async (req, res) => {
     await pruneQuestionIndex("vy:user:" + account.uid + ":questions", staleIds);
     return res.status(200).json({ ok: true, questions: checked.map(item => item.question).filter(Boolean) });
   } catch (e) {
-    console.error("User questions error:", e.message);
+    console.error("User questions error:");
     return res.status(503).json({ error: "عملیات پرسش‌ها موقتاً ممکن نیست." });
   }
 };
