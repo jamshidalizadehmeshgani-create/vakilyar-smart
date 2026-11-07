@@ -927,7 +927,7 @@ test("user-to-lawyer question lifecycle works across create, inbox, reply, histo
   const foreignSignature = crypto.createHmac("sha256", process.env.APP_SECRET).update(foreignUserId).digest("base64url");
   const foreignUserCookie = "vy_uid=" + foreignUserId + "." + foreignSignature;
   const foreignHistoryRes = responseMock();
-  await mine({ method: "GET", headers: { cookie: foreignUserCookie } }, foreignHistoryRes);
+  await mine({ method: "GET", headers: { cookie: foreignUserCookie, "x-real-ip": "192.0.2.44" } }, foreignHistoryRes);
   assert.equal(foreignHistoryRes.statusCode, 200);
   assert.deepEqual(foreignHistoryRes.body.questions, []);
 
@@ -954,7 +954,7 @@ test("user-to-lawyer question lifecycle works across create, inbox, reply, histo
   assert.equal(replyRes.statusCode, 200);
 
   const historyRes = responseMock();
-  await mine({ method: "GET", headers: { cookie: userCookie } }, historyRes);
+  await mine({ method: "GET", headers: { cookie: userCookie, "x-real-ip": "192.0.2.44" } }, historyRes);
   assert.equal(historyRes.statusCode, 200);
   assert.equal(historyRes.body.questions.length, 1);
   assert.equal(historyRes.body.questions[0].status, "answered");
