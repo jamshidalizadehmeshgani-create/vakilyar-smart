@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const { redis } = require("../../lib/quota");
 const { authorizeAdmin } = require("../../lib/admin-auth");
+const { sendWelcomeEmail } = require("../../lib/email");
 
 async function audit(event) {
   try {
@@ -115,9 +116,44 @@ module.exports = async (req, res) => {
       if (updated !== 1) return res.status(500).json({ error: "ساختار اطلاعات حساب وکیل معتبر نیست؛ وضعیت تغییر نکرد." });
       const updatedRaw = await redis(["GET", key]);
       const lawyer = JSON.parse(updatedRaw);
+      let welcomeEmail = { sent: false, reason: "not_applicable" };
+      if (enabled && lawyer.password_hash) {
+        const welcomeKey = "vy:lawyer:" + id + ":welcome-email";
+        const claimed = await redis(["SET", welcomeKey, "sending", "NX", "EX", "120"]);
+        if (claimed === "OK") {
+          welcomeEmail = await sendWelcomeEmail({
+            to: lawyer.email,
+            name: lawyer.name,
+            role: "وکیل همکار",
+            loginUrl: (process.env.APP_BASE_URL || "https://vakilyar-smart.vercel.app").replace(/\\/$/, "") + "/lawyer-login.html",
+            details: [
+              ["نام و نام خانوادگی", lawyer.name],
+              ["ایمیل حساب", lawyer.email],
+              ["شماره پروانه", lawyer.license_number || "ثبت نشده"],
+              ["نوع حساب", "پنل اختصاصی وکیل"]
+            ],
+            features: [
+              "ورود امن به پنل اختصاصی وکیل",
+              "مشاهده پرسش‌های ارجاع‌شده",
+              "ارسال پاسخ و پیگیری گفت‌وگو با کاربران"
+            ]
+          });
+          if (welcomeEmail.sent) await redis(["SET", welcomeKey, "sent", "EX", "315360000"]);
+          else await redis(["DEL", welcomeKey]);
+        } else {
+          welcomeEmail = { sent: claimed === "sent", reason: claimed === "sent" ? "already_sent" : "in_progress" };
+        }
+      }
       const audited = await audit({ action: enabled ? "lawyer_access_enabled" : "lawyer_access_disabled", lawyer_id: id, at: updatedAt });
       const { password_hash, ...safeLawyer } = lawyer;
-      return res.status(200).json({ ok: true, lawyer: safeLawyer, audit_warning: !audited, message: enabled ? "دسترسی وکیل فعال شد." : "دسترسی پاسخ‌گویی وکیل قطع شد." });
+      return res.status(200).json({
+        ok: true, lawyer: safeLawyer, audit_warning: !audited,
+        welcome_email_sent: welcomeEmail.sent,
+        welcome_email_reason: welcomeEmail.reason,
+        message: enabled
+          ? (welcomeEmail.sent ? "دسترسی وکیل فعال شد و ایمیل خوشامدگویی ارسال شد." : "دسترسی وکیل فعال شد؛ ارسال ایمیل خوشامدگویی هنوز انجام نشده است.")
+          : "دسترسی پاسخ‌گویی وکیل قطع شد."
+      });
     }
     return res.status(400).json({ error: "عملیات شناخته‌شده نیست." });
   } catch (error) {
