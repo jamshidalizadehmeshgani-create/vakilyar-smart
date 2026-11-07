@@ -141,7 +141,8 @@ module.exports = async (req, res) => {
           if (welcomeEmail.sent) await redis(["SET", welcomeKey, "sent", "EX", "315360000"]);
           else await redis(["DEL", welcomeKey]);
         } else {
-          welcomeEmail = { sent: claimed === "sent", reason: claimed === "sent" ? "already_sent" : "in_progress" };
+          const existingWelcomeState = await redis(["GET", welcomeKey]);
+          welcomeEmail = { sent: existingWelcomeState === "sent", reason: existingWelcomeState === "sent" ? "already_sent" : "in_progress" };
         }
       }
       const audited = await audit({ action: enabled ? "lawyer_access_enabled" : "lawyer_access_disabled", lawyer_id: id, at: updatedAt });
