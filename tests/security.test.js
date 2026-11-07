@@ -755,7 +755,7 @@ test("admin lawyer endpoint rejects an invalid manager key", async () => {
   const res = responseMock();
   await adminLawyers({
     method: "POST",
-    headers: { authorization: "Bearer wrong-key" },
+    headers: { authorization: "Bearer wrong-key", host: "app.example.test", origin: "https://app.example.test", "x-real-ip": "192.0.2.107" },
     body: { action: "list" }
   }, res);
   assert.equal(res.statusCode, 401);
@@ -945,12 +945,12 @@ test("admin lawyer lifecycle creates unique disabled accounts, hides password ha
 
 test("admin lawyer management validates method, key, and input before mutation", async () => {
   const wrongMethod=responseMock();
-  await adminLawyers({method:"GET",headers:{authorization:"Bearer test-admin-key",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.105",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.103"},body:{action:"list"}},wrongMethod);
+  await adminLawyers({method:"GET",headers:{authorization:"Bearer test-admin-key",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.103"},body:{action:"list"}},wrongMethod);
   assert.equal(wrongMethod.statusCode,405);
   assert.equal(wrongMethod.headers.Allow,"POST");
 
   const badKey=responseMock();
-  await adminLawyers({method:"POST",headers:{authorization:"Bearer wrong-key",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.106",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.104"},body:{action:"create",name:"نام معتبر",email:"valid@example.test"}},badKey);
+  await adminLawyers({method:"POST",headers:{authorization:"Bearer wrong-key",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.104"},body:{action:"create",name:"نام معتبر",email:"valid@example.test"}},badKey);
   assert.equal(badKey.statusCode,401);
 
   const beforeCount=lists.get("vy:lawyers:index")?.length||0;
@@ -995,7 +995,7 @@ test("admin credit lookup and grants report accurate balances without mixing Pro
 });
 
 test("admin credit endpoint rejects invalid identities, amounts, and non-POST requests", async () => {
-  const headers={authorization:"Bearer test-admin-key"};
+  const headers={authorization:"Bearer test-admin-key",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.110"};
   const invalidId=responseMock();
   await grantCredits({method:"POST",headers,body:{user_id:"bad",credits:10}},invalidId);
   assert.equal(invalidId.statusCode,400);
