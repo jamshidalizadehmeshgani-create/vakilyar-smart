@@ -4,6 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="وکیل‌یار؛ دستیار هوشمند اطلاعات عمومی حقوقی">
+  <meta name="theme-color" content="#14233f">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="وکیل‌یار">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="/icons/vakilyar-icon.svg">
+  <link rel="apple-touch-icon" href="/icons/vakilyar-icon.svg">
   <title>وکیل‌یار هوشمند</title>
   <style>
     :root{--navy:#14233f;--blue:#20375d;--gold:#c9a45c;--bg:#f5f3ee;--ink:#202938}
@@ -19,7 +26,7 @@
   </style>
 </head>
 <body>
-<header><h1>وکیل‌یار هوشمند</h1><p>همراه شما برای فهم روشن‌تر مسائل و اطلاعات عمومی حقوقی</p></header>
+<header><h1>وکیل‌یار هوشمند</h1><p>همراه شما برای فهم روشن‌تر مسائل و اطلاعات عمومی حقوقی</p><button id="installApp" type="button" hidden style="background:#c9a45c;color:#14233f;font-weight:bold">نصب وکیل‌یار روی گوشی</button><p id="installHelp" style="font-size:12px;margin-top:8px" aria-live="polite"></p></header>
 <main>
   <section class="panel">
     <div class="notice">وکیل‌یار برای ارائه اطلاعات عمومی و آموزشی است و جایگزین وکیل یا مشاوره حقوقی تخصصی نیست. پیش از تصمیم‌گیری مهم، متن رسمی قوانین و نظر وکیل دارای پروانه را بررسی کنید.</div>
@@ -38,6 +45,33 @@ const statusEl=document.getElementById("status");
 const answerEl=document.getElementById("answer");
 const sendBtn=document.getElementById("send");
 const consentEl=document.getElementById("consent");
+const installButton=document.getElementById("installApp");
+const installHelp=document.getElementById("installHelp");
+let installPrompt=null;
+window.addEventListener("beforeinstallprompt",(event)=>{
+  event.preventDefault();
+  installPrompt=event;
+  installButton.hidden=false;
+  installHelp.textContent="می‌توانید با انتخاب این گزینه، آیکون برنامه را به صفحه اصلی گوشی اضافه کنید.";
+});
+installButton.addEventListener("click",async()=>{
+  if(!installPrompt){
+    installHelp.textContent="اگر گزینه نصب نمایش داده نشد، از منوی مرورگر گزینه «Add to Home screen» یا «Install app» را انتخاب کنید.";
+    return;
+  }
+  installPrompt.prompt();
+  const choice=await installPrompt.userChoice;
+  installHelp.textContent=choice.outcome==="accepted"?"درخواست نصب پذیرفته شد.":"نصب انجام نشد؛ هر زمان خواستید دوباره تلاش کنید.";
+  installPrompt=null;
+  installButton.hidden=true;
+});
+window.addEventListener("appinstalled",()=>{
+  installButton.hidden=true;
+  installHelp.textContent="وکیل‌یار با موفقیت به دستگاه اضافه شد.";
+});
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));
+}
 
 async function loadUsage(){
   try{
