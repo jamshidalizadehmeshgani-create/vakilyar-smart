@@ -14,19 +14,27 @@ async function incrementDailyQuestionCount(key) {
   return Number(await redis(["EVAL", script, "1", key, "86400"]));
 }
 
-async function createQuestionWithDailyLimit({ counterKey, questionKey, lawyerListKey, userListKey, item, id, retentionSeconds, dailyLimit = 5 }) {
+async function createQuestionWithDailyLimit({ counterKey, questionKey, lawyerListKey, userListKey, idempotencyKey, fingerprint, item, id, retentionSeconds, dailyLimit = 5 }) {
   const script = "-- CREATE_OWNED_QUESTION_WITH_DAILY_LIMIT\n" +
+    "local prior=redis.call('GET',KEYS[5]); if prior then local prefix=ARGV[6]..'|'; if string.sub(prior,1,string.len(prefix))~=prefix then return {-3,''} end; return {-2,string.sub(prior,string.len(prefix)+1)} end; " +
     "local count=tonumber(redis.call('GET',KEYS[1]) or '0'); " +
-    "if count>=tonumber(ARGV[4]) then return -1 end; " +
+    "if count>=tonumber(ARGV[4]) then return {-1,''} end; " +
     "count=redis.call('INCR',KEYS[1]); " +
     "if count==1 then redis.call('EXPIRE',KEYS[1],ARGV[5]); end; " +
     "redis.call('SET',KEYS[2],ARGV[1],'EX',ARGV[3]); " +
     "redis.call('LPUSH',KEYS[3],ARGV[2]); redis.call('LPUSH',KEYS[4],ARGV[2]); " +
-    "redis.call('LTRIM',KEYS[3],0,499); redis.call('LTRIM',KEYS[4],0,499); return count";
-  return Number(await redis([
-    "EVAL", script, "4", counterKey, questionKey, lawyerListKey, userListKey,
-    JSON.stringify(item), id, String(retentionSeconds), String(dailyLimit), "86400"
-  ]));
+    "redis.call('LTRIM',KEYS[3],0,499); redis.call('LTRIM',KEYS[4],0,499); " +
+    "redis.call('SET',KEYS[5],ARGV[6]..'|'..ARGV[2],'EX',ARGV[7]); return {count,ARGV[2]}";
+  const result = await redis([
+    "EVAL", script, "5", counterKey, questionKey, lawyerListKey, userListKey, idempotencyKey,
+    JSON.stringify(item), id, String(retentionSeconds), String(dailyLimit), "86400", fingerprint, "604800"
+  ]);
+  const code=Number(result?.[0]), questionId=String(result?.[1]||"");
+  if(code===-1)return {limited:true,duplicate:false,questionId:""};
+  if(code===-3)return {conflict:true,duplicate:false,questionId:""};
+  if(code===-2)return {limited:false,conflict:false,duplicate:true,questionId};
+  if(!Number.isSafeInteger(code)||code<1||questionId!==id)throw new Error("Invalid atomic question creation result");
+  return {limited:false,conflict:false,duplicate:false,questionId};
 }
 
 module.exports = async (req, res) => {
@@ -65,15 +73,20 @@ module.exports = async (req, res) => {
     const id = crypto.randomBytes(16).toString("hex");
     const now = new Date().toISOString();
     const item = { id, lawyer_id: lawyerId, lawyer_name: lawyer.name, user_id: account.uid, question, status: "open", created_at: now, replies: [] };
-    const count = await createQuestionWithDailyLimit({
+    const requestId = typeof req.body?.request_id === "string" ? req.body.request_id.trim() : "";
+    if (!/^[a-f0-9]{32}$/.test(requestId)) return res.status(400).json({ error: "شناسه یکتای ارسال پرسش معتبر نیست." });
+    const fingerprint = crypto.createHash("sha256").update(account.uid + "\\n" + lawyerId + "\\n" + question).digest("hex");
+    const created = await createQuestionWithDailyLimit({
       counterKey: limitKey,
       questionKey: "vy:question:" + id,
       lawyerListKey: "vy:lawyer:" + lawyerId + ":questions",
       userListKey: "vy:user:" + account.uid + ":questions",
-      item, id, retentionSeconds, dailyLimit: 5
+      idempotencyKey: "vy:user:" + account.uid + ":question-request:" + requestId,
+      fingerprint, item, id, retentionSeconds, dailyLimit: 5
     });
-    if (count < 0) return res.status(429).json({ error: "سقف ارسال پرسش روزانه (۵ پرسش) رسیده است." });
-    return res.status(201).json({ ok: true, question_id: id, message: "پرسش برای وکیل منتخب ارسال شد." });
+    if (created.limited) return res.status(429).json({ error: "سقف ارسال پرسش روزانه (۵ پرسش) رسیده است." });
+    if (created.conflict) return res.status(409).json({ error: "شناسه این عملیات قبلاً برای متن یا وکیل دیگری استفاده شده است." });
+    return res.status(201).json({ ok: true, duplicate: created.duplicate, question_id: created.questionId, message: created.duplicate ? "این پرسش قبلاً ثبت شده بود؛ پرسش تکراری ایجاد نشد." : "پرسش برای وکیل منتخب ارسال شد." });
   } catch (e) {
     console.error("Question create error:", e.message);
     return res.status(503).json({ error: "ارسال پرسش موقتاً ممکن نیست." });
