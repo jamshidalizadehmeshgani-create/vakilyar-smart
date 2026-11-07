@@ -59,7 +59,8 @@ module.exports = async (req, res) => {
     if (error?.code === "CLIENT_IP_UNAVAILABLE") {
       return res.status(503).json({ code: "CLIENT_IP_UNAVAILABLE", error: "تشخیص امن اتصال ممکن نیست؛ لطفاً کمی بعد دوباره تلاش کنید." });
     }
-    throw error;
+    console.error("Chat IP rate-limit error:", error?.message || error);
+    return res.status(503).json({ code: "CHAT_RATE_LIMIT_UNAVAILABLE", error: "سامانه کنترل تعداد درخواست‌ها موقتاً در دسترس نیست." });
   }
   let charged = 0;
   let reservationId = null;
