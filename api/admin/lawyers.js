@@ -1,11 +1,7 @@
 const crypto = require("crypto");
 const { redis } = require("../../lib/quota");
+const { authorizeAdmin } = require("../../lib/admin-auth");
 
-function safeEqual(a, b) {
-  const x = Buffer.from(String(a || ""));
-  const y = Buffer.from(String(b || ""));
-  return x.length === y.length && x.length > 0 && crypto.timingSafeEqual(x, y);
-}
 async function audit(event) {
   try {
     await redis(["LPUSH", "vy:admin:audit", JSON.stringify(event)]);
@@ -23,10 +19,7 @@ module.exports = async (req, res) => {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "فقط درخواست POST پذیرفته می‌شود." });
   }
-  const adminKey = process.env.ADMIN_API_KEY;
-  if (!adminKey || !safeEqual(req.headers.authorization?.replace(/^Bearer\s+/i, ""), adminKey)) {
-    return res.status(401).json({ error: "دسترسی مدیر تأیید نشد." });
-  }
+  if (!await authorizeAdmin(req, res)) return;
   try {
     const action = req.body?.action;
     if (action === "config") {
