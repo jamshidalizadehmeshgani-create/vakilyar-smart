@@ -38,6 +38,8 @@ global.fetch = async (_url, options) => {
     const end = Number(args[2]);
     lists.set(args[0], list.slice(start, end < 0 ? undefined : end + 1));
     result = "OK";
+  } else if (op === "SMEMBERS") {
+    result = lists.get(args[0]) || [];
   } else if (op === "LRANGE") {
     const list = lists.get(args[0]) || [];
     const start = Number(args[1]);
@@ -644,10 +646,11 @@ test("admin lawyer management validates method, key, and input before mutation",
   await adminLawyers({method:"POST",headers:{authorization:"Bearer wrong-key"},body:{action:"create",name:"نام معتبر",email:"valid@example.test"}},badKey);
   assert.equal(badKey.statusCode,401);
 
+  const beforeCount=lists.get("vy:lawyers:index")?.length||0;
   const badInput=responseMock();
   await adminLawyers({method:"POST",headers:{authorization:"Bearer test-admin-key"},body:{action:"create",name:"x",email:"not-an-email"}},badInput);
   assert.equal(badInput.statusCode,400);
-  assert.equal(lists.get("vy:lawyers:index")?.length||0,0);
+  assert.equal(lists.get("vy:lawyers:index")?.length||0,beforeCount);
 });
 
 test("admin credit lookup and grants report accurate balances without mixing Pro and unlimited", async () => {
