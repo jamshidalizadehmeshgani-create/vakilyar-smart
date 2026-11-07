@@ -15,7 +15,7 @@ module.exports = async (req, res) => {
       if (!raw) return null;
       try {
         const w = JSON.parse(raw);
-        return w && w.id === id && w.access === "active" ? { id: w.id, name: w.name } : null;
+        return w && w.id === id && w.access === "active" && w.email_verified !== false ? { id: w.id, name: w.name } : null;
       } catch { return null; }
     }));
     return res.status(200).json({ ok: true, lawyers: rows.filter(Boolean) });
