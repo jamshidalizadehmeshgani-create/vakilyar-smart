@@ -50,3 +50,30 @@ test("question history and lawyer inbox announce updates accessibly", () => {
   assert.match(read("public/ask-lawyer.html"), /id="mine"[^>]*aria-live="polite"/);
   assert.match(read("public/lawyer-panel.html"), /id="questions"[^>]*aria-live="polite"/);
 });
+
+
+test("all public pages declare Persian RTL document metadata", () => {
+  const pages = [
+    "index.html", "ask-lawyer.html", "lawyer-login.html", "lawyer-panel.html",
+    "admin-lawyers.html", "admin-credits.html", "privacy.html", "terms.html"
+  ];
+  for (const page of pages) {
+    const html = read("public/" + page);
+    assert.match(html, /<html[^>]*lang=["']fa["']/i, page + " must declare Persian language");
+    assert.match(html, /<html[^>]*dir=["']rtl["']/i, page + " must declare RTL direction");
+    assert.match(html, /<meta[^>]*name=["']viewport["']/i, page + " must declare a mobile viewport");
+  }
+});
+
+test("admin panels keep manager credentials in password fields and send them only as bearer headers", () => {
+  const lawyers = read("public/admin-lawyers.html");
+  const credits = read("public/admin-credits.html");
+  assert.match(lawyers, /id="key" type="password"/);
+  assert.match(credits, /id="adminKey" type="password"/);
+  assert.match(lawyers, /"Authorization":"Bearer "\+key/);
+  assert.match(credits, /"Authorization":"Bearer "\+key/);
+  for (const [page, html] of [["admin-lawyers.html", lawyers], ["admin-credits.html", credits]]) {
+    assert.doesNotMatch(html, /localStorage|sessionStorage/);
+    assert.match(html, /autocomplete=["']off["']/);
+  }
+});
