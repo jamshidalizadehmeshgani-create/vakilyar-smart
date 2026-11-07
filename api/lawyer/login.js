@@ -16,6 +16,13 @@ function trustedClientIp(req) {
   return net.isIP(ip) ? ip : "";
 }
 
+function passwordHashForVerification(lawyer) {
+  const stored = lawyer?.password_hash;
+  return typeof stored === "string" && /^[a-f0-9]{32}:[a-f0-9]{128}$/.test(stored)
+    ? stored
+    : "0123456789abcdef0123456789abcdef:" + DUMMY_PASSWORD_HASH;
+}
+
 function verifyPassword(password, stored) {
   if (typeof stored !== "string" || !/^[a-f0-9]{32}:[a-f0-9]{128}$/.test(stored)) return Promise.resolve(false);
   const [salt, expectedHex] = stored.split(":");
@@ -60,9 +67,7 @@ module.exports = async (req, res) => {
     try { lawyer = raw ? JSON.parse(raw) : null; } catch {}
     // Always perform one scrypt verification, even when the email is unknown or the stored hash is malformed.
     // This reduces account-enumeration timing differences without changing the public error response.
-    const storedHash = typeof lawyer?.password_hash === "string" && /^[a-f0-9]{32}:[a-f0-9]{128}$/.test(lawyer.password_hash)
-      ? lawyer.password_hash
-      : "0123456789abcdef0123456789abcdef:" + DUMMY_PASSWORD_HASH;
+    const storedHash = passwordHashForVerification(lawyer);
     const passwordMatches = await verifyPassword(password, storedHash);
     const valid = Boolean(lawyer && lawyer.access === "active" && passwordMatches);
     if (!valid) return res.status(401).json({ error: "اطلاعات ورود نادرست است یا دسترسی حساب فعال نیست." });
@@ -82,3 +87,4 @@ module.exports = async (req, res) => {
 
 module.exports.incrementLoginAttempts = incrementLoginAttempts;
 module.exports.trustedClientIp = trustedClientIp;
+module.exports.passwordHashForVerification = passwordHashForVerification;
