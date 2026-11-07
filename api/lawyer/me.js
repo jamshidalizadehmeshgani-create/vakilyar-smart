@@ -15,7 +15,7 @@ module.exports = async (req, res) => {
     const w = session.lawyer;
     return res.status(200).json({ ok: true, lawyer: { id: w.id, name: w.name, email: w.email, license_number: w.license_number || "" } });
   } catch (error) {
-    console.error("Lawyer session error:", error.message);
+    console.error("Lawyer session error:");
     return res.status(503).json({ error: "بررسی نشست موقتاً ممکن نیست." });
   }
 };
