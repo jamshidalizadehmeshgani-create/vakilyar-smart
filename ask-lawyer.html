@@ -26,16 +26,44 @@ button:disabled{opacity:.6;cursor:wait}
 <label><input type="checkbox" id="consent" required> رضایت می‌دهم متن پرسش من برای پاسخ‌گویی در اختیار وکیل منتخب قرار گیرد.</label>
 <button id="send">ارسال پرسش</button>
 </form>
-<p id="msg" role="status"></p>
+<p id="msg" role="status" aria-live="polite" aria-atomic="true"></p>
 <h2>پرسش‌ها و پاسخ‌ها</h2>
-<div id="mine">در حال دریافت...</div>
+<div id="mine" aria-live="polite">در حال دریافت...</div>
 </main>
 <script>
 const $=id=>document.getElementById(id);
+let pendingQuestion=null;
+try{
+ const saved=sessionStorage.getItem("vy_pending_question");
+ if(saved){
+  const parsed=JSON.parse(saved);
+  if(parsed&&/^[a-f0-9]{32}$/.test(parsed.id||"")&&typeof parsed.lawyer_id==="string"&&typeof parsed.question==="string")pendingQuestion=parsed;
+  else sessionStorage.removeItem("vy_pending_question");
+ }
+}catch{}
+function persistPendingQuestion(){
+ try{
+  if(pendingQuestion)sessionStorage.setItem("vy_pending_question",JSON.stringify(pendingQuestion));
+  else sessionStorage.removeItem("vy_pending_question");
+  return true;
+ }catch{return false;}
+}
 async function loadLawyers(){
+  const select=$("lawyer"),send=$("send"),msg=$("msg");
+  send.disabled=true;
   const r=await fetch("/api/lawyers/active",{cache:"no-store"}),d=await r.json();
-  $("lawyer").replaceChildren(new Option("انتخاب وکیل",""));
-  for(const w of d.lawyers||[]) $("lawyer").add(new Option(w.name,w.id));
+  if(!r.ok||d.ok!==true||!Array.isArray(d.lawyers))throw new Error("LAWYER_LIST_UNAVAILABLE");
+  select.replaceChildren(new Option("انتخاب وکیل",""));
+  for(const w of d.lawyers) select.add(new Option(w.name,w.id));
+  if(d.lawyers.length===0){
+    select.disabled=true;
+    msg.textContent="در حال حاضر وکیل فعالی برای دریافت پرسش ثبت نشده است. پس از فعال‌شدن وکلا می‌توانید پرسش خود را ارسال کنید.";
+    send.disabled=true;
+    return;
+  }
+  select.disabled=false;
+  send.disabled=false;
+  if(pendingQuestion) msg.textContent="یک ارسال قبلی در انتظار تعیین نتیجه است؛ همان پرسش را دوباره ارسال کنید تا از ثبت تکراری جلوگیری شود.";
 }
 async function loadMine(){
   try{
@@ -65,15 +93,33 @@ async function loadMine(){
 }
 $("f").onsubmit=async e=>{
   e.preventDefault();if(!$("consent").checked)return;
+  const lawyer_id=$("lawyer").value,question=$("question").value.trim();
+  if(!lawyer_id||question.length<5){$("msg").textContent="وکیل و متن پرسش معتبر را انتخاب کنید.";return;}
+  if(pendingQuestion&&(pendingQuestion.lawyer_id!==lawyer_id||pendingQuestion.question!==question)){
+    $("msg").textContent="نتیجه ارسال قبلی هنوز مشخص نیست. برای جلوگیری از ثبت پرسش تکراری، همان وکیل و همان متن قبلی را دوباره ارسال کنید.";
+    return;
+  }
+  if(!pendingQuestion){
+    const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);
+    pendingQuestion={id:Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join(""),lawyer_id,question};
+    if(!persistPendingQuestion()){$("msg").textContent="ذخیره شناسه امن عملیات ممکن نیست؛ پرسش ارسال نشد.";pendingQuestion=null;return;}
+  }
   const b=$("send");b.disabled=true;
   try{
-    const r=await fetch("/api/questions/create",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({lawyer_id:$("lawyer").value,question:$("question").value,consent:true})});
+    const r=await fetch("/api/questions/create",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({lawyer_id,question,consent:true,request_id:pendingQuestion.id})});
     const d=await r.json();$("msg").textContent=d.message||d.error||"نتیجه نامشخص";
+    if(r.ok||r.status<500){pendingQuestion=null;persistPendingQuestion();}
     if(r.ok){$("question").value="";$("consent").checked=false;await loadMine();}
-  }catch{$("msg").textContent="ارتباط با سرور برقرار نشد";}
+  }catch{$("msg").textContent="ارتباط با سرور برقرار نشد. همان پرسش را دوباره ارسال کنید تا پرسش تکراری ثبت نشود.";}
   finally{b.disabled=false;}
 };
-loadLawyers().catch(()=>$("msg").textContent="فهرست وکلا در دسترس نیست");
+loadLawyers().then(()=>{
+ if(pendingQuestion){
+  $("lawyer").value=pendingQuestion.lawyer_id;
+  $("question").value=pendingQuestion.question;
+  $("consent").checked=true;
+ }
+}).catch(()=>{$("msg").textContent="فهرست وکلا موقتاً در دسترس نیست؛ امکان ارسال پرسش تا بازیابی فهرست غیرفعال شد.";$("lawyer").disabled=true;$("send").disabled=true;});
 loadMine();
 </script>
 </body></html>
