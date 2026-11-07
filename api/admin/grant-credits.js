@@ -7,7 +7,7 @@ async function recordAudit(event) {
     await redis(["LTRIM", "vy:admin:audit", "0", "499"]);
     return true;
   } catch (error) {
-    console.error("Admin audit error:", error.message);
+    console.error("Admin audit error:");
     return false;
   }
 }
@@ -109,7 +109,7 @@ module.exports = async (req, res) => {
     if (!Number.isSafeInteger(balance) || balance < 0) throw new Error("Invalid idempotent credit grant result");
     return res.status(200).json({ ok: true, duplicate: !wasApplied, audit_warning: false, credits_added: wasApplied ? amount : 0, credits_balance: balance, message: wasApplied ? "اعتبار هدیه با موفقیت اضافه شد." : "این عملیات قبلاً انجام شده بود؛ اعتبار دوباره اضافه نشد." });
   } catch (error) {
-    console.error("Admin credit grant error:", error.message);
+    console.error("Admin credit grant error:");
     return res.status(503).json({ error: "افزودن اعتبار انجام نشد؛ تنظیمات پایگاه داده را بررسی کنید." });
   }
 };
