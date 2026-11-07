@@ -70,7 +70,7 @@ global.fetch = async (_url, options) => {
     const rawSession = values.get(sessionKey);
     if (!rawSession) result = 0;
     else {
-      const match = /^([a-f0-9]{32})(?::\\d+)?$/.exec(rawSession);
+      const match = /^([a-f0-9]{32})(?::\d+)?$/.exec(rawSession);
       values.delete(sessionKey);
       if (match) {
         const indexKey = "vy:lawyer:" + match[1] + ":sessions";
