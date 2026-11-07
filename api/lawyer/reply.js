@@ -8,7 +8,9 @@ module.exports = async (req, res) => {
   const host = req.headers.host || "";
   let originHost = "";
   try { originHost = new URL(req.headers.origin || "").host; } catch {}
-  if (!host || !originHost || originHost !== host) return res.status(403).json({ error: "مبدأ درخواست معتبر نیست." });
+  const fetchSite = String(req.headers["sec-fetch-site"] || "").toLowerCase();
+  if (!host || !originHost || originHost !== host || (fetchSite && fetchSite !== "same-origin"))
+    return res.status(403).json({ error: "مبدأ درخواست معتبر نیست." });
   try {
     const limit = await consumeIpRateLimit(req, { scope: "lawyer-reply", limit: 40, windowSeconds: 900 });
     if (limit.count > limit.limit) {
