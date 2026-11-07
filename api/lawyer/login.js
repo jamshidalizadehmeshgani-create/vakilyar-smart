@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const net = require("net");
 const { redis, COOKIE, SESSION_SECONDS, cookieHeader, hashToken } = require("../../lib/lawyer-auth");
 
 async function incrementLoginAttempts(key, ttlSeconds = 900) {
@@ -7,6 +8,11 @@ async function incrementLoginAttempts(key, ttlSeconds = 900) {
   }
   const script = "local count=redis.call('INCR',KEYS[1]); if count==1 then redis.call('EXPIRE',KEYS[1],ARGV[1]); end; return count";
   return Number(await redis(["EVAL", script, "1", key, String(ttlSeconds)]));
+}
+
+function trustedClientIp(req) {
+  const ip = String(req?.headers?.["x-real-ip"] || "").trim();
+  return net.isIP(ip) ? ip : "";
 }
 
 function verifyPassword(password, stored) {
@@ -33,18 +39,19 @@ module.exports = async (req, res) => {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 1 || password.length > 200)
     return res.status(400).json({ error: "ایمیل یا رمز عبور معتبر نیست." });
   try {
+    const secret = process.env.APP_SECRET;
+    const ip = trustedClientIp(req);
+    if (!secret || !ip) {
+      return res.status(503).json({ code: "LOGIN_RATE_LIMIT_UNAVAILABLE", error: "کنترل امن تلاش‌های ورود موقتاً در دسترس نیست." });
+    }
     const rateId = crypto.createHash("sha256").update(email).digest("hex");
     const rateKey = "vy:lawyer:login-attempts:" + rateId;
     const attempts = await incrementLoginAttempts(rateKey);
     if (attempts > 8) return res.status(429).json({ error: "تلاش‌های ورود بیش از حد است؛ ۱۵ دقیقه بعد دوباره تلاش کنید." });
-    const secret = process.env.APP_SECRET;
-    const ip = String(req.headers["x-real-ip"] || req.headers["x-forwarded-for"] || "").split(",")[0].trim();
-    if (secret && ip && ip.length <= 100) {
-      const ipId = crypto.createHmac("sha256", secret).update(ip).digest("hex");
-      const ipKey = "vy:lawyer:login-ip-attempts:" + ipId;
-      const ipAttempts = await incrementLoginAttempts(ipKey);
-      if (ipAttempts > 30) return res.status(429).json({ error: "تلاش‌های ورود از این اتصال بیش از حد است؛ ۱۵ دقیقه بعد دوباره تلاش کنید." });
-    }
+    const ipId = crypto.createHmac("sha256", secret).update(ip).digest("hex");
+    const ipKey = "vy:lawyer:login-ip-attempts:" + ipId;
+    const ipAttempts = await incrementLoginAttempts(ipKey);
+    if (ipAttempts > 30) return res.status(429).json({ error: "تلاش‌های ورود از این اتصال بیش از حد است؛ ۱۵ دقیقه بعد دوباره تلاش کنید." });
     const emailKey = "vy:lawyer:email:" + rateId;
     const id = await redis(["GET", emailKey]);
     const raw = id ? await redis(["GET", "vy:lawyer:" + id]) : null;
@@ -67,3 +74,4 @@ module.exports = async (req, res) => {
 };
 
 module.exports.incrementLoginAttempts = incrementLoginAttempts;
+module.exports.trustedClientIp = trustedClientIp;
