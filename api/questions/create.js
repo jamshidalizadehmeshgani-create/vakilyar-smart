@@ -1,5 +1,5 @@
 const crypto = require("crypto");
-const { getAccount, redis } = require("../../lib/quota");
+const { getAccount, redis, consumeIpRateLimit } = require("../../lib/quota");
 function questionRetentionSeconds(days = process.env.QUESTION_RETENTION_DAYS) {
   const parsed = days === undefined || days === "" ? 90 : Number(days);
   if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > 3650) {
@@ -32,6 +32,11 @@ module.exports = async (req, res) => {
   if (!/^[a-f0-9]{32}$/.test(lawyerId) || question.length < 5 || question.length > 5000)
     return res.status(400).json({ error: "وکیل و متن پرسش معتبر را انتخاب کنید." });
   try {
+    const ipLimit = await consumeIpRateLimit(req, { scope: "lawyer-question", limit: 10, windowSeconds: 86400 });
+    if (ipLimit.count > ipLimit.limit) {
+      res.setHeader("Retry-After", String(ipLimit.windowSeconds));
+      return res.status(429).json({ error: "سقف ارسال پرسش از این اتصال در بازه ۲۴ ساعته رسیده است." });
+    }
     const raw = await redis(["GET", "vy:lawyer:" + lawyerId]);
     if (!raw) return res.status(404).json({ error: "وکیل یافت نشد." });
     let lawyer;
