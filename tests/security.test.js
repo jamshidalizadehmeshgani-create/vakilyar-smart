@@ -103,6 +103,40 @@ global.fetch = async (_url, options) => {
         result = 1;
       }
     }
+  } else if (op === "EVAL" && String(args[0]).includes("redis.call('SET',KEYS[1],ARGV[1],'EX',ARGV[3])")) {
+    const questionKey = args[2], lawyerListKey = args[3], userListKey = args[4];
+    const item = args[5], id = args[6];
+    values.set(questionKey, item);
+    for (const key of [lawyerListKey, userListKey]) {
+      const list = lists.get(key) || [];
+      list.unshift(String(id));
+      lists.set(key, list.slice(0, 500));
+    }
+    result = 1;
+  } else if (op === "EVAL" && String(args[0]).includes("q.replies=q.replies or {}")) {
+    const questionKey = args[2], auditKey = args[3], lawyerId = args[4];
+    const reply = JSON.parse(args[5]), at = args[6], audit = args[7];
+    const raw = values.get(questionKey);
+    if (!raw) result = -1;
+    else {
+      const q = JSON.parse(raw);
+      if (q.lawyer_id !== lawyerId) result = -3;
+      else {
+        q.replies = q.replies || [];
+        q.replies.push(reply);
+        q.status = "answered";
+        q.updated_at = at;
+        values.set(questionKey, JSON.stringify(q));
+        const list = lists.get(auditKey) || [];
+        list.unshift(audit);
+        lists.set(auditKey, list.slice(0, 500));
+        result = 1;
+      }
+    }
+  } else if (op === "EVAL" && String(args[0]).includes("local v=redis.call('GET',KEYS[1]); if not v then redis.call('SET',KEYS[1],ARGV[1])")) {
+    const key = args[2], initial = args[3];
+    if (!values.has(key)) values.set(key, String(initial));
+    result = Number(values.get(key));
   } else if (op === "EVAL" && String(args[0]).includes("INCR") && String(args[0]).includes("EXPIRE")) {
     const key = args[2];
     const count = Number(values.get(key) || 0) + 1;
@@ -455,4 +489,81 @@ test("Redis transport exceptions never expose Authorization credentials", async 
     global.fetch = originalFetch;
     process.env.UPSTASH_REDIS_REST_TOKEN = originalToken;
   }
+});
+
+
+test("user-to-lawyer question lifecycle works across create, inbox, reply, history, and owned deletion", async () => {
+  process.env.APP_SECRET = "test-app-secret-for-question-lifecycle";
+  const userId = "a".repeat(48);
+  const signature = crypto.createHmac("sha256", process.env.APP_SECRET).update(userId).digest("base64url");
+  const userCookie = "vy_uid=" + userId + "." + signature;
+  const lawyerId = "b".repeat(32);
+  const lawyerToken = "c".repeat(64);
+  const password = "lifecycle-test-password";
+  const salt = crypto.randomBytes(16).toString("hex");
+  const passwordHash = await new Promise((resolve, reject) => crypto.scrypt(password, salt, 64,
+    (err, key) => err ? reject(err) : resolve(salt + ":" + key.toString("hex"))));
+  values.set("vy:lawyer:" + lawyerId, JSON.stringify({
+    id: lawyerId, name: "وکیل چرخه آزمون", email: "lifecycle@example.test",
+    access: "active", password_hash: passwordHash
+  }));
+  values.set("vy:lawyer:email:" + crypto.createHash("sha256").update("lifecycle@example.test").digest("hex"), lawyerId);
+
+  const sameOrigin = { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "same-origin" };
+  const createQuestion = require("../api/questions/create");
+  const mine = require("../api/questions/mine");
+  const login = require("../api/lawyer/login");
+  const me = require("../api/lawyer/me");
+  const inbox = require("../api/lawyer/questions");
+  const reply = require("../api/lawyer/reply");
+
+  const createRes = responseMock();
+  await createQuestion({ method: "POST", headers: { ...sameOrigin, cookie: userCookie },
+    body: { consent: true, lawyer_id: lawyerId, question: "شرایط قانونی فسخ قرارداد چیست؟" } }, createRes);
+  assert.equal(createRes.statusCode, 201);
+  const questionId = createRes.body.question_id;
+  assert.match(questionId, /^[a-f0-9]{32}$/);
+
+  const loginRes = responseMock();
+  await login({ method: "POST", headers: sameOrigin,
+    body: { email: "lifecycle@example.test", password } }, loginRes);
+  assert.equal(loginRes.statusCode, 200);
+  const sessionCookie = loginRes.headers["Set-Cookie"].split(";")[0];
+
+  const meRes = responseMock();
+  await me({ method: "GET", headers: { cookie: sessionCookie } }, meRes);
+  assert.equal(meRes.statusCode, 200);
+  assert.equal(meRes.body.lawyer.id, lawyerId);
+
+  const inboxRes = responseMock();
+  await inbox({ method: "GET", headers: { cookie: sessionCookie } }, inboxRes);
+  assert.equal(inboxRes.statusCode, 200);
+  assert.equal(inboxRes.body.questions.length, 1);
+  assert.equal(inboxRes.body.questions[0].id, questionId);
+
+  const replyRes = responseMock();
+  await reply({ method: "POST", headers: { ...sameOrigin, cookie: sessionCookie },
+    body: { question_id: questionId, message: "برای پاسخ دقیق، متن قرارداد باید بررسی شود." } }, replyRes);
+  assert.equal(replyRes.statusCode, 200);
+
+  const historyRes = responseMock();
+  await mine({ method: "GET", headers: { cookie: userCookie } }, historyRes);
+  assert.equal(historyRes.statusCode, 200);
+  assert.equal(historyRes.body.questions.length, 1);
+  assert.equal(historyRes.body.questions[0].status, "answered");
+  assert.equal(historyRes.body.questions[0].replies[0].message, "برای پاسخ دقیق، متن قرارداد باید بررسی شود.");
+
+  const deleteRes = responseMock();
+  await mine({ method: "POST", headers: { ...sameOrigin, cookie: userCookie },
+    body: { question_id: questionId } }, deleteRes);
+  assert.equal(deleteRes.statusCode, 200);
+  assert.equal(values.has("vy:question:" + questionId), false);
+  assert.deepEqual(lists.get("vy:user:" + userId + ":questions"), []);
+  assert.deepEqual(lists.get("vy:lawyer:" + lawyerId + ":questions"), []);
+
+  const historyAfterDelete = responseMock();
+  await mine({ method: "GET", headers: { cookie: userCookie } }, historyAfterDelete);
+  assert.equal(historyAfterDelete.statusCode, 200);
+  assert.deepEqual(historyAfterDelete.body.questions, []);
+  delete process.env.APP_SECRET;
 });
