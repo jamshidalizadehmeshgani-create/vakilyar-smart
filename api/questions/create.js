@@ -9,10 +9,24 @@ function questionRetentionSeconds(days = process.env.QUESTION_RETENTION_DAYS) {
 }
 
 async function incrementDailyQuestionCount(key) {
-  // Increment and set the first-request TTL atomically to avoid a permanent
-  // counter if the function stops between INCR and EXPIRE.
+  // Kept as a small primitive for diagnostics and regression tests.
   const script = "local count=redis.call('INCR',KEYS[1]); if count==1 then redis.call('EXPIRE',KEYS[1],ARGV[1]); end; return count";
   return Number(await redis(["EVAL", script, "1", key, "86400"]));
+}
+
+async function createQuestionWithDailyLimit({ counterKey, questionKey, lawyerListKey, userListKey, item, id, retentionSeconds, dailyLimit = 5 }) {
+  const script = "-- CREATE_OWNED_QUESTION_WITH_DAILY_LIMIT\n" +
+    "local count=tonumber(redis.call('GET',KEYS[1]) or '0'); " +
+    "if count>=tonumber(ARGV[4]) then return -1 end; " +
+    "count=redis.call('INCR',KEYS[1]); " +
+    "if count==1 then redis.call('EXPIRE',KEYS[1],ARGV[5]); end; " +
+    "redis.call('SET',KEYS[2],ARGV[1],'EX',ARGV[3]); " +
+    "redis.call('LPUSH',KEYS[3],ARGV[2]); redis.call('LPUSH',KEYS[4],ARGV[2]); " +
+    "redis.call('LTRIM',KEYS[3],0,499); redis.call('LTRIM',KEYS[4],0,499); return count";
+  return Number(await redis([
+    "EVAL", script, "4", counterKey, questionKey, lawyerListKey, userListKey,
+    JSON.stringify(item), id, String(retentionSeconds), String(dailyLimit), "86400"
+  ]));
 }
 
 module.exports = async (req, res) => {
@@ -48,13 +62,17 @@ module.exports = async (req, res) => {
     // A bad environment value must fail closed without consuming a user's attempt.
     const retentionSeconds = questionRetentionSeconds();
     const limitKey = "vy:user:" + account.uid + ":question-limit";
-    const count = await incrementDailyQuestionCount(limitKey);
-    if (count > 5) return res.status(429).json({ error: "سقف ارسال پرسش روزانه (۵ پرسش) رسیده است." });
     const id = crypto.randomBytes(16).toString("hex");
     const now = new Date().toISOString();
     const item = { id, lawyer_id: lawyerId, lawyer_name: lawyer.name, user_id: account.uid, question, status: "open", created_at: now, replies: [] };
-    const script = "redis.call('SET',KEYS[1],ARGV[1],'EX',ARGV[3]); redis.call('LPUSH',KEYS[2],ARGV[2]); redis.call('LPUSH',KEYS[3],ARGV[2]); redis.call('LTRIM',KEYS[2],0,499); redis.call('LTRIM',KEYS[3],0,499); return 1";
-    await redis(["EVAL", script, "3", "vy:question:" + id, "vy:lawyer:" + lawyerId + ":questions", "vy:user:" + account.uid + ":questions", JSON.stringify(item), id, String(retentionSeconds)]);
+    const count = await createQuestionWithDailyLimit({
+      counterKey: limitKey,
+      questionKey: "vy:question:" + id,
+      lawyerListKey: "vy:lawyer:" + lawyerId + ":questions",
+      userListKey: "vy:user:" + account.uid + ":questions",
+      item, id, retentionSeconds, dailyLimit: 5
+    });
+    if (count < 0) return res.status(429).json({ error: "سقف ارسال پرسش روزانه (۵ پرسش) رسیده است." });
     return res.status(201).json({ ok: true, question_id: id, message: "پرسش برای وکیل منتخب ارسال شد." });
   } catch (e) {
     console.error("Question create error:", e.message);
@@ -63,4 +81,5 @@ module.exports = async (req, res) => {
 };
 
 module.exports.incrementDailyQuestionCount = incrementDailyQuestionCount;
+module.exports.createQuestionWithDailyLimit = createQuestionWithDailyLimit;
 module.exports.questionRetentionSeconds = questionRetentionSeconds;
