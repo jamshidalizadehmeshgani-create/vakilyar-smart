@@ -183,6 +183,12 @@ global.fetch = async (_url, options) => {
     const key = args[2], initial = args[3];
     if (!values.has(key)) values.set(key, String(initial));
     result = Number(values.get(key));
+  } else if (op === "EVAL" && String(args[0]).includes("VY_IP_RATE_LIMIT")) {
+    const key = args[2];
+    const count = Number(values.get(key) || 0) + 1;
+    values.set(key, String(count));
+    if (count === 1) expirations.set(key, Number(args[3]));
+    result = count;
   } else if (op === "EVAL" && String(args[0]).includes("INCR") && String(args[0]).includes("EXPIRE")) {
     const key = args[2];
     const count = Number(values.get(key) || 0) + 1;
@@ -550,6 +556,58 @@ test("daily lawyer-question counter increments through one atomic Redis operatio
   assert.equal(await incrementDailyQuestionCount(key), 1);
   assert.equal(await incrementDailyQuestionCount(key), 2);
   assert.equal(values.get(key), "2");
+});
+
+test("public chat IP limiter hashes trusted Vercel IPs and enforces an atomic bounded window", async () => {
+  const { consumeIpRateLimit } = require("../lib/quota");
+  const previousSecret = process.env.APP_SECRET;
+  process.env.APP_SECRET = "test-ip-rate-limit-secret";
+  try {
+    const req = { headers: { "x-real-ip": "203.0.113.25" } };
+    const first = await consumeIpRateLimit(req, { limit: 2, windowSeconds: 900 });
+    const second = await consumeIpRateLimit(req, { limit: 2, windowSeconds: 900 });
+    const third = await consumeIpRateLimit(req, { limit: 2, windowSeconds: 900 });
+    assert.deepEqual([first.count, second.count, third.count], [1, 2, 3]);
+    const digest = crypto.createHmac("sha256", process.env.APP_SECRET).update("203.0.113.25").digest("hex");
+    const key = "vy:ratelimit:chat:" + digest;
+    assert.equal(values.get(key), "3");
+    assert.equal(expirations.get(key), 900);
+    assert.equal(values.has("203.0.113.25"), false, "raw IP addresses must never be stored");
+    await assert.rejects(consumeIpRateLimit({ headers: { "x-real-ip": "not-an-ip" } }), error => error.code === "CLIENT_IP_UNAVAILABLE");
+    await assert.rejects(consumeIpRateLimit({ headers: { "x-forwarded-for": "203.0.113.25" } }), error => error.code === "CLIENT_IP_UNAVAILABLE");
+  } finally {
+    if (previousSecret === undefined) delete process.env.APP_SECRET;
+    else process.env.APP_SECRET = previousSecret;
+  }
+});
+
+test("public chat returns 429 with Retry-After after the IP request threshold", async () => {
+  const previousSecret = process.env.APP_SECRET;
+  const previousKey = process.env.AI_API_KEY;
+  process.env.APP_SECRET = "test-chat-ip-secret";
+  process.env.AI_API_KEY = "test-ai-key";
+  const ip = "198.51.100.17";
+  const digest = crypto.createHmac("sha256", process.env.APP_SECRET).update(ip).digest("hex");
+  values.set("vy:ratelimit:chat:" + digest, "40");
+  delete require.cache[require.resolve("../api/chat")];
+  const chat = require("../api/chat");
+  const res = responseMock();
+  try {
+    await chat({
+      method: "POST",
+      headers: { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "same-origin", "x-real-ip": ip },
+      body: { consent: true, message: "یک پرسش حقوقی آزمایشی" }
+    }, res);
+  } finally {
+    delete require.cache[require.resolve("../api/chat")];
+    if (previousSecret === undefined) delete process.env.APP_SECRET;
+    else process.env.APP_SECRET = previousSecret;
+    if (previousKey === undefined) delete process.env.AI_API_KEY;
+    else process.env.AI_API_KEY = previousKey;
+  }
+  assert.equal(res.statusCode, 429);
+  assert.equal(res.headers["Retry-After"], "900");
+  assert.equal(res.body.code, "CHAT_RATE_LIMITED");
 });
 
 test("lawyer login rate limits increment atomically with a bounded TTL", async () => {
