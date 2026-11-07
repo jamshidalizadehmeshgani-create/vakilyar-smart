@@ -77,7 +77,8 @@ module.exports = async (req, res) => {
     if (error?.code === "CLIENT_IP_UNAVAILABLE") {
       return res.status(503).json({ code: "CLIENT_IP_UNAVAILABLE", error: "تشخیص امن اتصال ممکن نیست؛ لطفاً کمی بعد دوباره تلاش کنید." });
     }
-    console.error("Chat IP rate-limit error:", error?.message || error);
+    const diagnosticCode = typeof error?.code === "string" && /^[A-Z0-9_]{2,40}$/i.test(error.code) ? error.code.toUpperCase() : "UNCLASSIFIED";
+    console.error("Chat IP rate-limit failure:", diagnosticCode);
     return res.status(503).json({ code: "CHAT_RATE_LIMIT_UNAVAILABLE", error: "سامانه کنترل تعداد درخواست‌ها موقتاً در دسترس نیست." });
   }
   let charged = 0;
@@ -159,8 +160,9 @@ module.exports = async (req, res) => {
     }
     return res.status(200).json({ configured: true, reply, plan: account.isPro ? "pro" : "free", unlimited: account.isUnlimited, credits_used: charged, credits_remaining: (account.isPro || account.isUnlimited) ? null : remainingCredits });
   } catch (error) {
-    if (account && reservationId) { try { await refundReservation(account.key, reservationId); reservationId = null; } catch (refundError) { console.error("Credit refund error:", refundError.message); } }
-    console.error("Chat API error:", error?.message || error);
+    if (account && reservationId) { try { await refundReservation(account.key, reservationId); reservationId = null; } catch (refundError) { console.error("Credit refund failed"); } }
+    const diagnosticCode = typeof error?.code === "string" && /^[A-Z0-9_]{2,40}$/i.test(error.code) ? error.code.toUpperCase() : "UNCLASSIFIED";
+    console.error("Chat API failure:", diagnosticCode);
     return res.status(502).json({ error: "در حال حاضر امکان دریافت پاسخ وجود ندارد. کمی بعد دوباره تلاش کنید." });
   }
 };
