@@ -97,3 +97,15 @@ test("admin panels keep manager credentials in password fields and send them onl
   assert.match(credits, /sessionStorage\.setItem\(["']vy_pending_credit_grant["']/);
   assert.match(credits, /sessionStorage\.getItem\(["']vy_pending_credit_grant["']/);
 });
+
+
+test("lawyer login form mirrors server input limits and prevents duplicate submits", () => {
+  const login = read("public/lawyer-login.html");
+  assert.match(login, /id="email" type="email"[^>]*maxlength="190"/);
+  assert.match(login, /id="password" type="password"[^>]*maxlength="200"/);
+  assert.match(login, /autocomplete="username"/);
+  assert.match(login, /autocomplete="current-password"/);
+  assert.match(login, /button\.disabled=true/);
+  assert.match(login, /finally\{button\.disabled=false;\}/);
+  assert.match(login, /aria-live="polite"/);
+});
