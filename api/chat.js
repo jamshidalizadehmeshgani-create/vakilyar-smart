@@ -130,6 +130,7 @@ module.exports = async (req, res) => {
       body: JSON.stringify({
         model,
         temperature: 0.2,
+        max_tokens: 4096,
         messages: [
           { role: "system", content: SYSTEM_PROMPT + "\nحوزه حقوقی این درخواست: " + scopeLabel },
           { role: "user", content: message }
@@ -145,7 +146,10 @@ module.exports = async (req, res) => {
     }
 
     const reply = data?.choices?.[0]?.message?.content;
-    if (!reply) { if (reservationId) { await refundReservation(account.key, reservationId); reservationId = null; } return res.status(502).json({ error: "پاسخ معتبری دریافت نشد؛ اعتبار رزروشده بازگردانده شد." }); }
+    if (typeof reply !== "string" || !reply.trim() || reply.length > 24000) {
+      if (reservationId) { await refundReservation(account.key, reservationId); reservationId = null; }
+      return res.status(502).json({ error: "پاسخ موتور هوش مصنوعی نامعتبر یا بیش از حد طولانی بود؛ اعتبار رزروشده بازگردانده شد." });
+    }
     if (reservationId) {
       const committed = await commitReservation(reservationId);
       if (committed !== 1) throw new Error("Credit reservation could not be committed");
