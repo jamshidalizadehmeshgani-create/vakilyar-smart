@@ -721,6 +721,16 @@ test("question deletion atomically verifies ownership and removes both indexes",
   }), 0);
 });
 
+test("admin authorization fails closed when trusted edge IP is missing", async () => {
+  const res = responseMock();
+  const ok = await authorizeAdmin({
+    headers: { host: "app.example.test", origin: "https://app.example.test", authorization: "Bearer test-admin-key" }
+  }, res);
+  assert.equal(ok, false);
+  assert.equal(res.statusCode, 503);
+  assert.equal(res.body.code, "ADMIN_RATE_LIMIT_UNAVAILABLE");
+});
+
 test("admin authorization rejects cross-origin requests before checking credentials", async () => {
   const res = responseMock();
   const ok = await authorizeAdmin({
@@ -955,7 +965,7 @@ test("admin lawyer management validates method, key, and input before mutation",
 
   const beforeCount=lists.get("vy:lawyers:index")?.length||0;
   const badInput=responseMock();
-  await adminLawyers({method:"POST",headers:{authorization:"Bearer test-admin-key",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.105",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.103"},body:{action:"create",name:"x",email:"not-an-email"}},badInput);
+  await adminLawyers({method:"POST",headers:{authorization:"Bearer test-admin-key",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.105"},body:{action:"create",name:"x",email:"not-an-email"}},badInput);
   assert.equal(badInput.statusCode,400);
   assert.equal(lists.get("vy:lawyers:index")?.length||0,beforeCount);
 });
