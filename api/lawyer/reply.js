@@ -38,7 +38,7 @@ module.exports = async (req, res) => {
     if (saved !== 1) return res.status(503).json({ error: "ساختار پرسش قابل پردازش نیست." });
     return res.status(200).json({ ok: true, duplicate: false, message: "پاسخ ثبت شد." });
   } catch (e) {
-    console.error("Lawyer reply error:", e.message);
+    console.error("Lawyer reply error:");
     return res.status(503).json({ error: "ثبت پاسخ موقتاً ممکن نیست." });
   }
 };
