@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>مدیریت هدیه اعتبار | وکیل‌یار</title>
+<style>
+body{font-family:Tahoma,Arial,sans-serif;background:#f4f2ed;color:#17243d;margin:0;padding:24px}
+main{max-width:620px;margin:30px auto;background:#fff;padding:24px;border-radius:16px;box-shadow:0 8px 28px #14233f12}
+h1{font-size:22px;color:#14233f}p{line-height:1.9;color:#586174}
+label{display:block;margin:16px 0 7px;font-size:14px}
+input{box-sizing:border-box;width:100%;padding:13px;border:1px solid #ccd2dc;border-radius:9px;font:inherit}
+button{border:0;border-radius:9px;padding:12px 18px;margin:10px 5px 0 0;font:inherit;cursor:pointer;background:#20375d;color:white}
+button.gold{background:#b18b42;color:#fff}button.danger{background:#8a3434}
+#result{white-space:pre-wrap;background:#f5f3ee;padding:14px;border-radius:9px;margin-top:18px;line-height:1.8}
+.note{font-size:12px;background:#fff7e6;padding:12px;border-radius:8px}
+</style></head>
+<body><main>
+<h1>پنل هدیه اعتبار وکیل‌یار</h1>
+<p>مدیر می‌تواند اعتبار حجمی، دسترسی نامحدود یا اشتراک آزمایشی Pro را برای یک کاربر مدیریت کند. فعال‌سازی Pro در این نسخه دستی است و به معنی پرداخت یا تمدید خودکار نیست.</p>
+<p class="note">این صفحه به‌تنهایی مجوز مدیریت نیست. کلید مدیر فقط در درخواست امن به سرور ارسال می‌شود؛ آن را در اختیار دیگران نگذارید و در مرورگر ذخیره نکنید.</p>
+<p><a href="/admin-lawyers.html">مدیریت حساب و دسترسی وکلا</a></p>\n<label for="adminKey">کلید مدیر (ADMIN_API_KEY)</label><input id="adminKey" type="password" autocomplete="off">
+<label for="userId">شناسه کاربر (از مسیر /api/usage)</label><input id="userId" placeholder="شناسه ۴۸ رقمی هگز">
+<label for="amount">مقدار اعتبار هدیه</label><input id="amount" type="number" min="1" max="10000000" value="500">
+<div>
+<button id="lookup">نمایش وضعیت کاربر</button>
+<button class="gold" id="gift">افزودن اعتبار</button>
+<button id="unlimited">فعال‌سازی نامحدود</button>
+<button class="danger" id="revoke">لغو نامحدود</button>
+<button class="gold" id="activatePro">فعال‌سازی وکیل‌یار پرو</button>
+<button class="danger" id="revokePro">لغو وکیل‌یار پرو</button>
+</div>
+<div id="result" role="status">نتیجه عملیات در این قسمت نمایش داده می‌شود.</div>
+</main>
+<script>
+const result=document.getElementById("result");
+let pendingCreditGrant=null;
+try{
+ const saved=sessionStorage.getItem("vy_pending_credit_grant");
+ if(saved){
+  const parsed=JSON.parse(saved);
+  if(parsed&&/^[a-f0-9]{32}$/.test(parsed.id||"")&&typeof parsed.user_id==="string"&&Number.isSafeInteger(parsed.credits)&&parsed.credits>0)pendingCreditGrant=parsed;
+  else sessionStorage.removeItem("vy_pending_credit_grant");
+ }
+}catch(e){}
+function persistPendingCreditGrant(){
+ try{
+  if(pendingCreditGrant)sessionStorage.setItem("vy_pending_credit_grant",JSON.stringify(pendingCreditGrant));
+  else sessionStorage.removeItem("vy_pending_credit_grant");
+ }catch(e){}
+}
+async function send(data){
+ const key=document.getElementById("adminKey").value.trim();
+ const user_id=document.getElementById("userId").value.trim();
+ if(!key||!user_id){result.textContent="کلید مدیر و شناسه کاربر را وارد کنید.";return;}
+ const isCreditGrant=Number.isSafeInteger(data.credits)&&data.credits>0;
+ if(isCreditGrant){
+  if(pendingCreditGrant && (pendingCreditGrant.user_id!==user_id || pendingCreditGrant.credits!==data.credits)){
+   result.textContent="نتیجه عملیات قبلی نامشخص است. برای جلوگیری از شارژ دوباره، همان شناسه کاربر و همان مقدار قبلی را دوباره ارسال کنید.";
+   return;
+  }
+  if(!pendingCreditGrant){
+   const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);
+   pendingCreditGrant={id:Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join(""),user_id,credits:data.credits};
+   persistPendingCreditGrant();
+  }
+  data={...data,request_id:pendingCreditGrant.id};
+ }
+ const buttons=Array.from(document.querySelectorAll("button"));
+ buttons.forEach(button=>button.disabled=true);
+ result.textContent="در حال ارسال درخواست...";
+ try{
+  const r=await fetch("/api/admin/grant-credits",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify({...data,user_id})});
+  const d=await r.json();
+  result.textContent=d.action==="lookup" ? `موجودی اعتبار: ${d.credits_balance}\nاعتبار نامحدود هدیه: ${d.unlimited ? "فعال" : "غیرفعال"}\nاشتراک Pro: ${d.pro ? "فعال" : "غیرفعال"}\nشناسه: ${d.user_id}` : (d.message||d.error||"پاسخ نامشخص");
+  if(!r.ok) result.textContent+=" (کد "+r.status+")";
+  if(isCreditGrant&&(r.ok||r.status<500)){pendingCreditGrant=null;persistPendingCreditGrant();}
+ }catch(e){result.textContent="ارتباط با سرور برقرار نشد. برای جلوگیری از شارژ دوباره، همان عملیات را با همان شناسه و مقدار تکرار کنید.";}
+ finally{buttons.forEach(button=>button.disabled=false);}
+}
+document.getElementById("lookup").onclick=()=>send({action:"lookup"});
+document.getElementById("gift").onclick=()=>send({credits:Number(document.getElementById("amount").value)});
+document.getElementById("unlimited").onclick=()=>{if(confirm("دسترسی نامحدود برای این کاربر فعال شود؟"))send({unlimited:true});};
+document.getElementById("revoke").onclick=()=>{if(confirm("دسترسی نامحدود این کاربر لغو شود؟"))send({unlimited:false});};
+document.getElementById("activatePro").onclick=()=>{if(confirm("اشتراک آزمایشی Pro برای این کاربر فعال شود؟"))send({action:"set_pro",active:true});};
+document.getElementById("revokePro").onclick=()=>{if(confirm("دسترسی Pro این کاربر لغو شود؟"))send({action:"set_pro",active:false});};
+</script></body></html>
