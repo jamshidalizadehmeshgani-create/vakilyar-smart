@@ -648,6 +648,34 @@ test("public usage and lawyer-directory reads enforce per-IP request ceilings", 
   }
 });
 
+test("question history and deletion endpoints enforce independent IP limits before account access", async () => {
+  const previousSecret = process.env.APP_SECRET;
+  process.env.APP_SECRET = "test-question-history-ip-limit-secret";
+  const ip = "203.0.113.77";
+  const digest = crypto.createHmac("sha256", process.env.APP_SECRET).update(ip).digest("hex");
+  try {
+    values.set("vy:ratelimit:question-history:" + digest, "120");
+    const mine = require("../api/questions/mine");
+    const historyRes = responseMock();
+    await mine({ method: "GET", headers: { "x-real-ip": ip } }, historyRes);
+    assert.equal(historyRes.statusCode, 429);
+    assert.equal(historyRes.body.code, "QUESTION_HISTORY_RATE_LIMITED");
+
+    values.set("vy:ratelimit:question-delete:" + digest, "30");
+    const deleteRes = responseMock();
+    await mine({
+      method: "POST",
+      headers: { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "same-origin", "x-real-ip": ip },
+      body: { question_id: "a".repeat(32) }
+    }, deleteRes);
+    assert.equal(deleteRes.statusCode, 429);
+    assert.equal(deleteRes.body.code, "QUESTION_DELETE_RATE_LIMITED");
+  } finally {
+    if (previousSecret === undefined) delete process.env.APP_SECRET;
+    else process.env.APP_SECRET = previousSecret;
+  }
+});
+
 test("lawyer profile, inbox, and reply endpoints enforce independent IP limits", async () => {
   const previousSecret = process.env.APP_SECRET;
   process.env.APP_SECRET = "test-lawyer-read-write-rate-limit-secret";
