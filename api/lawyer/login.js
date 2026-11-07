@@ -52,7 +52,7 @@ module.exports = async (req, res) => {
     return res.status(403).json({ error: "مبدأ درخواست معتبر نیست؛ صفحه را تازه‌سازی و دوباره تلاش کنید." });
   const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
   const password = typeof req.body?.password === "string" ? req.body.password : "";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 1 || password.length > 200)
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 190 || password.length < 1 || password.length > 200)
     return res.status(400).json({ error: "ایمیل یا رمز عبور معتبر نیست." });
   try {
     const secret = process.env.APP_SECRET;
