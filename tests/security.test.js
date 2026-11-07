@@ -1695,6 +1695,12 @@ test("API error logs do not include raw exception messages or objects", () => {
     "../api/lawyers/active",
     "../api/questions/create",
     "../api/questions/mine",
+    "../api/users/register",
+    "../api/users/login",
+    "../api/users/verify",
+    "../api/users/me",
+    "../api/users/logout",
+    "../api/users/resend-verification",
     "../api/usage"
   ];
   for (const file of apiFiles) {
