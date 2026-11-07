@@ -283,6 +283,15 @@ function responseMock() {
   };
 }
 
+test("lawyer admin panel clears dynamic lists without using an HTML parsing sink", () => {
+  const fs = require("node:fs");
+  const source = fs.readFileSync(require.resolve("../public/admin-lawyers.html"), "utf8");
+  assert.match(source, /\$\("list"\)\.replaceChildren\(\)/);
+  assert.doesNotMatch(source, /\.innerHTML\s*=/);
+  assert.match(source, /title\.textContent\s*=\s*w\.name/);
+  assert.match(source, /detail\.textContent\s*=/);
+});
+
 test("an ambiguous reservation timeout can be safely refunded", async () => {
   values.set("test:credits", "100");
   throwAfterReserve = true;
