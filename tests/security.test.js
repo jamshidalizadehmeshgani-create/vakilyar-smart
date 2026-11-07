@@ -884,9 +884,23 @@ test("lawyer login trusts only a valid platform IP and ignores spoofable forward
   assert.equal(res.body.code, "LOGIN_RATE_LIMIT_UNAVAILABLE");
 });
 
+test("lawyer login account throttling is HMAC-scoped to email and IP to prevent cross-client lockout", () => {
+  const { loginAttemptKey } = loginLawyer;
+  const first = loginAttemptKey("lawyer@example.test", "203.0.113.10", "test-secret");
+  const samePair = loginAttemptKey("lawyer@example.test", "203.0.113.10", "test-secret");
+  const otherIp = loginAttemptKey("lawyer@example.test", "203.0.113.11", "test-secret");
+  const otherEmail = loginAttemptKey("other@example.test", "203.0.113.10", "test-secret");
+  assert.equal(first, samePair);
+  assert.notEqual(first, otherIp);
+  assert.notEqual(first, otherEmail);
+  assert.match(first, /^vy:lawyer:login-pair-attempts:[a-f0-9]{64}$/);
+  assert.equal(first.includes("lawyer@example.test"), false);
+  assert.throws(() => loginAttemptKey("lawyer@example.test", "invalid-ip", "test-secret"), /Invalid login rate-limit identity/);
+});
+
 test("lawyer login rate limits increment atomically with a bounded TTL", async () => {
-  const { incrementLoginAttempts } = loginLawyer;
-  const emailKey = "vy:lawyer:login-attempts:" + "a".repeat(64);
+  const { incrementLoginAttempts, loginAttemptKey } = loginLawyer;
+  const emailKey = loginAttemptKey("lawyer@example.test", "203.0.113.10", "test-secret");
   const ipKey = "vy:lawyer:login-ip-attempts:" + "b".repeat(64);
   assert.equal(await incrementLoginAttempts(emailKey, 900), 1);
   assert.equal(await incrementLoginAttempts(emailKey, 900), 2);
