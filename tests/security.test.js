@@ -197,6 +197,34 @@ global.fetch = async (_url, options) => {
       lists.set(key, list.slice(0, 500));
     }
     result = 1;
+  } else if (op === "EVAL" && String(args[0]).includes("VY_LAWYER_REPLY_IDEMPOTENT")) {
+    const questionKey=args[2], auditKey=args[3], idempotencyKey=args[4];
+    const lawyerId=args[5], reply=JSON.parse(args[6]), at=args[7], audit=args[8];
+    const fingerprint=args[9], replyId=args[10];
+    const prior=values.get(idempotencyKey);
+    if(prior!==undefined) {
+      const prefix=fingerprint+"|";
+      result=prior.startsWith(prefix)?2:-4;
+    } else {
+      const raw=values.get(questionKey);
+      if(!raw)result=-1;
+      else {
+        const q=JSON.parse(raw);
+        if(q.lawyer_id!==lawyerId)result=-3;
+        else {
+          q.replies=q.replies||[];
+          q.replies.push(reply);
+          q.status="answered";
+          q.updated_at=at;
+          values.set(questionKey,JSON.stringify(q));
+          const list=lists.get(auditKey)||[];
+          list.unshift(audit);
+          lists.set(auditKey,list.slice(0,500));
+          values.set(idempotencyKey,fingerprint+"|"+replyId);
+          result=1;
+        }
+      }
+    }
   } else if (op === "EVAL" && String(args[0]).includes("q.replies=q.replies or {}")) {
     const questionKey = args[2], auditKey = args[3], lawyerId = args[4];
     const reply = JSON.parse(args[5]), at = args[6], audit = args[7];
@@ -769,6 +797,39 @@ test("lawyer question submissions have an independent hashed IP limit", async ()
     if (previousSecret === undefined) delete process.env.APP_SECRET;
     else process.env.APP_SECRET = previousSecret;
   }
+});
+
+test("lawyer replies are idempotent and reject request IDs reused with different content", async () => {
+  const replyHandler=require("../api/lawyer/reply");
+  const lawyerId="c".repeat(32), questionId="d".repeat(32), token="e".repeat(64);
+  const sessionKey="vy:lawyer:session:"+crypto.createHash("sha256").update(token).digest("hex");
+  values.set(sessionKey,lawyerId+":0");
+  values.set("vy:lawyer:"+lawyerId,JSON.stringify({id:lawyerId,name:"وکیل آزمایشی",access:"active",session_version:0}));
+  values.set("vy:question:"+questionId,JSON.stringify({id:questionId,lawyer_id:lawyerId,question:"پرسش آزمایشی",replies:[]}));
+  const headers={host:"app.example.test",origin:"https://app.example.test","sec-fetch-site":"same-origin","x-real-ip":"192.0.2.141",cookie:"vy_lawyer_session="+token};
+  const requestId="f".repeat(32);
+  const call=async message=>{
+    const res=responseMock();
+    await replyHandler({method:"POST",headers,body:{question_id:questionId,message,request_id:requestId}},res);
+    return res;
+  };
+  const first=await call("پاسخ حقوقی آزمایشی");
+  assert.equal(first.statusCode,200);
+  assert.equal(first.body.duplicate,false);
+  const afterFirst=JSON.parse(values.get("vy:question:"+questionId));
+  assert.equal(afterFirst.replies.length,1);
+  const auditKey="vy:lawyer:"+lawyerId+":audit";
+  const auditCount=lists.get(auditKey).length;
+
+  const retry=await call("پاسخ حقوقی آزمایشی");
+  assert.equal(retry.statusCode,200);
+  assert.equal(retry.body.duplicate,true);
+  assert.equal(JSON.parse(values.get("vy:question:"+questionId)).replies.length,1);
+  assert.equal(lists.get(auditKey).length,auditCount);
+
+  const changed=await call("متن پاسخ متفاوت");
+  assert.equal(changed.statusCode,409);
+  assert.equal(JSON.parse(values.get("vy:question:"+questionId)).replies.length,1);
 });
 
 test("lawyer login uses a valid dummy scrypt hash for unknown and malformed accounts", () => {
