@@ -141,7 +141,8 @@ module.exports = async (req, res) => {
 
     const data = await upstream.json().catch(() => ({}));
     if (!upstream.ok) {
-      console.error("AI provider error:", upstream.status, data?.error?.message || "unknown");
+      // Provider error bodies are untrusted and may echo prompts or credentials; log status only.
+      console.error("AI provider returned non-success status:", upstream.status);
       if (reservationId) { await refundReservation(account.key, reservationId); reservationId = null; }
       return res.status(502).json({ error: "ارتباط با موتور هوش مصنوعی برقرار نشد؛ اعتبار رزروشده بازگردانده شد." });
     }
