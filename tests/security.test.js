@@ -64,8 +64,8 @@ global.fetch = async (_url, options) => {
     if(values.has(emailKey)) result=0;
     else { values.set(emailKey,id); values.set(lawyerKey,raw); const set=lists.get(indexKey)||[]; if(!set.includes(id))set.push(id); lists.set(indexKey,set); result=1; }
   } else if (op === "EVAL" && String(args[0]).includes("VY_ADMIN_CREDIT_GRANT_IDEMPOTENT")) {
-    const balanceKey=args[2], idempotencyKey=args[3];
-    const initial=Number(args[4]), amount=Number(args[5]), fingerprint=args[6];
+    const balanceKey=args[2], idempotencyKey=args[3], auditKey=args[4];
+    const initial=Number(args[5]), amount=Number(args[6]), fingerprint=args[7], auditEvent=args[9];
     const prior=values.get(idempotencyKey);
     if(prior!==undefined) {
       const prefix=fingerprint+"|";
@@ -76,6 +76,9 @@ global.fetch = async (_url, options) => {
       const balance=Number(values.get(balanceKey))+amount;
       values.set(balanceKey,String(balance));
       values.set(idempotencyKey,fingerprint+"|"+String(balance));
+      const audit=lists.get(auditKey)||[];
+      audit.unshift(String(auditEvent));
+      lists.set(auditKey,audit.slice(0,500));
       result=[balance,1];
     }
   } else if (op === "EVAL" && String(args[0]).includes("return redis.call('INCRBY',KEYS[1],ARGV[2])")) {
@@ -1161,11 +1164,13 @@ test("admin credit grants are idempotent across retries and reject reused IDs wi
   const userId="6".repeat(48), otherUserId="5".repeat(48);
   const headers={authorization:"Bearer test-admin-key",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.111"};
   const requestId="b".repeat(32);
+  const auditCountBefore=lists.get("vy:admin:audit")?.length||0;
   const first=responseMock();
   await grantCredits({method:"POST",headers,body:{user_id:userId,credits:80,request_id:requestId}},first);
   assert.equal(first.statusCode,200);
   assert.equal(first.body.credits_balance,1080);
   assert.equal(first.body.duplicate,false);
+  assert.equal((lists.get("vy:admin:audit")?.length||0),auditCountBefore+1);
 
   const retry=responseMock();
   await grantCredits({method:"POST",headers,body:{user_id:userId,credits:80,request_id:requestId}},retry);
@@ -1173,6 +1178,7 @@ test("admin credit grants are idempotent across retries and reject reused IDs wi
   assert.equal(retry.body.duplicate,true);
   assert.equal(retry.body.credits_added,0);
   assert.equal(retry.body.credits_balance,1080);
+  assert.equal((lists.get("vy:admin:audit")?.length||0),auditCountBefore+1,"a retry must not duplicate the audit event");
   assert.equal(values.get("vy:user:"+userId+":credits"),"1080");
 
   const changedAmount=responseMock();
