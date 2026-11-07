@@ -20,7 +20,7 @@ module.exports = async (req, res) => {
     }));
     return res.status(200).json({ ok: true, questions: rows.filter(Boolean) });
   } catch (e) {
-    console.error("Lawyer questions error:", e.message);
+    console.error("Lawyer questions error:");
     return res.status(503).json({ error: "دریافت پرسش‌ها موقتاً ممکن نیست." });
   }
 };
