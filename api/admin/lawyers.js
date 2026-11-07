@@ -125,7 +125,7 @@ module.exports = async (req, res) => {
             to: lawyer.email,
             name: lawyer.name,
             role: "وکیل همکار",
-            loginUrl: (process.env.APP_BASE_URL || "https://vakilyar-smart.vercel.app").replace(/\\/$/, "") + "/lawyer-login.html",
+            loginUrl: (process.env.APP_BASE_URL || "https://vakilyar-smart.vercel.app").replace(/\/$/, "") + "/lawyer-login.html",
             details: [
               ["نام و نام خانوادگی", lawyer.name],
               ["ایمیل حساب", lawyer.email],
