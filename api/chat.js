@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const { getAccount, classifyRequest, reserveCredits, refundReservation, commitReservation, consumeIpRateLimit } = require("../lib/quota");
+const { getIranLeaseLawContext } = require("../lib/legal-sources/iran-civil-code-lease");
 
 const SYSTEM_PROMPT = `تو «وکیل‌یار هوشمند» هستی؛ دستیار ارائه‌دهنده اطلاعات عمومی و آموزشی حقوقی.
 اصول الزامی:
@@ -122,6 +123,7 @@ module.exports = async (req, res) => {
       if (remainingCredits < 0) return res.status(402).json({ code: "CREDITS_EXHAUSTED", error: "اعتبار رایگان شما به پایان رسیده است. برای ادامه، وکیل‌یار پرو را فعال کنید." });
     }
     const scopeLabel = foreignRequest ? (countryLabel || "حوزه حقوقی انتخاب‌شده") : "قوانین جمهوری اسلامی ایران";
+    const verifiedLegalContext = foreignRequest ? "" : getIranLeaseLawContext(message);
     const upstream = await fetch(endpoint, {
       method: "POST",
       signal: AbortSignal.timeout(25000),
@@ -134,7 +136,7 @@ module.exports = async (req, res) => {
         temperature: 0.2,
         max_tokens: 4096,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT + "\nحوزه حقوقی این درخواست: " + scopeLabel },
+          { role: "system", content: SYSTEM_PROMPT + "\nحوزه حقوقی این درخواست: " + scopeLabel + (verifiedLegalContext ? "\n\n" + verifiedLegalContext : "") },
           { role: "user", content: message }
         ]
       })
