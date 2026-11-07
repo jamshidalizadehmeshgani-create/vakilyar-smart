@@ -26,7 +26,7 @@
 پس از افزودن یا تغییر متغیرها، یک Redeploy انجام دهید. کلید API را هرگز در کد، مخزن عمومی یا گفتگو قرار ندهید.
 
 ## اجرای محلی
-به Node.js نسخه 18 یا بالاتر و Vercel CLI نیاز است:
+به Node.js نسخه 22 یا بالاتر و Vercel CLI نیاز است:
 ```bash
 npm install -g vercel
 vercel dev
