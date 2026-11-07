@@ -1106,12 +1106,12 @@ test("user-to-lawyer question lifecycle works across create, inbox, reply, histo
   values.set("vy:lawyer:session:" + hashToken(otherLawyerToken), otherLawyerId);
   const forbiddenReplyRes = responseMock();
   await reply({ method: "POST", headers: { ...sameOrigin, cookie: "vy_lawyer_session=" + otherLawyerToken },
-    body: { question_id: questionId, message: "پاسخ غیرمجاز" } }, forbiddenReplyRes);
+    body: { question_id: questionId, message: "پاسخ غیرمجاز", request_id: "1".repeat(32) } }, forbiddenReplyRes);
   assert.equal(forbiddenReplyRes.statusCode, 403);
 
   const replyRes = responseMock();
   await reply({ method: "POST", headers: { ...sameOrigin, cookie: sessionCookie },
-    body: { question_id: questionId, message: "برای پاسخ دقیق، متن قرارداد باید بررسی شود." } }, replyRes);
+    body: { question_id: questionId, message: "برای پاسخ دقیق، متن قرارداد باید بررسی شود.", request_id: "2".repeat(32) } }, replyRes);
   assert.equal(replyRes.statusCode, 200);
 
   const historyRes = responseMock();
