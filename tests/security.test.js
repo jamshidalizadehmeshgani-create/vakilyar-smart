@@ -1669,3 +1669,12 @@ test("anonymous user identity cookie is signed, HttpOnly, Secure, and tampering 
     process.env.APP_SECRET = secret;
   }
 });
+
+
+test("chat diagnostics never log raw exception messages or objects", () => {
+  const source = fs.readFileSync(require.resolve("../api/chat"), "utf8");
+  assert.match(source, /console\\.error\\("Chat IP rate-limit failure:", diagnosticCode\\)/);
+  assert.match(source, /console\\.error\\("Chat API failure:", diagnosticCode\\)/);
+  assert.match(source, /console\\.error\\("Credit refund failed"\\)/);
+  assert.doesNotMatch(source, /console\\.error\\([^\\n]*(?:error\\?\\.message|refundError\\.message|console\\.error\\([^\\n]*,\\s*error\\s*\\))/);
+});
