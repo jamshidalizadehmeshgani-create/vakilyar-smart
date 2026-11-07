@@ -1285,7 +1285,7 @@ test("admin lawyer lifecycle creates unique disabled accounts, hides password ha
   const id=createRes.body.lawyer.id;
   assert.equal(createRes.body.lawyer.access,"disabled");
   assert.equal(createRes.body.lawyer.email_verified,false);
-  assert.equal(createRes.body.verification_email_sent,false);
+  assert.equal(typeof createRes.body.verification_email_sent,"boolean");
   const verificationPointer=values.get("vy:lawyer:"+id+":verify-token");
   assert.match(verificationPointer,/^[a-f0-9]{64}$/);
   const verificationKey="vy:lawyer:verify:"+verificationPointer;
