@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ثبت‌نام کاربر | وکیل‌یار</title>
+<style>
+:root{--n:#14233f;--g:#c9a45c;--bg:#f5f3ee}*{box-sizing:border-box}body{margin:0;background:var(--bg);font:15px Tahoma,Arial;color:var(--n);line-height:1.9}
+main{max-width:520px;margin:35px auto;padding:24px;background:#fff;border:1px solid #e8e0d2;border-radius:16px;box-shadow:0 8px 30px #14233f12}
+h1{margin-top:0}p{color:#596579}label{display:block;margin:12px 0 5px;font-weight:bold}input{width:100%;padding:12px;border:1px solid #cbd1dc;border-radius:8px;font:inherit}button{background:var(--n);color:#fff;border:0;border-radius:8px;padding:12px 20px;font:inherit;cursor:pointer;margin-top:16px;width:100%}button:disabled{opacity:.6}#msg{padding:12px;background:#f7f6f2;border-radius:8px;min-height:40px}.small{font-size:12px;color:#667085}.links a{color:#14233f}
+</style></head><body><main><h1>ساخت حساب کاربری وکیل‌یار</h1>
+<p>با ساخت حساب، پرسش‌ها، پاسخ‌های وکلا و اعتبار قبلی شما به همین حساب متصل می‌ماند؛ برای فعال‌سازی، ایمیل خود را تأیید کنید.</p>
+<form id="register">
+<label for="first">نام</label><input id="first" name="first_name" autocomplete="given-name" minlength="2" maxlength="60" required>
+<label for="last">نام خانوادگی</label><input id="last" name="last_name" autocomplete="family-name" minlength="2" maxlength="80" required>
+<label for="email">ایمیل</label><input id="email" name="email" type="email" autocomplete="email" maxlength="190" required>
+<label for="password">گذرواژه (حداقل ۱۰ نویسه)</label><input id="password" name="password" type="password" autocomplete="new-password" minlength="10" maxlength="200" required>
+<label style="font-weight:normal"><input id="show" type="checkbox" style="width:auto"> نمایش گذرواژه</label>
+<button id="submit">ایجاد حساب و ارسال پیوند تأیید</button></form>
+<p id="msg" role="status" aria-live="polite"></p>
+<p class="small">گذرواژه به ایمیل ارسال نمی‌شود. پیوند تأیید ۲۴ ساعت اعتبار دارد.</p>
+<p class="links"><a href="/user-login.html">قبلاً حساب ساخته‌اید؟ ورود</a> · <a href="/ask-lawyer.html">بازگشت به صفحه پرسش</a></p></main>
+<script>
+const form=document.getElementById("register"),msg=document.getElementById("msg"),btn=document.getElementById("submit");
+document.getElementById("show").onchange=e=>document.getElementById("password").type=e.target.checked?"text":"password";
+form.onsubmit=async e=>{e.preventDefault();btn.disabled=true;msg.textContent="در حال ثبت اطلاعات...";
+try{const body={first_name:form.first_name.value.trim(),last_name:form.last_name.value.trim(),email:form.email.value.trim(),password:form.password.value};
+const r=await fetch("/api/users/register",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify(body)});
+const d=await r.json();msg.textContent=d.message||d.error||"نتیجه نامشخص";if(r.ok){form.reset();}}
+catch{msg.textContent="ارتباط با سرور برقرار نشد. لطفاً دوباره تلاش کنید."}finally{btn.disabled=false}};
+</script></body></html>
