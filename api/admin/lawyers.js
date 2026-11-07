@@ -85,8 +85,8 @@ module.exports = async (req, res) => {
         created_at: new Date().toISOString()
       };
       const emailKey = "vy:lawyer:email:" + crypto.createHash("sha256").update(email).digest("hex");
-      const createScript = "if redis.call('EXISTS',KEYS[1])==1 then return 0 end; redis.call('SET',KEYS[1],ARGV[1]); redis.call('SET',KEYS[2],ARGV[2]); redis.call('SADD',KEYS[3],ARGV[1]); redis.call('SET',KEYS[4],ARGV[3],'EX',ARGV[4]); return 1";
-      const created = Number(await redis(["EVAL", createScript, "4", emailKey, `vy:lawyer:${id}`, "vy:lawyers:index", verificationKey, id, JSON.stringify(lawyer), id, "86400"]));
+      const createScript = "if redis.call('EXISTS',KEYS[1])==1 then return 0 end; redis.call('SET',KEYS[1],ARGV[1]); redis.call('SET',KEYS[2],ARGV[2]); redis.call('SADD',KEYS[3],ARGV[1]); redis.call('SET',KEYS[4],ARGV[3],'EX',ARGV[4]); redis.call('SET',KEYS[5],ARGV[5],'EX',ARGV[4]); return 1";
+      const created = Number(await redis(["EVAL", createScript, "5", emailKey, `vy:lawyer:${id}`, "vy:lawyers:index", verificationKey, `vy:lawyer:${id}:verify-token`, id, JSON.stringify(lawyer), id, "86400", crypto.createHash("sha256").update(verificationToken).digest("hex")]));
       if (created !== 1) return res.status(409).json({ error: "برای این ایمیل قبلاً حساب وکیل ثبت شده است." });
       const verificationEmail = await sendLawyerVerificationEmail({ to: email, name, token: verificationToken });
       const audited = await audit({ action: "lawyer_created", lawyer_id: id, at: new Date().toISOString() });
