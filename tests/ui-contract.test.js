@@ -73,7 +73,10 @@ test("admin panels keep manager credentials in password fields and send them onl
   assert.match(lawyers, /"Authorization":"Bearer "\+key/);
   assert.match(credits, /"Authorization":"Bearer "\+key/);
   for (const [page, html] of [["admin-lawyers.html", lawyers], ["admin-credits.html", credits]]) {
-    assert.doesNotMatch(html, /localStorage|sessionStorage/);
+    assert.doesNotMatch(html, /localStorage/);
+    assert.doesNotMatch(html, /sessionStorage\.(?:setItem|getItem)\(["'](?:adminKey|ADMIN_API_KEY|key)["']/i);
     assert.match(html, /autocomplete=["']off["']/);
   }
+  assert.match(credits, /sessionStorage\.setItem\(["']vy_pending_credit_grant["']/);
+  assert.match(credits, /sessionStorage\.getItem\(["']vy_pending_credit_grant["']/);
 });
