@@ -19,3 +19,8 @@ test("lawyer question form sends and persists an idempotency key", () => {
   assert.match(html, /vy_pending_question/);
   assert.match(html, /request_id:pendingQuestion\.id/);
 });
+
+test("root and deployed lawyer question pages stay in sync", () => {
+  const root = fs.readFileSync("ask-lawyer.html", "utf8");
+  assert.equal(root, html);
+});
