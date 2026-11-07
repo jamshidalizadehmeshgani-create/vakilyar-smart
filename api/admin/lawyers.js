@@ -43,7 +43,7 @@ module.exports = async (req, res) => {
         upstash_url_present: Boolean(process.env.UPSTASH_REDIS_REST_URL),
         upstash_token_present: Boolean(process.env.UPSTASH_REDIS_REST_TOKEN),
         redis_connection: redisConnection,
-        ai_api_key_present: Boolean(process.env.AI_API_KEY),
+        ai_api_key_present: Boolean(process.env.AI_API_KEY || process.env.ai_api_key),
         free_credits_initial_valid: Number.isSafeInteger(initialCredits) && initialCredits >= 0 && initialCredits <= 10000000
       };
       return res.status(200).json({ ok: true, configuration });
