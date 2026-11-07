@@ -63,6 +63,21 @@ global.fetch = async (_url, options) => {
     const emailKey=args[2], lawyerKey=args[3], indexKey=args[4], id=args[5], raw=args[6];
     if(values.has(emailKey)) result=0;
     else { values.set(emailKey,id); values.set(lawyerKey,raw); const set=lists.get(indexKey)||[]; if(!set.includes(id))set.push(id); lists.set(indexKey,set); result=1; }
+  } else if (op === "EVAL" && String(args[0]).includes("VY_ADMIN_CREDIT_GRANT_IDEMPOTENT")) {
+    const balanceKey=args[2], idempotencyKey=args[3];
+    const initial=Number(args[4]), amount=Number(args[5]), fingerprint=args[6];
+    const prior=values.get(idempotencyKey);
+    if(prior!==undefined) {
+      const prefix=fingerprint+"|";
+      if(!prior.startsWith(prefix)) result=[-2,0];
+      else result=[Number(prior.slice(prefix.length)),0];
+    } else {
+      if(!values.has(balanceKey))values.set(balanceKey,String(initial));
+      const balance=Number(values.get(balanceKey))+amount;
+      values.set(balanceKey,String(balance));
+      values.set(idempotencyKey,fingerprint+"|"+String(balance));
+      result=[balance,1];
+    }
   } else if (op === "EVAL" && String(args[0]).includes("return redis.call('INCRBY',KEYS[1],ARGV[2])")) {
     const key=args[2], initial=Number(args[3]), amount=Number(args[4]);
     if(!values.has(key))values.set(key,String(initial));
@@ -1121,7 +1136,7 @@ test("admin credit lookup and grants report accurate balances without mixing Pro
     assert.equal(lookupBefore.body.unlimited,false);
 
     const gift=responseMock();
-    await grantCredits({method:"POST",headers,body:{user_id:userId,credits:75}},gift);
+    await grantCredits({method:"POST",headers,body:{user_id:userId,credits:75,request_id:"a".repeat(32)}},gift);
     assert.equal(gift.statusCode,200);
     assert.equal(gift.body.credits_balance,325);
 
@@ -1140,6 +1155,35 @@ test("admin credit lookup and grants report accurate balances without mixing Pro
     if(initial===undefined)delete process.env.FREE_CREDITS_INITIAL;
     else process.env.FREE_CREDITS_INITIAL=initial;
   }
+});
+
+test("admin credit grants are idempotent across retries and reject reused IDs with changed payload", async () => {
+  const userId="6".repeat(48), otherUserId="5".repeat(48);
+  const headers={authorization:"Bearer test-admin-key",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.111"};
+  const requestId="b".repeat(32);
+  const first=responseMock();
+  await grantCredits({method:"POST",headers,body:{user_id:userId,credits:80,request_id:requestId}},first);
+  assert.equal(first.statusCode,200);
+  assert.equal(first.body.credits_balance,1080);
+  assert.equal(first.body.duplicate,false);
+
+  const retry=responseMock();
+  await grantCredits({method:"POST",headers,body:{user_id:userId,credits:80,request_id:requestId}},retry);
+  assert.equal(retry.statusCode,200);
+  assert.equal(retry.body.duplicate,true);
+  assert.equal(retry.body.credits_added,0);
+  assert.equal(retry.body.credits_balance,1080);
+  assert.equal(values.get("vy:user:"+userId+":credits"),"1080");
+
+  const changedAmount=responseMock();
+  await grantCredits({method:"POST",headers,body:{user_id:userId,credits:81,request_id:requestId}},changedAmount);
+  assert.equal(changedAmount.statusCode,409);
+  assert.equal(values.get("vy:user:"+userId+":credits"),"1080");
+
+  const changedUser=responseMock();
+  await grantCredits({method:"POST",headers,body:{user_id:otherUserId,credits:80,request_id:requestId}},changedUser);
+  assert.equal(changedUser.statusCode,409);
+  assert.equal(values.has("vy:user:"+otherUserId+":credits"),false);
 });
 
 test("admin credit endpoint rejects invalid identities, amounts, and non-POST requests", async () => {
