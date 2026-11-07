@@ -648,6 +648,32 @@ test("public usage and lawyer-directory reads enforce per-IP request ceilings", 
   }
 });
 
+test("lawyer profile, inbox, and reply endpoints enforce independent IP limits", async () => {
+  const previousSecret = process.env.APP_SECRET;
+  process.env.APP_SECRET = "test-lawyer-read-write-rate-limit-secret";
+  const ip = "198.51.100.91";
+  const digest = crypto.createHmac("sha256", process.env.APP_SECRET).update(ip).digest("hex");
+  const scenarios = [
+    { path: "lawyer-me", limit: 120, module: "../api/lawyer/me", method: "GET", headers: { "x-real-ip": ip }, code: "LAWYER_PROFILE_RATE_LIMITED" },
+    { path: "lawyer-inbox", limit: 60, module: "../api/lawyer/questions", method: "GET", headers: { "x-real-ip": ip }, code: "LAWYER_INBOX_RATE_LIMITED" },
+    { path: "lawyer-reply", limit: 40, module: "../api/lawyer/reply", method: "POST", headers: { host: "app.example.test", origin: "https://app.example.test", "x-real-ip": ip }, code: "LAWYER_REPLY_RATE_LIMITED" }
+  ];
+  try {
+    for (const item of scenarios) {
+      values.set("vy:ratelimit:" + item.path + ":" + digest, String(item.limit));
+      const handler = require(item.module);
+      const res = responseMock();
+      await handler({ method: item.method, headers: item.headers, body: {} }, res);
+      assert.equal(res.statusCode, 429, item.path);
+      assert.equal(res.headers["Retry-After"], "900", item.path);
+      assert.equal(res.body.code, item.code, item.path);
+    }
+  } finally {
+    if (previousSecret === undefined) delete process.env.APP_SECRET;
+    else process.env.APP_SECRET = previousSecret;
+  }
+});
+
 test("lawyer question submissions have an independent hashed IP limit", async () => {
   const previousSecret = process.env.APP_SECRET;
   process.env.APP_SECRET = "test-lawyer-question-ip-secret";
