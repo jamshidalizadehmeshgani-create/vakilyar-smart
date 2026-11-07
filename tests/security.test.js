@@ -169,23 +169,29 @@ global.fetch = async (_url, options) => {
       }
     }
   } else if (op === "EVAL" && String(args[0]).includes("CREATE_OWNED_QUESTION_WITH_DAILY_LIMIT")) {
-    const counterKey = args[2], questionKey = args[3], lawyerListKey = args[4], userListKey = args[5];
-    const item = args[6], id = args[7], retentionSeconds = Number(args[8]);
-    const dailyLimit = Number(args[9]), ttl = Number(args[10]);
-    const count = Number(values.get(counterKey) || 0);
-    if (count >= dailyLimit) result = -1;
-    else {
-      const nextCount = count + 1;
-      values.set(counterKey, String(nextCount));
-      if (nextCount === 1) expirations.set(counterKey, ttl);
-      values.set(questionKey, item);
-      for (const key of [lawyerListKey, userListKey]) {
-        const list = lists.get(key) || [];
-        list.unshift(String(id));
-        lists.set(key, list.slice(0, 500));
+    const counterKey=args[2],questionKey=args[3],lawyerListKey=args[4],userListKey=args[5],idempotencyKey=args[6];
+    const item=args[7],id=args[8],retentionSeconds=Number(args[9]),dailyLimit=Number(args[10]),ttl=Number(args[11]),fingerprint=args[12];
+    const prior=values.get(idempotencyKey);
+    if(prior!==undefined){
+      const prefix=fingerprint+"|";
+      result=prior.startsWith(prefix)?[-2,prior.slice(prefix.length)]:[-3,""];
+    }else{
+      const count=Number(values.get(counterKey)||0);
+      if(count>=dailyLimit)result=[-1,""];
+      else{
+        const nextCount=count+1;
+        values.set(counterKey,String(nextCount));
+        if(nextCount===1)expirations.set(counterKey,ttl);
+        values.set(questionKey,item);
+        for(const key of [lawyerListKey,userListKey]){
+          const list=lists.get(key)||[];
+          list.unshift(String(id));
+          lists.set(key,list.slice(0,500));
+        }
+        expirations.set(questionKey,retentionSeconds);
+        values.set(idempotencyKey,fingerprint+"|"+id);
+        result=[nextCount,id];
       }
-      expirations.set(questionKey, retentionSeconds);
-      result = nextCount;
     }
   } else if (op === "EVAL" && String(args[0]).includes("redis.call('SET',KEYS[1],ARGV[1],'EX',ARGV[3])")) {
     const questionKey = args[2], lawyerListKey = args[3], userListKey = args[4];
@@ -1079,7 +1085,7 @@ test("user-to-lawyer question lifecycle works across create, inbox, reply, histo
 
   const createRes = responseMock();
   await createQuestion({ method: "POST", headers: { ...sameOrigin, cookie: userCookie },
-    body: { consent: true, lawyer_id: lawyerId, question: "شرایط قانونی فسخ قرارداد چیست؟" } }, createRes);
+    body: { consent: true, lawyer_id: lawyerId, question: "شرایط قانونی فسخ قرارداد چیست؟", request_id: "9".repeat(32) } }, createRes);
   assert.equal(createRes.statusCode, 201);
   const questionId = createRes.body.question_id;
   assert.match(questionId, /^[a-f0-9]{32}$/);
@@ -1302,16 +1308,22 @@ test("daily question limit and question storage are one atomic bounded operation
   for (let i = 1; i <= 5; i++) {
     const id = String(i).padStart(32, "0");
     const item = { id, user_id: "7".repeat(48), question: "پرسش آزمایشی " + i };
-    assert.equal(await createQuestionWithDailyLimit({
+    const created=await createQuestionWithDailyLimit({
       counterKey, questionKey: "vy:question:" + id, lawyerListKey, userListKey,
-      item, id, retentionSeconds: 90 * 86400, dailyLimit: 5
-    }), i);
+      idempotencyKey:"vy:user:"+ "7".repeat(48) + ":question-request:" + id,
+      fingerprint:"fingerprint-"+id,item,id,retentionSeconds:90*86400,dailyLimit:5
+    });
+    assert.equal(created.duplicate,false);
+    assert.equal(created.questionId,id);
   }
   const blockedId = "f".repeat(32);
-  assert.equal(await createQuestionWithDailyLimit({
-    counterKey, questionKey: "vy:question:" + blockedId, lawyerListKey, userListKey,
-    item: { id: blockedId }, id: blockedId, retentionSeconds: 90 * 86400, dailyLimit: 5
-  }), -1);
+  const blocked=await createQuestionWithDailyLimit({
+    counterKey, questionKey:"vy:question:"+blockedId,lawyerListKey,userListKey,
+    idempotencyKey:"vy:user:"+"7".repeat(48)+":question-request:"+blockedId,
+    fingerprint:"fingerprint-"+blockedId,item:{id:blockedId},id:blockedId,
+    retentionSeconds:90*86400,dailyLimit:5
+  });
+  assert.equal(blocked.limited,true);
   assert.equal(values.get(counterKey), "5", "blocked attempts must not increase the daily counter");
   assert.equal(values.has("vy:question:" + blockedId), false, "blocked attempts must not create a question");
   assert.equal(lists.get(lawyerListKey).length, 5);
