@@ -146,12 +146,12 @@ test("all public pages avoid dangerous HTML parsing and dynamic code execution s
   assert.ok(pages.length >= 8, "Expected the complete public HTML page set");
 
   const forbidden = [
-    [/\\.innerHTML\\s*=/, "innerHTML assignment"],
-    [/\\.outerHTML\\s*=/, "outerHTML assignment"],
-    [/\\.insertAdjacentHTML\\s*\\(/, "insertAdjacentHTML"],
-    [/document\\.write\\s*\\(/, "document.write"],
-    [/\\beval\\s*\\(/, "eval"],
-    [/\\bnew\\s+Function\\s*\\(/, "dynamic Function constructor"]
+    [/\.innerHTML\s*=/, "innerHTML assignment"],
+    [/\.outerHTML\s*=/, "outerHTML assignment"],
+    [/\.insertAdjacentHTML\s*\(/, "insertAdjacentHTML"],
+    [/document\.write\s*\(/, "document.write"],
+    [/\beval\s*\(/, "eval"],
+    [/\bnew\s+Function\s*\(/, "dynamic Function constructor"]
   ];
 
   for (const page of pages) {
