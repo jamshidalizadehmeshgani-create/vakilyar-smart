@@ -1,5 +1,5 @@
 const crypto = require("crypto");
-const { getAccount, classifyRequest, reserveCredits, refundReservation, commitReservation } = require("../lib/quota");
+const { getAccount, classifyRequest, reserveCredits, refundReservation, commitReservation, consumeIpRateLimit } = require("../lib/quota");
 
 const SYSTEM_PROMPT = `تو «وکیل‌یار هوشمند» هستی؛ دستیار ارائه‌دهنده اطلاعات عمومی و آموزشی حقوقی.
 اصول الزامی:
@@ -49,6 +49,18 @@ module.exports = async (req, res) => {
   }
 
   let account;
+  try {
+    const ipLimit = await consumeIpRateLimit(req);
+    if (ipLimit.count > ipLimit.limit) {
+      res.setHeader("Retry-After", String(ipLimit.windowSeconds));
+      return res.status(429).json({ code: "CHAT_RATE_LIMITED", error: "تعداد درخواست‌ها از این اتصال بیش از حد مجاز است؛ ۱۵ دقیقه بعد دوباره تلاش کنید." });
+    }
+  } catch (error) {
+    if (error?.code === "CLIENT_IP_UNAVAILABLE") {
+      return res.status(503).json({ code: "CLIENT_IP_UNAVAILABLE", error: "تشخیص امن اتصال ممکن نیست؛ لطفاً کمی بعد دوباره تلاش کنید." });
+    }
+    throw error;
+  }
   let charged = 0;
   let reservationId = null;
   let remainingCredits = null;
