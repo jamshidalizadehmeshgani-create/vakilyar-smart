@@ -1089,6 +1089,23 @@ test("user-to-lawyer question lifecycle works across create, inbox, reply, histo
   assert.equal(createRes.statusCode, 201);
   const questionId = createRes.body.question_id;
   assert.match(questionId, /^[a-f0-9]{32}$/);
+  const dailyCounter="vy:user:"+userId+":question-limit";
+  const retryCreate=responseMock();
+  await createQuestion({method:"POST",headers:{...sameOrigin,cookie:userCookie},body:{
+    consent:true,lawyer_id:lawyerId,question:"شرایط قانونی فسخ قرارداد چیست؟",request_id:"9".repeat(32)
+  }},retryCreate);
+  assert.equal(retryCreate.statusCode,201);
+  assert.equal(retryCreate.body.duplicate,true);
+  assert.equal(retryCreate.body.question_id,questionId);
+  assert.equal(values.get(dailyCounter),"1","retry must not consume another daily question");
+  assert.equal(lists.get("vy:user:"+userId+":questions").length,1);
+
+  const conflictingCreate=responseMock();
+  await createQuestion({method:"POST",headers:{...sameOrigin,cookie:userCookie},body:{
+    consent:true,lawyer_id:lawyerId,question:"متن متفاوت برای همان شناسه",request_id:"9".repeat(32)
+  }},conflictingCreate);
+  assert.equal(conflictingCreate.statusCode,409);
+  assert.equal(values.get(dailyCounter),"1");
 
   const loginRes = responseMock();
   await login({ method: "POST", headers: sameOrigin,
