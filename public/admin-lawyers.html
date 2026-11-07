@@ -14,11 +14,11 @@ body{font-family:Tahoma,Arial,sans-serif;background:#f4f2ed;color:#17243d;margin
 <label for="email">ایمیل اختصاصی</label><input id="email" type="email" maxlength="190">
 <label for="license">شماره پروانه (اختیاری)</label><input id="license" maxlength="80">
 <button class="gold" id="create">ایجاد حساب وکیل</button><button id="refresh">نمایش فهرست وکلا</button><button id="auditBtn">گزارش ۱۰۰ رویداد اخیر مدیر</button><button id="configBtn">بررسی تنظیمات سرور</button>
-<div id="result" role="status">آماده انجام عملیات.</div><section id="list"></section><h2>گزارش فعالیت‌های مدیریتی</h2><section id="audit" aria-live="polite"></section>
+<div id="result" role="status" aria-live="polite" aria-atomic="true">آماده انجام عملیات.</div><section id="list"></section><h2>گزارش فعالیت‌های مدیریتی</h2><section id="audit" aria-live="polite"></section>
 <script>
 const $=id=>document.getElementById(id), result=$("result");
-async function call(data){const key=$("key").value.trim();if(!key){result.textContent="کلید مدیر را وارد کنید.";return null;}result.textContent="در حال ارتباط با سرور...";
-try{const r=await fetch("/api/admin/lawyers",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify(data)});const d=await r.json();result.textContent=d.message||d.error||"پاسخ نامشخص";if(!r.ok)result.textContent+=" (کد "+r.status+")";return r.ok?d:null;}catch(e){result.textContent="ارتباط با سرور برقرار نشد.";return null;}}
+async function call(data){const key=$("key").value.trim();if(!key){result.textContent="کلید مدیر را وارد کنید.";return null;}const controls=Array.from(document.querySelectorAll("button"));controls.forEach(button=>button.disabled=true);result.textContent="در حال ارتباط با سرور...";
+try{const r=await fetch("/api/admin/lawyers",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify(data)});const d=await r.json();result.textContent=d.message||d.error||"پاسخ نامشخص";if(!r.ok)result.textContent+=" (کد "+r.status+")";return r.ok?d:null;}catch(e){result.textContent="ارتباط با سرور برقرار نشد.";return null;}finally{controls.forEach(button=>button.disabled=false);}}
 async function showConfig(){
  const d=await call({action:"config"});if(!d)return;
  const c=d.configuration;
