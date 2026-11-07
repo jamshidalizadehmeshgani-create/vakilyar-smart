@@ -55,6 +55,14 @@ global.fetch = async (_url, options) => {
     }
     lists.set(args[0], next);
     result = removed;
+  } else if (op === "EVAL" && String(args[0]).includes("redis.call('SADD',KEYS[3],ARGV[1])")) {
+    const emailKey=args[2], lawyerKey=args[3], indexKey=args[4], id=args[5], raw=args[6];
+    if(values.has(emailKey)) result=0;
+    else { values.set(emailKey,id); values.set(lawyerKey,raw); const set=lists.get(indexKey)||[]; if(!set.includes(id))set.push(id); lists.set(indexKey,set); result=1; }
+  } else if (op === "EVAL" && String(args[0]).includes("return redis.call('INCRBY',KEYS[1],ARGV[2])")) {
+    const key=args[2], initial=Number(args[3]), amount=Number(args[4]);
+    if(!values.has(key))values.set(key,String(initial));
+    const balance=Number(values.get(key))+amount; values.set(key,String(balance)); result=balance;
   } else if (op === "EVAL" && String(args[0]).includes("lawyer.password_hash=ARGV[2]")) {
     const key = args[2], id = args[3], passwordHash = args[4], updatedAt = args[5];
     const raw = values.get(key);
@@ -591,4 +599,102 @@ test("user-to-lawyer question lifecycle works across create, inbox, reply, histo
   assert.equal(historyAfterDelete.statusCode, 200);
   assert.deepEqual(historyAfterDelete.body.questions, []);
   delete process.env.APP_SECRET;
+});
+
+
+test("admin lawyer lifecycle creates unique disabled accounts, hides password hashes, and safely sets access", async () => {
+  const headers={authorization:"Bearer test-admin-key"};
+  const email="new-lawyer@example.test";
+  const createRes=responseMock();
+  await adminLawyers({method:"POST",headers,body:{action:"create",name:"وکیل آزمون",email,license_number:"12345"}},createRes);
+  assert.equal(createRes.statusCode,201);
+  const id=createRes.body.lawyer.id;
+  assert.equal(createRes.body.lawyer.access,"disabled");
+  assert.equal(values.has("vy:lawyer:email:"+crypto.createHash("sha256").update(email).digest("hex")),true);
+
+  const duplicateRes=responseMock();
+  await adminLawyers({method:"POST",headers,body:{action:"create",name:"وکیل تکراری",email:email.toUpperCase(),license_number:""}},duplicateRes);
+  assert.equal(duplicateRes.statusCode,409);
+
+  const passwordRes=responseMock();
+  await adminLawyers({method:"POST",headers,body:{action:"set_password",lawyer_id:id,password:"a-strong-test-password"}},passwordRes);
+  assert.equal(passwordRes.statusCode,200);
+
+  const listRes=responseMock();
+  await adminLawyers({method:"POST",headers,body:{action:"list"}},listRes);
+  assert.equal(listRes.statusCode,200);
+  const listed=listRes.body.lawyers.find(x=>x.id===id);
+  assert.ok(listed);
+  assert.equal(Object.hasOwn(listed,"password_hash"),false);
+
+  const enableRes=responseMock();
+  await adminLawyers({method:"POST",headers,body:{action:"set_access",lawyer_id:id,enabled:true}},enableRes);
+  assert.equal(enableRes.statusCode,200);
+  assert.equal(enableRes.body.lawyer.access,"active");
+  assert.equal(Object.hasOwn(enableRes.body.lawyer,"password_hash"),false);
+});
+
+test("admin lawyer management validates method, key, and input before mutation", async () => {
+  const wrongMethod=responseMock();
+  await adminLawyers({method:"GET",headers:{authorization:"Bearer test-admin-key"},body:{action:"list"}},wrongMethod);
+  assert.equal(wrongMethod.statusCode,405);
+  assert.equal(wrongMethod.headers.Allow,"POST");
+
+  const badKey=responseMock();
+  await adminLawyers({method:"POST",headers:{authorization:"Bearer wrong-key"},body:{action:"create",name:"نام معتبر",email:"valid@example.test"}},badKey);
+  assert.equal(badKey.statusCode,401);
+
+  const badInput=responseMock();
+  await adminLawyers({method:"POST",headers:{authorization:"Bearer test-admin-key"},body:{action:"create",name:"x",email:"not-an-email"}},badInput);
+  assert.equal(badInput.statusCode,400);
+  assert.equal(lists.get("vy:lawyers:index")?.length||0,0);
+});
+
+test("admin credit lookup and grants report accurate balances without mixing Pro and unlimited", async () => {
+  const userId="9".repeat(48), headers={authorization:"Bearer test-admin-key"};
+  const initial=process.env.FREE_CREDITS_INITIAL;
+  process.env.FREE_CREDITS_INITIAL="250";
+  try {
+    const lookupBefore=responseMock();
+    await grantCredits({method:"POST",headers,body:{user_id:userId,action:"lookup"}},lookupBefore);
+    assert.equal(lookupBefore.statusCode,200);
+    assert.equal(lookupBefore.body.credits_balance,250);
+    assert.equal(lookupBefore.body.pro,false);
+    assert.equal(lookupBefore.body.unlimited,false);
+
+    const gift=responseMock();
+    await grantCredits({method:"POST",headers,body:{user_id:userId,credits:75}},gift);
+    assert.equal(gift.statusCode,200);
+    assert.equal(gift.body.credits_balance,325);
+
+    const lookupAfter=responseMock();
+    await grantCredits({method:"POST",headers,body:{user_id:userId,action:"lookup"}},lookupAfter);
+    assert.equal(lookupAfter.body.credits_balance,325);
+
+    const pro=responseMock();
+    await grantCredits({method:"POST",headers,body:{user_id:userId,action:"set_pro",active:true}},pro);
+    assert.equal(pro.statusCode,200);
+    const finalLookup=responseMock();
+    await grantCredits({method:"POST",headers,body:{user_id:userId,action:"lookup"}},finalLookup);
+    assert.equal(finalLookup.body.pro,true);
+    assert.equal(finalLookup.body.unlimited,false);
+  } finally {
+    if(initial===undefined)delete process.env.FREE_CREDITS_INITIAL;
+    else process.env.FREE_CREDITS_INITIAL=initial;
+  }
+});
+
+test("admin credit endpoint rejects invalid identities, amounts, and non-POST requests", async () => {
+  const headers={authorization:"Bearer test-admin-key"};
+  const invalidId=responseMock();
+  await grantCredits({method:"POST",headers,body:{user_id:"bad",credits:10}},invalidId);
+  assert.equal(invalidId.statusCode,400);
+
+  const invalidAmount=responseMock();
+  await grantCredits({method:"POST",headers,body:{user_id:"8".repeat(48),credits:0}},invalidAmount);
+  assert.equal(invalidAmount.statusCode,400);
+
+  const wrongMethod=responseMock();
+  await grantCredits({method:"GET",headers,body:{user_id:"8".repeat(48),credits:10}},wrongMethod);
+  assert.equal(wrongMethod.statusCode,405);
 });
