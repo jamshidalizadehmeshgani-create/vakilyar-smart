@@ -66,7 +66,7 @@ global.fetch = async (_url, options) => {
     const key=args[2], initial=Number(args[3]), amount=Number(args[4]);
     if(!values.has(key))values.set(key,String(initial));
     const balance=Number(values.get(key))+amount; values.set(key,String(balance)); result=balance;
-  } else if (op === "EVAL" && String(args[0]).includes("redis.call('SREM','vy:lawyer:'..id..':sessions,KEYS[1])")) {
+  } else if (op === "EVAL" && String(args[0]).includes("redis.call('SREM','vy:lawyer:'..id..':sessions',KEYS[1])")) {
     lastLogoutEvalScript = String(args[0]);
     const sessionKey = args[2];
     const rawSession = values.get(sessionKey);
@@ -305,7 +305,7 @@ test("lawyer logout deletes the session and removes its index entry", async () =
   }, res);
   assert.equal(res.statusCode, 200);
   assert.equal(values.has(sessionKey), false);
-  assert.match(lastLogoutEvalScript, /SREM/);
+  assert.deepEqual(lists.get(indexKey), ["stale-session-key"]);
   assert.match(res.headers["Set-Cookie"], /Max-Age=0/);
 });
 
