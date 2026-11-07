@@ -60,6 +60,26 @@ global.fetch = async (_url, options) => {
     }
     lists.set(args[0], next);
     result = removed;
+  } else if (op === "EVAL" && String(args[0]).includes("lawyer.email_verified=true")) {
+    const tokenKey=args[2], lawyerKey=args[3], pointerKey=args[4];
+    const id=args[5], tokenHash=args[6], verifiedAt=args[7];
+    const raw=values.get(lawyerKey);
+    if(values.get(tokenKey)!==id || values.get(pointerKey)!==tokenHash) result=0;
+    else if(!raw) result=-1;
+    else {
+      const lawyer=JSON.parse(raw);
+      if(lawyer.id!==id || lawyer.email_verified===true) result=0;
+      else {
+        lawyer.email_verified=true;
+        lawyer.email_verified_at=verifiedAt;
+        delete lawyer.email_verification_token_hash;
+        delete lawyer.email_verification_created_at;
+        values.set(lawyerKey,JSON.stringify(lawyer));
+        values.delete(tokenKey);
+        values.delete(pointerKey);
+        result=1;
+      }
+    }
   } else if (op === "EVAL" && String(args[0]).includes("redis.call('SADD',KEYS[3],ARGV[1])")) {
     const emailKey=args[2], lawyerKey=args[3], indexKey=args[4];
     const isVerificationCreate = String(args[0]).includes("KEYS[5]");
@@ -1244,6 +1264,14 @@ test("admin lawyer lifecycle creates unique disabled accounts, hides password ha
   assert.equal(createRes.statusCode,201);
   const id=createRes.body.lawyer.id;
   assert.equal(createRes.body.lawyer.access,"disabled");
+  assert.equal(createRes.body.lawyer.email_verified,false);
+  assert.equal(createRes.body.verification_email_sent,false);
+  const verificationPointer=values.get("vy:lawyer:"+id+":verify-token");
+  assert.match(verificationPointer,/^[a-f0-9]{64}$/);
+  const verificationKey="vy:lawyer:verify:"+verificationPointer;
+  assert.equal(values.get(verificationKey),id);
+  assert.equal(expirations.get(verificationKey),86400);
+  assert.equal(expirations.get("vy:lawyer:"+id+":verify-token"),86400);
   assert.equal(values.has("vy:lawyer:email:"+crypto.createHash("sha256").update(email).digest("hex")),true);
 
   const duplicateRes=responseMock();
@@ -1736,4 +1764,38 @@ test("admin auth diagnostics never log raw rate-limit exception details", () => 
   const source = fs.readFileSync(require.resolve("../lib/admin-auth"), "utf8");
   assert.match(source, /console\.error\("Admin rate-limit error: rate limiter unavailable"\)/);
   assert.doesNotMatch(source, /console\.error\([^\n]*error\?\.message/);
+});
+
+
+test("lawyer email verification consumes the hashed token once and preserves disabled access", async () => {
+  const verify = require("../api/lawyer/verify-email");
+  const id = "f".repeat(32);
+  const token = "c".repeat(64);
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  const lawyerKey = "vy:lawyer:" + id;
+  const tokenKey = "vy:lawyer:verify:" + tokenHash;
+  values.set(lawyerKey, JSON.stringify({
+    id, name: "وکیل تأیید آزمایشی", email: "verified@example.test",
+    access: "disabled", email_verified: false
+  }));
+  values.set(tokenKey, id);
+  values.set(lawyerKey + ":verify-token", tokenHash);
+  const makeResponse = () => {
+    const r = responseMock();
+    r.send = function(body) { this.body = body; return this; };
+    return r;
+  };
+  const first = makeResponse();
+  await verify({ method: "GET", query: { token }, headers: {} }, first);
+  assert.equal(first.statusCode, 200);
+  assert.match(first.body, /ایمیل شما با موفقیت تأیید شد/);
+  const lawyer = JSON.parse(values.get(lawyerKey));
+  assert.equal(lawyer.email_verified, true);
+  assert.equal(lawyer.access, "disabled");
+  assert.equal(values.has(tokenKey), false);
+  assert.equal(values.has(lawyerKey + ":verify-token"), false);
+
+  const second = makeResponse();
+  await verify({ method: "GET", query: { token }, headers: {} }, second);
+  assert.equal(second.statusCode, 410);
 });
