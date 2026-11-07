@@ -12,7 +12,7 @@ module.exports = async (req, res) => {
     const rate = await consumeIpRateLimit(req, { scope: "lawyer-resend-verify", limit: 3, windowSeconds: 3600 });
     if (rate.count > rate.limit) return res.status(429).json({ error: "تعداد درخواست‌های ارسال مجدد بیش از حد مجاز است." });
     const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
-    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 190) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 190) {
       return res.status(400).json({ error: "ایمیل معتبر وارد کنید." });
     }
     const emailHash = crypto.createHash("sha256").update(email).digest("hex");
