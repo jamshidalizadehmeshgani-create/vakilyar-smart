@@ -29,8 +29,8 @@ module.exports = async (req, res) => {
         try { redisConnection = (await redis(["PING"])) === "PONG"; } catch { redisConnection = false; }
       }
       const configuration = {
-        admin_api_key_present: Boolean(adminKey),
-        admin_api_key_strength_ok: Boolean(adminKey && adminKey.length >= 32),
+        admin_api_key_present: Boolean(process.env.ADMIN_API_KEY),
+        admin_api_key_strength_ok: Boolean(process.env.ADMIN_API_KEY && process.env.ADMIN_API_KEY.length >= 32),
         app_secret_present: Boolean(process.env.APP_SECRET),
         app_secret_strength_ok: Boolean(process.env.APP_SECRET && process.env.APP_SECRET.length >= 32),
         upstash_url_present: Boolean(process.env.UPSTASH_REDIS_REST_URL),
