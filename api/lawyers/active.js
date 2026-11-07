@@ -20,7 +20,7 @@ module.exports = async (req, res) => {
     }));
     return res.status(200).json({ ok: true, lawyers: rows.filter(Boolean) });
   } catch (e) {
-    console.error("Active lawyers error:", e.message);
+    console.error("Active lawyers error:");
     return res.status(503).json({ error: "فهرست وکلا موقتاً در دسترس نیست." });
   }
 };
