@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const net = require("net");
+const DUMMY_PASSWORD_HASH = crypto.scryptSync("vakilyar-dummy-password-never-valid", "0123456789abcdef0123456789abcdef", 64).toString("hex");
 const { redis, COOKIE, SESSION_SECONDS, cookieHeader, hashToken } = require("../../lib/lawyer-auth");
 
 async function incrementLoginAttempts(key, ttlSeconds = 900) {
@@ -57,7 +58,13 @@ module.exports = async (req, res) => {
     const raw = id ? await redis(["GET", "vy:lawyer:" + id]) : null;
     let lawyer = null;
     try { lawyer = raw ? JSON.parse(raw) : null; } catch {}
-    const valid = lawyer && lawyer.access === "active" && await verifyPassword(password, lawyer.password_hash);
+    // Always perform one scrypt verification, even when the email is unknown or the stored hash is malformed.
+    // This reduces account-enumeration timing differences without changing the public error response.
+    const storedHash = typeof lawyer?.password_hash === "string" && /^[a-f0-9]{32}:[a-f0-9]{128}$/.test(lawyer.password_hash)
+      ? lawyer.password_hash
+      : "0123456789abcdef0123456789abcdef:" + DUMMY_PASSWORD_HASH;
+    const passwordMatches = await verifyPassword(password, storedHash);
+    const valid = Boolean(lawyer && lawyer.access === "active" && passwordMatches);
     if (!valid) return res.status(401).json({ error: "اطلاعات ورود نادرست است یا دسترسی حساب فعال نیست." });
     await redis(["DEL", rateKey]);
     const token = crypto.randomBytes(32).toString("hex");
