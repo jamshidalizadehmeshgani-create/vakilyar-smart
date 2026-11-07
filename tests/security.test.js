@@ -541,6 +541,31 @@ test("user-to-lawyer question lifecycle works across create, inbox, reply, histo
   assert.equal(inboxRes.body.questions.length, 1);
   assert.equal(inboxRes.body.questions[0].id, questionId);
 
+  const foreignUserId = "d".repeat(48);
+  const foreignSignature = crypto.createHmac("sha256", process.env.APP_SECRET).update(foreignUserId).digest("base64url");
+  const foreignUserCookie = "vy_uid=" + foreignUserId + "." + foreignSignature;
+  const foreignHistoryRes = responseMock();
+  await mine({ method: "GET", headers: { cookie: foreignUserCookie } }, foreignHistoryRes);
+  assert.equal(foreignHistoryRes.statusCode, 200);
+  assert.deepEqual(foreignHistoryRes.body.questions, []);
+
+  const foreignDeleteRes = responseMock();
+  await mine({ method: "POST", headers: { ...sameOrigin, cookie: foreignUserCookie },
+    body: { question_id: questionId } }, foreignDeleteRes);
+  assert.equal(foreignDeleteRes.statusCode, 403);
+  assert.equal(values.has("vy:question:" + questionId), true);
+
+  const otherLawyerId = "e".repeat(32);
+  const otherLawyerToken = "f".repeat(64);
+  values.set("vy:lawyer:" + otherLawyerId, JSON.stringify({
+    id: otherLawyerId, name: "وکیل دیگر", email: "other@example.test", access: "active"
+  }));
+  values.set("vy:lawyer:session:" + hashToken(otherLawyerToken), otherLawyerId);
+  const forbiddenReplyRes = responseMock();
+  await reply({ method: "POST", headers: { ...sameOrigin, cookie: "vy_lawyer_session=" + otherLawyerToken },
+    body: { question_id: questionId, message: "پاسخ غیرمجاز" } }, forbiddenReplyRes);
+  assert.equal(forbiddenReplyRes.statusCode, 403);
+
   const replyRes = responseMock();
   await reply({ method: "POST", headers: { ...sameOrigin, cookie: sessionCookie },
     body: { question_id: questionId, message: "برای پاسخ دقیق، متن قرارداد باید بررسی شود." } }, replyRes);
