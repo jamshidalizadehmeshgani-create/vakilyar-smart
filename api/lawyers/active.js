@@ -1,9 +1,14 @@
-const { redis } = require("../../lib/quota");
+const { redis, consumeIpRateLimit } = require("../../lib/quota");
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
   if (req.method !== "GET") { res.setHeader("Allow", "GET"); return res.status(405).json({ error: "فقط GET مجاز است." }); }
   try {
+    const ipLimit = await consumeIpRateLimit(req, { scope: "lawyers-active", limit: 60, windowSeconds: 900 });
+    if (ipLimit.count > ipLimit.limit) {
+      res.setHeader("Retry-After", String(ipLimit.windowSeconds));
+      return res.status(429).json({ code: "LAWYERS_LIST_RATE_LIMITED", error: "درخواست‌های فهرست وکلا از این اتصال بیش از حد مجاز است." });
+    }
     const ids = await redis(["SMEMBERS", "vy:lawyers:index"]) || [];
     const rows = await Promise.all(ids.map(async id => {
       const raw = await redis(["GET", "vy:lawyer:" + id]);
