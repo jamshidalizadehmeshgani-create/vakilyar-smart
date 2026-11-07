@@ -614,6 +614,29 @@ test("public chat returns 429 with Retry-After after the IP request threshold", 
   assert.equal(res.body.code, "CHAT_RATE_LIMITED");
 });
 
+test("lawyer question submissions have an independent hashed IP limit", async () => {
+  const previousSecret = process.env.APP_SECRET;
+  process.env.APP_SECRET = "test-lawyer-question-ip-secret";
+  const ip = "203.0.113.44";
+  const digest = crypto.createHmac("sha256", process.env.APP_SECRET).update(ip).digest("hex");
+  values.set("vy:ratelimit:lawyer-question:" + digest, "10");
+  try {
+    const createQuestion = require("../api/questions/create");
+    const res = responseMock();
+    await createQuestion({
+      method: "POST",
+      headers: { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "same-origin", "x-real-ip": ip },
+      body: { consent: true, lawyer_id: "a".repeat(32), question: "پرسش آزمایشی معتبر" }
+    }, res);
+    assert.equal(res.statusCode, 429);
+    assert.equal(res.headers["Retry-After"], "86400");
+    assert.equal(res.body.error.includes("۲۴ ساعته"), true);
+  } finally {
+    if (previousSecret === undefined) delete process.env.APP_SECRET;
+    else process.env.APP_SECRET = previousSecret;
+  }
+});
+
 test("lawyer login rate limits increment atomically with a bounded TTL", async () => {
   const { incrementLoginAttempts } = loginLawyer;
   const emailKey = "vy:lawyer:login-attempts:" + "a".repeat(64);
