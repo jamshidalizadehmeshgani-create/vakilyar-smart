@@ -61,9 +61,22 @@ global.fetch = async (_url, options) => {
     lists.set(args[0], next);
     result = removed;
   } else if (op === "EVAL" && String(args[0]).includes("redis.call('SADD',KEYS[3],ARGV[1])")) {
-    const emailKey=args[2], lawyerKey=args[3], indexKey=args[4], id=args[5], raw=args[6];
+    const emailKey=args[2], lawyerKey=args[3], indexKey=args[4];
+    const isVerificationCreate = String(args[0]).includes("KEYS[5]");
+    const verificationKey = args[5], pointerKey = args[6];
+    const id = args[isVerificationCreate ? 7 : 5], raw = args[isVerificationCreate ? 8 : 6];
     if(values.has(emailKey)) result=0;
-    else { values.set(emailKey,id); values.set(lawyerKey,raw); const set=lists.get(indexKey)||[]; if(!set.includes(id))set.push(id); lists.set(indexKey,set); result=1; }
+    else {
+      values.set(emailKey,id); values.set(lawyerKey,raw);
+      const set=lists.get(indexKey)||[]; if(!set.includes(id))set.push(id); lists.set(indexKey,set);
+      if(isVerificationCreate) {
+        values.set(verificationKey,id);
+        values.set(pointerKey,args[11]);
+        expirations.set(verificationKey,Number(args[10]));
+        expirations.set(pointerKey,Number(args[10]));
+      }
+      result=1;
+    }
   } else if (op === "EVAL" && String(args[0]).includes("VY_ADMIN_CREDIT_GRANT_IDEMPOTENT")) {
     const balanceKey=args[2], idempotencyKey=args[3], auditKey=args[4];
     const initial=Number(args[5]), amount=Number(args[6]), fingerprint=args[7], auditEvent=args[9];
@@ -1701,6 +1714,8 @@ test("API error logs do not include raw exception messages or objects", () => {
     "../api/users/me",
     "../api/users/logout",
     "../api/users/resend-verification",
+    "../api/lawyer/verify-email",
+    "../api/lawyer/resend-verification",
     "../api/usage"
   ];
   for (const file of apiFiles) {
