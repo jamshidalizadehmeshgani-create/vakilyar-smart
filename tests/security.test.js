@@ -5,6 +5,7 @@ const crypto = require("crypto");
 process.env.UPSTASH_REDIS_REST_URL = "https://redis.test";
 process.env.UPSTASH_REDIS_REST_TOKEN = "test-token";
 process.env.ADMIN_API_KEY = "test-admin-key";
+process.env.APP_SECRET = "test-app-secret-for-security-suite";
 
 const values = new Map();
 const lists = new Map();
@@ -911,7 +912,7 @@ test("user-to-lawyer question lifecycle works across create, inbox, reply, histo
 
 
 test("admin lawyer lifecycle creates unique disabled accounts, hides password hashes, and safely sets access", async () => {
-  const headers={authorization:"Bearer test-admin-key"};
+  const headers={authorization:"Bearer test-admin-key",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.109"};
   const email="new-lawyer@example.test";
   const createRes=responseMock();
   await adminLawyers({method:"POST",headers,body:{action:"create",name:"وکیل آزمون",email,license_number:"12345"}},createRes);
@@ -960,7 +961,7 @@ test("admin lawyer management validates method, key, and input before mutation",
 });
 
 test("admin credit lookup and grants report accurate balances without mixing Pro and unlimited", async () => {
-  const userId="9".repeat(48), headers={authorization:"Bearer test-admin-key"};
+  const userId="9".repeat(48), headers={authorization:"Bearer test-admin-key",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.110"};
   const initial=process.env.FREE_CREDITS_INITIAL;
   process.env.FREE_CREDITS_INITIAL="250";
   try {
