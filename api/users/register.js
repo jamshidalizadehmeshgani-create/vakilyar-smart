@@ -27,7 +27,7 @@ module.exports = async (req, res) => {
     if (created === -1) return res.status(409).json({ error: "این مرورگر قبلاً به یک حساب متصل شده است. ابتدا وارد همان حساب شوید." });
     if (created === -2) return res.status(409).json({ error: "این ایمیل قبلاً ثبت شده است. وارد حساب شوید یا از بازیابی دسترسی استفاده کنید." });
     if (created !== 1) throw new Error("Unexpected account registration result");
-    const delivery = await issueVerification({ ...account, token });
+    const delivery = await issueVerification(account, token);
     return res.status(201).json({
       ok: true, email_verification_required: true, email_sent: delivery.sent,
       message: delivery.sent
