@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 const { redis } = require("../../lib/quota");
-const { sendWelcomeEmail, escapeHtml } = require("../../lib/email");
+const { sendWelcomeEmail } = require("../../lib/email");
 
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
