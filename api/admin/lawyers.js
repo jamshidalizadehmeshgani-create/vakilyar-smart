@@ -8,7 +8,7 @@ async function audit(event) {
     await redis(["LTRIM", "vy:admin:audit", "0", "499"]);
     return true;
   } catch (e) {
-    console.error("Lawyer audit error:", e.message);
+    console.error("Lawyer audit error:");
     return false;
   }
 }
@@ -121,7 +121,7 @@ module.exports = async (req, res) => {
     }
     return res.status(400).json({ error: "عملیات شناخته‌شده نیست." });
   } catch (error) {
-    console.error("Admin lawyer management error:", error.message);
+    console.error("Admin lawyer management error:");
     return res.status(503).json({ error: "عملیات انجام نشد؛ تنظیمات پایگاه داده را بررسی کنید." });
   }
 };
