@@ -79,7 +79,7 @@ module.exports = async (req, res) => {
     // This reduces account-enumeration timing differences without changing the public error response.
     const storedHash = passwordHashForVerification(lawyer);
     const passwordMatches = await verifyPassword(password, storedHash);
-    const valid = Boolean(lawyer && lawyer.access === "active" && passwordMatches);
+    const valid = Boolean(lawyer && lawyer.access === "active" && lawyer.email_verified !== false && passwordMatches);
     if (!valid) return res.status(401).json({ error: "اطلاعات ورود نادرست است یا دسترسی حساب فعال نیست." });
     await redis(["DEL", pairKey]);
     const token = crypto.randomBytes(32).toString("hex");
