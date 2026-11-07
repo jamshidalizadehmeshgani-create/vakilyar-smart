@@ -65,6 +65,19 @@ global.fetch = async (_url, options) => {
     const key=args[2], initial=Number(args[3]), amount=Number(args[4]);
     if(!values.has(key))values.set(key,String(initial));
     const balance=Number(values.get(key))+amount; values.set(key,String(balance)); result=balance;
+  } else if (op === "EVAL" && String(args[0]).includes("redis.call('SREM','vy:lawyer:'..id..':sessions,KEYS[1])")) {
+    const sessionKey = args[2];
+    const rawSession = values.get(sessionKey);
+    if (!rawSession) result = 0;
+    else {
+      const match = /^([a-f0-9]{32})(?::\\d+)?$/.exec(rawSession);
+      values.delete(sessionKey);
+      if (match) {
+        const indexKey = "vy:lawyer:" + match[1] + ":sessions";
+        lists.set(indexKey, (lists.get(indexKey) || []).filter(key => key !== sessionKey));
+      }
+      result = 1;
+    }
   } else if (op === "EVAL" && String(args[0]).includes("redis.call('SADD',KEYS[2],KEYS[1])")) {
     const sessionKey=args[2], sessionIndex=args[3], lawyerId=args[4];
     values.set(sessionKey,lawyerId); const set=lists.get(sessionIndex)||[]; if(!set.includes(sessionKey))set.push(sessionKey); lists.set(sessionIndex,set); result=1;
@@ -271,6 +284,47 @@ test("reservation helpers reject invalid identifiers and amounts", async () => {
   await assert.rejects(reserveCredits("test:credits", 10, "bad-id"), /Invalid credit reservation/);
   await assert.rejects(reserveCredits("test:credits", 0, "f".repeat(32)), /Invalid credit reservation/);
   await assert.rejects(refundReservation("test:credits", "bad-id"), /Invalid credit reservation/);
+});
+
+test("lawyer logout deletes the session and removes its index entry", async () => {
+  const lawyerId = "1".repeat(32);
+  const token = "2".repeat(64);
+  const sessionKey = "vy:lawyer:session:" + hashToken(token);
+  const indexKey = "vy:lawyer:" + lawyerId + ":sessions";
+  values.set(sessionKey, lawyerId + ":1");
+  lists.set(indexKey, [sessionKey, "stale-session-key"]);
+  const logout = require("../api/lawyer/logout");
+  const res = responseMock();
+  await logout({
+    method: "POST",
+    headers: {
+      host: "app.example.test",
+      origin: "https://app.example.test",
+      cookie: "vy_lawyer_session=" + token
+    }
+  }, res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(values.has(sessionKey), false);
+  assert.deepEqual(lists.get(indexKey), ["stale-session-key"]);
+  assert.match(res.headers["Set-Cookie"], /Max-Age=0/);
+});
+
+test("lawyer logout rejects a cross-origin request without changing the session", async () => {
+  const token = "3".repeat(64);
+  const sessionKey = "vy:lawyer:session:" + hashToken(token);
+  values.set(sessionKey, "4".repeat(32) + ":1");
+  const logout = require("../api/lawyer/logout");
+  const res = responseMock();
+  await logout({
+    method: "POST",
+    headers: {
+      host: "app.example.test",
+      origin: "https://attacker.example",
+      cookie: "vy_lawyer_session=" + token
+    }
+  }, res);
+  assert.equal(res.statusCode, 403);
+  assert.equal(values.has(sessionKey), true);
 });
 
 test("admin can disable a lawyer and the existing session and new questions are blocked", async () => {
