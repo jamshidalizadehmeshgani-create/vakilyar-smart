@@ -309,6 +309,27 @@ test("lawyer logout deletes the session and removes its index entry", async () =
   assert.match(res.headers["Set-Cookie"], /Max-Age=0/);
 });
 
+test("lawyer logout clears the browser cookie when Redis is unavailable", async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => { throw new Error("simulated Redis outage"); };
+  try {
+    const logout = require("../api/lawyer/logout");
+    const res = responseMock();
+    await logout({
+      method: "POST",
+      headers: {
+        host: "app.example.test",
+        origin: "https://app.example.test",
+        cookie: "vy_lawyer_session=" + "5".repeat(64)
+      }
+    }, res);
+    assert.equal(res.statusCode, 503);
+    assert.match(res.headers["Set-Cookie"], /Max-Age=0/);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test("lawyer logout rejects a cross-origin request without changing the session", async () => {
   const token = "3".repeat(64);
   const sessionKey = "vy:lawyer:session:" + hashToken(token);
