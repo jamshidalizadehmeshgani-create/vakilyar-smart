@@ -60,3 +60,40 @@ test("user session cookie is HttpOnly, Secure, SameSite=Lax and expires", () => 
   assert.match(header, /Max-Age=2592000/);
   assert.equal(auth.hash("abc").length, 64);
 });
+
+test("authenticated session reuses the original anonymous UID for credits and question history", async () => {
+  const originalFetch = global.fetch;
+  const previous = {
+    url: process.env.UPSTASH_REDIS_REST_URL,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    secret: process.env.APP_SECRET
+  };
+  const uid = "c".repeat(48);
+  const sessionToken = "d".repeat(64);
+  process.env.UPSTASH_REDIS_REST_URL = "https://redis.example.test";
+  process.env.UPSTASH_REDIS_REST_TOKEN = "test-token";
+  process.env.APP_SECRET = "identity-preservation-test-secret";
+  const anonymousUid = "e".repeat(48);
+  const signature = crypto.createHmac("sha256", process.env.APP_SECRET).update(anonymousUid).digest("base64url");
+  global.fetch = async (url, options) => {
+    const command = JSON.parse(options.body);
+    let result = null;
+    if (command[0] === "GET" && command[1].startsWith("vy:user:session:")) result = uid;
+    else if (command[0] === "EVAL") result = 735;
+    return { ok: true, status: 200, json: async () => ({ result }) };
+  };
+  try {
+    const { getAccount } = require("../lib/quota");
+    const account = await getAccount({
+      headers: { cookie: "vy_uid=" + anonymousUid + "." + signature + "; " + auth.SESSION_COOKIE + "=" + sessionToken }
+    }, { setHeader() {} });
+    assert.equal(account.uid, uid);
+    assert.equal(account.key, "vy:user:" + uid + ":credits");
+    assert.equal(account.credits, 735);
+  } finally {
+    global.fetch = originalFetch;
+    if (previous.url === undefined) delete process.env.UPSTASH_REDIS_REST_URL; else process.env.UPSTASH_REDIS_REST_URL = previous.url;
+    if (previous.token === undefined) delete process.env.UPSTASH_REDIS_REST_TOKEN; else process.env.UPSTASH_REDIS_REST_TOKEN = previous.token;
+    if (previous.secret === undefined) delete process.env.APP_SECRET; else process.env.APP_SECRET = previous.secret;
+  }
+});
