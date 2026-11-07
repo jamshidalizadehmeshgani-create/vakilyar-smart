@@ -1699,7 +1699,7 @@ test("API error logs do not include raw exception messages or objects", () => {
   ];
   for (const file of apiFiles) {
     const source = fs.readFileSync(require.resolve(file), "utf8");
-    assert.doesNotMatch(source, /console\\.error\\([^\\n]*,\\s*(?:error|e)(?:\\.message)?\\s*\\)/, file);
+    assert.doesNotMatch(source, /console\.error\([^\n]*,\s*(?:error|e)(?:\.message)?\s*\)/, file);
   }
 });
 
@@ -1707,6 +1707,6 @@ test("API error logs do not include raw exception messages or objects", () => {
 test("usage API never returns raw storage exception details", () => {
   const source = fs.readFileSync(require.resolve("../api/usage"), "utf8");
   assert.doesNotMatch(source, /storage_detail/);
-  assert.doesNotMatch(source, /error\\.message/);
-  assert.match(source, /storage_diagnostic: missing\\.length \\? null : "REDIS_STORAGE_ERROR"/);
+  assert.doesNotMatch(source, /error\.message/);
+  assert.match(source, /storage_diagnostic: missing\.length \? null : "REDIS_STORAGE_ERROR"/);
 });
