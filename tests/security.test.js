@@ -978,6 +978,15 @@ test("admin authorization rejects cross-origin requests before checking credenti
   assert.equal(res.statusCode, 403);
 });
 
+test("global response security headers include a restrictive baseline CSP", () => {
+  const config = JSON.parse(fs.readFileSync(require.resolve("../vercel.json"), "utf8"));
+  const headers = config.headers.find(entry => entry.source === "/(.*)")?.headers || [];
+  const policy = headers.find(entry => entry.key === "Content-Security-Policy")?.value || "";
+  for (const directive of ["default-src 'self'", "base-uri 'self'", "object-src 'none'", "frame-ancestors 'none'", "form-action 'self'", "connect-src 'self'"]) {
+    assert.ok(policy.split(";").map(value => value.trim()).includes(directive), "Missing CSP directive: " + directive);
+  }
+});
+
 test("admin authorization rejects cross-site fetch metadata even with a matching Origin", async () => {
   const res = responseMock();
   const ok = await authorizeAdmin({
