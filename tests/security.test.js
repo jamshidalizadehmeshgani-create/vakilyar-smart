@@ -340,7 +340,7 @@ test("lawyer admin panel clears dynamic lists without using an HTML parsing sink
   const fs = require("node:fs");
   const source = fs.readFileSync(require.resolve("../public/admin-lawyers.html"), "utf8");
   assert.match(source, /\$\("list"\)\.replaceChildren\(\)/);
-  assert.doesNotMatch(source, /error\?\.message|refundError\.message/);
+  assert.doesNotMatch(source, /error\\?\\.message|refundError\\.message/);
   assert.doesNotMatch(source, /console\.error\([^\n]*,\s*error\s*\)/);
   assert.match(source, /title\.textContent\s*=\s*w\.name/);
   assert.match(source, /detail\.textContent\s*=/);
