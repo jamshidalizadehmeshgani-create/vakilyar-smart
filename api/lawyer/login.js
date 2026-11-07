@@ -90,7 +90,7 @@ module.exports = async (req, res) => {
     res.setHeader("Set-Cookie", cookieHeader(token, SESSION_SECONDS));
     return res.status(200).json({ ok: true, lawyer: { id: lawyer.id, name: lawyer.name, email: lawyer.email }, message: "ورود موفق بود." });
   } catch (error) {
-    console.error("Lawyer login error:", error.message);
+    console.error("Lawyer login error:");
     return res.status(503).json({ error: "سامانه ورود موقتاً در دسترس نیست." });
   }
 };
