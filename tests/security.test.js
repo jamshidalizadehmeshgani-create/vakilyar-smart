@@ -885,12 +885,12 @@ test("user-to-lawyer question lifecycle works across create, inbox, reply, histo
   const sessionCookie = loginRes.headers["Set-Cookie"].split(";")[0];
 
   const meRes = responseMock();
-  await me({ method: "GET", headers: { cookie: sessionCookie } }, meRes);
+  await me({ method: "GET", headers: { ...sameOrigin, cookie: sessionCookie } }, meRes);
   assert.equal(meRes.statusCode, 200);
   assert.equal(meRes.body.lawyer.id, lawyerId);
 
   const inboxRes = responseMock();
-  await inbox({ method: "GET", headers: { cookie: sessionCookie } }, inboxRes);
+  await inbox({ method: "GET", headers: { ...sameOrigin, cookie: sessionCookie } }, inboxRes);
   assert.equal(inboxRes.statusCode, 200);
   assert.equal(inboxRes.body.questions.length, 1);
   assert.equal(inboxRes.body.questions[0].id, questionId);
