@@ -892,6 +892,31 @@ test("Redis transport exceptions never expose Authorization credentials", async 
 });
 
 
+test("Redis token normalization accepts wrappers but rejects embedded whitespace", async () => {
+  const originalFetch = global.fetch;
+  const originalToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+  let authorization = "";
+  global.fetch = async (_url, options) => {
+    authorization = new Headers(options.headers).get("Authorization");
+    return { ok: true, status: 200, json: async () => ({ result: "PONG" }) };
+  };
+  try {
+    process.env.UPSTASH_REDIS_REST_TOKEN = '  Bearer "test-token"  ';
+    assert.equal(await redis(["PING"]), "PONG");
+    assert.equal(authorization, "Bearer test-token");
+
+    process.env.UPSTASH_REDIS_REST_TOKEN = "test token";
+    let called = false;
+    global.fetch = async () => { called = true; return { ok: true, json: async () => ({ result: "PONG" }) }; };
+    await assert.rejects(redis(["PING"]), /invalid formatting/);
+    assert.equal(called, false, "malformed credentials must be rejected before network access");
+  } finally {
+    global.fetch = originalFetch;
+    process.env.UPSTASH_REDIS_REST_TOKEN = originalToken;
+  }
+});
+
+
 test("user-to-lawyer question lifecycle works across create, inbox, reply, history, and owned deletion", async () => {
   const previousAppSecret = process.env.APP_SECRET;
   process.env.APP_SECRET = "test-app-secret-for-question-lifecycle";
