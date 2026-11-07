@@ -118,3 +118,13 @@ test("lawyer question form announces submission feedback accessibly", () => {
   assert.match(ask, /<select id="lawyer" required>/);
   assert.match(ask, /<input type="checkbox" id="consent" required>/);
 });
+
+
+test("lawyer reply feedback uses an accessible live status instead of alert dialogs", () => {
+  const panel = read("public/lawyer-panel.html");
+  assert.match(panel, /const feedback=el\("p","muted",""\)/);
+  assert.match(panel, /feedback\.setAttribute\("role","status"\)/);
+  assert.match(panel, /feedback\.setAttribute\("aria-live","polite"\)/);
+  assert.match(panel, /card\.append\(area,send,feedback\)/);
+  assert.doesNotMatch(panel, /alert\(dd\.message/);
+});
