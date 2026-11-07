@@ -32,3 +32,12 @@ test("keeps a useful answer with no legal citations unchanged", () => {
 test("handles non-string provider output safely", () => {
   assert.equal(sanitizeLegalReply(null), "");
 });
+
+test("preserves following sections even when their heading is not in the known list", () => {
+  const result = sanitizeLegalReply(
+    "## مبنای حقوقی\\n- ماده ۲۳۱ قانون نمونه\\n## نکات تکمیلی\\nاین توضیح عمومی باید باقی بماند."
+  );
+  assert.doesNotMatch(result, /ماده ۲۳۱|قانون نمونه/);
+  assert.match(result, /نکات تکمیلی/);
+  assert.match(result, /این توضیح عمومی باید باقی بماند/);
+});
