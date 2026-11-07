@@ -1,5 +1,6 @@
 const { getLawyerSession, redis } = require("../../lib/lawyer-auth");
 const { consumeIpRateLimit } = require("../../lib/quota");
+const { toLawyerQuestionView } = require("../../lib/lawyer-question-view");
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
@@ -16,7 +17,10 @@ module.exports = async (req, res) => {
     const rows = await Promise.all(ids.map(async id => {
       const raw = await redis(["GET", "vy:question:" + id]);
       if (!raw) return null;
-      try { const q = JSON.parse(raw); return q && q.lawyer_id === session.lawyer.id ? q : null; } catch { return null; }
+      try {
+        const q = JSON.parse(raw);
+        return q && q.lawyer_id === session.lawyer.id ? toLawyerQuestionView(q) : null;
+      } catch { return null; }
     }));
     return res.status(200).json({ ok: true, questions: rows.filter(Boolean) });
   } catch (e) {
