@@ -353,6 +353,18 @@ test("admin password reset revokes every previously issued lawyer session", asyn
   const { getLawyerSession } = require("../lib/lawyer-auth");
   const legacySession = await getLawyerSession({ headers: { cookie: "vy_lawyer_session=" + legacyToken } }, responseMock());
   assert.equal(legacySession, null, "legacy unindexed sessions must be rejected by session version after password reset");
+
+  const email = "session@example.test";
+  values.set("vy:lawyer:email:" + crypto.createHash("sha256").update(email).digest("hex"), legacyLawyerId);
+  const login = require("../api/lawyer/login");
+  const loginRes = responseMock();
+  const sameOrigin = { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "same-origin" };
+  await login({ method: "POST", headers: sameOrigin, body: { email, password: "another-strong-password" } }, loginRes);
+  assert.equal(loginRes.statusCode, 200, "new password must allow a fresh login");
+  const freshCookie = loginRes.headers["Set-Cookie"].split(";")[0];
+  const freshSession = await getLawyerSession({ headers: { cookie: freshCookie } }, responseMock());
+  assert.equal(freshSession.lawyer.id, legacyLawyerId);
+  assert.equal(freshSession.lawyer.session_version, 1);
 });
 
 test("configuration diagnostics expose readiness flags without secret values", async () => {
