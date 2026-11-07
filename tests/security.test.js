@@ -1713,6 +1713,6 @@ test("usage API never returns raw storage exception details", () => {
 
 test("admin auth diagnostics never log raw rate-limit exception details", () => {
   const source = fs.readFileSync(require.resolve("../lib/admin-auth"), "utf8");
-  assert.match(source, /console\\.error\\("Admin rate-limit error: rate limiter unavailable"\\)/);
-  assert.doesNotMatch(source, /console\\.error\\([^\\n]*error\\?\\.message/);
+  assert.match(source, /console\.error\("Admin rate-limit error: rate limiter unavailable"\)/);
+  assert.doesNotMatch(source, /console\.error\([^\n]*error\?\.message/);
 });
