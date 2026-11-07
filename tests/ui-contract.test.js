@@ -45,3 +45,8 @@ test("lawyer question submission requires explicit consent and safe text renderi
   assert.match(ask, /p\.textContent\s*=\s*q\.question/);
   assert.match(home, /answerEl\.textContent\s*=\s*data\.reply/);
 });
+
+test("question history and lawyer inbox announce updates accessibly", () => {
+  assert.match(read("public/ask-lawyer.html"), /id="mine"[^>]*aria-live="polite"/);
+  assert.match(read("public/lawyer-panel.html"), /id="questions"[^>]*aria-live="polite"/);
+});
