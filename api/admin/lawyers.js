@@ -117,7 +117,7 @@ module.exports = async (req, res) => {
       const updatedRaw = await redis(["GET", key]);
       const lawyer = JSON.parse(updatedRaw);
       let welcomeEmail = { sent: false, reason: "not_applicable" };
-      if (enabled && lawyer.password_hash) {
+      if (enabled && lawyer.password_hash && lawyer.email_verified !== false) {
         const welcomeKey = "vy:lawyer:" + id + ":welcome-email";
         const claimed = await redis(["SET", welcomeKey, "sending", "NX", "EX", "120"]);
         if (claimed === "OK") {
