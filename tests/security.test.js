@@ -1669,3 +1669,24 @@ test("anonymous user identity cookie is signed, HttpOnly, Secure, and tampering 
     process.env.APP_SECRET = secret;
   }
 });
+
+
+test("API error logs do not include raw exception messages or objects", () => {
+  const apiFiles = [
+    "../api/admin/grant-credits",
+    "../api/admin/lawyers",
+    "../api/lawyer/login",
+    "../api/lawyer/logout",
+    "../api/lawyer/me",
+    "../api/lawyer/questions",
+    "../api/lawyer/reply",
+    "../api/lawyers/active",
+    "../api/questions/create",
+    "../api/questions/mine",
+    "../api/usage"
+  ];
+  for (const file of apiFiles) {
+    const source = fs.readFileSync(require.resolve(file), "utf8");
+    assert.doesNotMatch(source, /console\.error\([^\n]*,\s*(?:error|e)(?:\.message)?\s*\)/, file);
+  }
+});
