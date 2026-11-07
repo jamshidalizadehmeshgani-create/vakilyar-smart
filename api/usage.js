@@ -1,4 +1,4 @@
-const { getAccount } = require("../lib/quota");
+const { getAccount, consumeIpRateLimit } = require("../lib/quota");
 
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -8,6 +8,11 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: "فقط درخواست GET پذیرفته می‌شود." });
   }
   try {
+    const ipLimit = await consumeIpRateLimit(req, { scope: "usage", limit: 120, windowSeconds: 900 });
+    if (ipLimit.count > ipLimit.limit) {
+      res.setHeader("Retry-After", String(ipLimit.windowSeconds));
+      return res.status(429).json({ code: "USAGE_RATE_LIMITED", error: "درخواست‌های بررسی سهمیه از این اتصال بیش از حد مجاز است." });
+    }
     const account = await getAccount(req, res);
     return res.status(200).json({
       ok: true,
