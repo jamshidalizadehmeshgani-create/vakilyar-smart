@@ -33,17 +33,34 @@ button.gold{background:#b18b42;color:#fff}button.danger{background:#8a3434}
 </main>
 <script>
 const result=document.getElementById("result");
+let pendingCreditGrant=null;
 async function send(data){
  const key=document.getElementById("adminKey").value.trim();
  const user_id=document.getElementById("userId").value.trim();
  if(!key||!user_id){result.textContent="کلید مدیر و شناسه کاربر را وارد کنید.";return;}
+ const isCreditGrant=Number.isSafeInteger(data.credits)&&data.credits>0;
+ if(isCreditGrant){
+  if(pendingCreditGrant && (pendingCreditGrant.user_id!==user_id || pendingCreditGrant.credits!==data.credits)){
+   result.textContent="نتیجه عملیات قبلی نامشخص است. برای جلوگیری از شارژ دوباره، همان شناسه کاربر و همان مقدار قبلی را دوباره ارسال کنید.";
+   return;
+  }
+  if(!pendingCreditGrant){
+   const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);
+   pendingCreditGrant={id:Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join(""),user_id,credits:data.credits};
+  }
+  data={...data,request_id:pendingCreditGrant.id};
+ }
+ const buttons=Array.from(document.querySelectorAll("button"));
+ buttons.forEach(button=>button.disabled=true);
  result.textContent="در حال ارسال درخواست...";
  try{
   const r=await fetch("/api/admin/grant-credits",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify({...data,user_id})});
   const d=await r.json();
   result.textContent=d.action==="lookup" ? `موجودی اعتبار: ${d.credits_balance}\nاعتبار نامحدود هدیه: ${d.unlimited ? "فعال" : "غیرفعال"}\nاشتراک Pro: ${d.pro ? "فعال" : "غیرفعال"}\nشناسه: ${d.user_id}` : (d.message||d.error||"پاسخ نامشخص");
   if(!r.ok) result.textContent+=" (کد "+r.status+")";
- }catch(e){result.textContent="ارتباط با سرور برقرار نشد.";}
+  if(isCreditGrant&&(r.ok||r.status<500))pendingCreditGrant=null;
+ }catch(e){result.textContent="ارتباط با سرور برقرار نشد. برای جلوگیری از شارژ دوباره، همان عملیات را با همان شناسه و مقدار تکرار کنید.";}
+ finally{buttons.forEach(button=>button.disabled=false);}
 }
 document.getElementById("lookup").onclick=()=>send({action:"lookup"});
 document.getElementById("gift").onclick=()=>send({credits:Number(document.getElementById("amount").value)});
