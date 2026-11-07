@@ -67,7 +67,7 @@ global.fetch = async (_url, options) => {
     const balance=Number(values.get(key))+amount; values.set(key,String(balance)); result=balance;
   } else if (op === "EVAL" && String(args[0]).includes("redis.call('SADD',KEYS[2],KEYS[1])")) {
     const sessionKey=args[2], sessionIndex=args[3], lawyerId=args[4];
-    values.set(sessionKey,lawyerId + ":0"); const set=lists.get(sessionIndex)||[]; if(!set.includes(sessionKey))set.push(sessionKey); lists.set(sessionIndex,set); result=1;
+    values.set(sessionKey,lawyerId); const set=lists.get(sessionIndex)||[]; if(!set.includes(sessionKey))set.push(sessionKey); lists.set(sessionIndex,set); result=1;
   } else if (op === "EVAL" && String(args[0]).includes("lawyer.password_hash=ARGV[2]")) {
     const key = args[2], indexKey = args[3], id = args[4], passwordHash = args[5], updatedAt = args[6];
     const raw = values.get(key);
