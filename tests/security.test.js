@@ -60,6 +60,26 @@ global.fetch = async (_url, options) => {
     }
     lists.set(args[0], next);
     result = removed;
+  } else if (op === "EVAL" && String(args[0]).includes("lawyer.email_verification_created_at=ARGV[4]")) {
+    const lawyerKey=args[2], pointerKey=args[3], tokenKey=args[4];
+    const id=args[5], tokenHash=args[6], ttl=Number(args[7]), createdAt=args[8];
+    const raw=values.get(lawyerKey);
+    if(!raw) result=0;
+    else {
+      const lawyer=JSON.parse(raw);
+      if(lawyer.id!==id || lawyer.email_verified!==false) result=0;
+      else {
+        const oldHash=values.get(pointerKey);
+        if(oldHash) values.delete("vy:lawyer:verify:"+oldHash);
+        lawyer.email_verification_created_at=createdAt;
+        values.set(lawyerKey,JSON.stringify(lawyer));
+        values.set(tokenKey,id);
+        values.set(pointerKey,tokenHash);
+        expirations.set(tokenKey,ttl);
+        expirations.set(pointerKey,ttl);
+        result=1;
+      }
+    }
   } else if (op === "EVAL" && String(args[0]).includes("lawyer.email_verified=true")) {
     const tokenKey=args[2], lawyerKey=args[3], pointerKey=args[4];
     const id=args[5], tokenHash=args[6], verifiedAt=args[7];
@@ -1798,4 +1818,37 @@ test("lawyer email verification consumes the hashed token once and preserves dis
   const second = makeResponse();
   await verify({ method: "GET", query: { token }, headers: {} }, second);
   assert.equal(second.statusCode, 410);
+});
+
+
+test("lawyer verification resend rotates the active token and applies an IP limit", async () => {
+  const resend = require("../api/lawyer/resend-verification");
+  const id = "e".repeat(32);
+  const email = "resend-lawyer@example.test";
+  const lawyerKey = "vy:lawyer:" + id;
+  const pointerKey = lawyerKey + ":verify-token";
+  const oldHash = "1".repeat(64);
+  values.set("vy:lawyer:email:" + crypto.createHash("sha256").update(email).digest("hex"), id);
+  values.set(lawyerKey, JSON.stringify({
+    id, name: "وکیل ارسال مجدد", email, email_verified: false, access: "disabled"
+  }));
+  values.set(pointerKey, oldHash);
+  values.set("vy:lawyer:verify:" + oldHash, id);
+  const res = responseMock();
+  await resend({
+    method: "POST",
+    headers: {
+      host: "app.example.test", origin: "https://app.example.test",
+      "sec-fetch-site": "same-origin", "x-real-ip": "192.0.2.222"
+    },
+    body: { email }
+  }, res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(values.has("vy:lawyer:verify:" + oldHash), false);
+  const newHash = values.get(pointerKey);
+  assert.match(newHash,/^[a-f0-9]{64}$/);
+  assert.notEqual(newHash,oldHash);
+  assert.equal(values.get("vy:lawyer:verify:" + newHash),id);
+  assert.equal(expirations.get("vy:lawyer:verify:" + newHash),86400);
+  assert.equal(JSON.parse(values.get(lawyerKey)).email_verified,false);
 });
