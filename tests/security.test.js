@@ -471,7 +471,7 @@ test("admin password reset revokes every previously issued lawyer session", asyn
   values.set("vy:lawyer:email:" + crypto.createHash("sha256").update(email).digest("hex"), legacyLawyerId);
   const login = require("../api/lawyer/login");
   const loginRes = responseMock();
-  const sameOrigin = { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "same-origin" };
+  const sameOrigin = { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "same-origin", "x-real-ip": "192.0.2.44" };
   await login({ method: "POST", headers: sameOrigin, body: { email, password: "another-strong-password" } }, loginRes);
   assert.equal(loginRes.statusCode, 200, "new password must allow a fresh login");
   const freshCookie = loginRes.headers["Set-Cookie"].split(";")[0];
@@ -762,7 +762,7 @@ test("user-to-lawyer question lifecycle works across create, inbox, reply, histo
   }));
   values.set("vy:lawyer:email:" + crypto.createHash("sha256").update("lifecycle@example.test").digest("hex"), lawyerId);
 
-  const sameOrigin = { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "same-origin" };
+  const sameOrigin = { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "same-origin", "x-real-ip": "192.0.2.44" };
   const createQuestion = require("../api/questions/create");
   const mine = require("../api/questions/mine");
   const login = require("../api/lawyer/login");
