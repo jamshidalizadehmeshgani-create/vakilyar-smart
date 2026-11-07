@@ -1126,6 +1126,15 @@ test("admin lawyer management validates method, key, and input before mutation",
   assert.equal(lists.get("vy:lawyers:index")?.length||0,beforeCount);
 });
 
+test("admin credit panel preserves an uncertain grant ID across page reloads", () => {
+  const fs=require("node:fs");
+  const path=require("node:path");
+  const html=fs.readFileSync(path.join(__dirname,"../public/admin-credits.html"),"utf8");
+  assert.match(html,/sessionStorage\.getItem\("vy_pending_credit_grant"\)/);
+  assert.match(html,/sessionStorage\.setItem\("vy_pending_credit_grant"/);
+  assert.match(html,/pendingCreditGrant\.id/);
+});
+
 test("admin credit lookup and grants report accurate balances without mixing Pro and unlimited", async () => {
   const userId="9".repeat(48), headers={authorization:"Bearer test-admin-key",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.110"};
   const initial=process.env.FREE_CREDITS_INITIAL;
