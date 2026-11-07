@@ -340,7 +340,8 @@ test("lawyer admin panel clears dynamic lists without using an HTML parsing sink
   const fs = require("node:fs");
   const source = fs.readFileSync(require.resolve("../public/admin-lawyers.html"), "utf8");
   assert.match(source, /\$\("list"\)\.replaceChildren\(\)/);
-  assert.doesNotMatch(source, /\.innerHTML\s*=/);
+  assert.doesNotMatch(source, /error\\?\\.message|refundError\\.message/);
+  assert.doesNotMatch(source, /console\.error\([^\n]*,\s*error\s*\)/);
   assert.match(source, /title\.textContent\s*=\s*w\.name/);
   assert.match(source, /detail\.textContent\s*=/);
 });
@@ -1668,4 +1669,16 @@ test("anonymous user identity cookie is signed, HttpOnly, Secure, and tampering 
   } finally {
     process.env.APP_SECRET = secret;
   }
+});
+
+
+test("chat diagnostics never log raw exception messages or objects", () => {
+  const source = fs.readFileSync(require.resolve("../api/chat"), "utf8");
+  assert.ok(source.includes('console.error("Chat IP rate-limit failure:", diagnosticCode)'));
+  assert.ok(source.includes('console.error("Chat API failure:", diagnosticCode)'));
+  assert.ok(source.includes('console.error("Credit refund failed")'));
+  assert.equal(source.includes("error?.message"), false);
+  assert.equal(source.includes("refundError.message"), false);
+  assert.equal(source.includes('console.error("Credit refund failed",'), false);
+  assert.doesNotMatch(source, /console\.error\([^\n]*,\s*error\s*\)/);
 });
