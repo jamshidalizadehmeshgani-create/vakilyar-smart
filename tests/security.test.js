@@ -66,6 +66,17 @@ global.fetch = async (_url, options) => {
     const key=args[2], initial=Number(args[3]), amount=Number(args[4]);
     if(!values.has(key))values.set(key,String(initial));
     const balance=Number(values.get(key))+amount; values.set(key,String(balance)); result=balance;
+  } else if (op === "EVAL" && String(args[0]).includes("DELETE_INVALID_LAWYER_SESSION")) {
+    const sessionKey = args[2];
+    const rawSession = values.get(sessionKey);
+    if (!rawSession) result = 0;
+    else {
+      const lawyerId = String(rawSession).split(":")[0];
+      values.delete(sessionKey);
+      const indexKey = "vy:lawyer:" + lawyerId + ":sessions";
+      lists.set(indexKey, (lists.get(indexKey) || []).filter(value => value !== sessionKey));
+      result = 1;
+    }
   } else if (op === "EVAL" && String(args[0]).includes("redis.call('SREM','vy:lawyer:'..id..':sessions',KEYS[1])")) {
     lastLogoutEvalScript = String(args[0]);
     const sessionKey = args[2];
@@ -284,6 +295,27 @@ test("reservation helpers reject invalid identifiers and amounts", async () => {
   await assert.rejects(reserveCredits("test:credits", 10, "bad-id"), /Invalid credit reservation/);
   await assert.rejects(reserveCredits("test:credits", 0, "f".repeat(32)), /Invalid credit reservation/);
   await assert.rejects(refundReservation("test:credits", "bad-id"), /Invalid credit reservation/);
+});
+
+test("invalid versioned lawyer sessions are removed from their index", async () => {
+  const lawyerId = "6".repeat(32);
+  const token = "7".repeat(64);
+  const sessionKey = "vy:lawyer:session:" + hashToken(token);
+  const indexKey = "vy:lawyer:" + lawyerId + ":sessions";
+  values.set("vy:lawyer:" + lawyerId, JSON.stringify({
+    id: lawyerId, name: "وکیل آزمون", email: "cleanup@example.test",
+    access: "active", session_version: 2
+  }));
+  values.set(sessionKey, lawyerId + ":1");
+  lists.set(indexKey, [sessionKey, "stale-session-key"]);
+  const res = responseMock();
+  const session = await getLawyerSession({
+    headers: { cookie: "vy_lawyer_session=" + token }
+  }, res);
+  assert.equal(session, null);
+  assert.equal(values.has(sessionKey), false);
+  assert.deepEqual(lists.get(indexKey), ["stale-session-key"]);
+  assert.match(res.headers["Set-Cookie"], /Max-Age=0/);
 });
 
 test("lawyer logout deletes the session and removes its index entry", async () => {
