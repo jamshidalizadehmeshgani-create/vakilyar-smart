@@ -16,7 +16,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - name: Validate package metadata
         run: node -e "JSON.parse(require('fs').readFileSync('package.json','utf8'))"
       - name: Check all API and library JavaScript syntax
@@ -24,15 +24,17 @@ jobs:
           find api lib -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
       - name: Run security and quota unit tests
         run: node --test tests/*.test.js
-      - name: Validate admin page inline scripts
+      - name: Validate deployed public page inline scripts
         run: |
           node <<'NODE'
           const fs = require('node:fs');
-          for (const file of ['admin-credits.html', 'admin-lawyers.html']) {
+          const required = new Set(['public/admin-credits.html', 'public/admin-lawyers.html', 'public/lawyer-login.html', 'public/lawyer-panel.html', 'public/index.html']);
+          const files = [...required, 'public/ask-lawyer.html'];
+          for (const file of files) {
             const html = fs.readFileSync(file, 'utf8');
-            const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)];
-            if (!scripts.length) throw new Error('No inline script found in ' + file);
-            scripts.forEach((match, index) => new Function(match[1]));
+            const scripts = [...html.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi)];
+            if (required.has(file) && !scripts.length) throw new Error('No inline script found in ' + file);
+            scripts.forEach(match => new Function(match[1]));
             console.log(file + ': ' + scripts.length + ' inline script(s) valid');
           }
           NODE
