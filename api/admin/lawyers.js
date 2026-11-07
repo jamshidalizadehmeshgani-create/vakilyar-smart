@@ -102,7 +102,7 @@ module.exports = async (req, res) => {
       const hash = await new Promise((resolve, reject) => crypto.scrypt(password, salt, 64, (err, keyBytes) => err ? reject(err) : resolve(keyBytes.toString("hex"))));
       const passwordHash = salt + ":" + hash;
       const updatedAt = new Date().toISOString();
-      const updatePasswordScript = "local raw=redis.call('GET',KEYS[1]); if not raw then return -1 end; local ok,lawyer=pcall(cjson.decode,raw); if not ok or type(lawyer)~='table' or lawyer.id~=ARGV[1] then return -2 end; local sessions=redis.call('SMEMBERS',KEYS[2]); for _,sessionKey in ipairs(sessions) do redis.call('DEL',sessionKey) end; redis.call('DEL',KEYS[2]); lawyer.password_hash=ARGV[2]; lawyer.password_updated_at=ARGV[3]; redis.call('SET',KEYS[1],cjson.encode(lawyer)); return 1";
+      const updatePasswordScript = "local raw=redis.call('GET',KEYS[1]); if not raw then return -1 end; local ok,lawyer=pcall(cjson.decode,raw); if not ok or type(lawyer)~='table' or lawyer.id~=ARGV[1] then return -2 end; local sessions=redis.call('SMEMBERS',KEYS[2]); for _,sessionKey in ipairs(sessions) do redis.call('DEL',sessionKey) end; redis.call('DEL',KEYS[2]); lawyer.password_hash=ARGV[2]; lawyer.session_version=(tonumber(lawyer.session_version) or 0)+1; lawyer.password_updated_at=ARGV[3]; redis.call('SET',KEYS[1],cjson.encode(lawyer)); return 1";
       const updated = Number(await redis(["EVAL", updatePasswordScript, "2", key, "vy:lawyer:" + id + ":sessions", id, passwordHash, updatedAt]));
       if (updated === -1) return res.status(404).json({ error: "حساب وکیل یافت نشد." });
       if (updated !== 1) return res.status(500).json({ error: "ساختار حساب معتبر نیست؛ رمز تغییر نکرد." });
@@ -116,8 +116,8 @@ module.exports = async (req, res) => {
       const key = `vy:lawyer:${id}`;
       const updatedAt = new Date().toISOString();
       const access = enabled ? "active" : "disabled";
-      const updateAccessScript = "local raw=redis.call('GET',KEYS[1]); if not raw then return -1 end; local ok,lawyer=pcall(cjson.decode,raw); if not ok or type(lawyer)~='table' or lawyer.id~=ARGV[1] then return -2 end; lawyer.access=ARGV[2]; lawyer.access_updated_at=ARGV[3]; redis.call('SET',KEYS[1],cjson.encode(lawyer)); return 1";
-      const updated = Number(await redis(["EVAL", updateAccessScript, "1", key, id, access, updatedAt]));
+      const updateAccessScript = "local raw=redis.call('GET',KEYS[1]); if not raw then return -1 end; local ok,lawyer=pcall(cjson.decode,raw); if not ok or type(lawyer)~='table' or lawyer.id~=ARGV[1] then return -2 end; lawyer.access=ARGV[2]; if ARGV[2]=='disabled' then lawyer.session_version=(tonumber(lawyer.session_version) or 0)+1; local sessions=redis.call('SMEMBERS',KEYS[2]); for _,sessionKey in ipairs(sessions) do redis.call('DEL',sessionKey) end; redis.call('DEL',KEYS[2]); end; lawyer.access_updated_at=ARGV[3]; redis.call('SET',KEYS[1],cjson.encode(lawyer)); return 1";
+      const updated = Number(await redis(["EVAL", updateAccessScript, "2", key, "vy:lawyer:" + id + ":sessions", id, access, updatedAt]));
       if (updated === -1) return res.status(404).json({ error: "حساب وکیل یافت نشد." });
       if (updated !== 1) return res.status(500).json({ error: "ساختار اطلاعات حساب وکیل معتبر نیست؛ وضعیت تغییر نکرد." });
       const updatedRaw = await redis(["GET", key]);
