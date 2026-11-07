@@ -109,3 +109,12 @@ test("lawyer login form mirrors server input limits and prevents duplicate submi
   assert.match(login, /finally\{button\.disabled=false;\}/);
   assert.match(login, /aria-live="polite"/);
 });
+
+
+test("lawyer question form announces submission feedback accessibly", () => {
+  const ask = read("public/ask-lawyer.html");
+  assert.match(ask, /id="msg"[^>]*role="status"[^>]*aria-live="polite"[^>]*aria-atomic="true"/);
+  assert.match(ask, /<textarea id="question" minlength="5" maxlength="5000" required>/);
+  assert.match(ask, /<select id="lawyer" required>/);
+  assert.match(ask, /<input type="checkbox" id="consent" required>/);
+});
