@@ -969,7 +969,7 @@ test("user-to-lawyer question lifecycle works across create, inbox, reply, histo
   assert.deepEqual(lists.get("vy:lawyer:" + lawyerId + ":questions"), []);
 
   const historyAfterDelete = responseMock();
-  await mine({ method: "GET", headers: { cookie: userCookie } }, historyAfterDelete);
+  await mine({ method: "GET", headers: { cookie: userCookie, "x-real-ip": "192.0.2.44" } }, historyAfterDelete);
   assert.equal(historyAfterDelete.statusCode, 200);
   assert.deepEqual(historyAfterDelete.body.questions, []);
   if (previousAppSecret === undefined) delete process.env.APP_SECRET;
