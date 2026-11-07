@@ -23,5 +23,7 @@
       "type": "image/svg+xml",
       "purpose": "any"
     }
-  ]
+  ],
+  "orientation": "portrait",
+  "prefer_related_applications": false
 }
