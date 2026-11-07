@@ -1640,3 +1640,32 @@ test("chat refunds reserved credits after an AI provider network timeout", async
     }
   }
 });
+
+
+test("anonymous user identity cookie is signed, HttpOnly, Secure, and tampering rotates the identity", async () => {
+  const { getAccount } = require("../lib/quota");
+  const secret = process.env.APP_SECRET;
+  process.env.APP_SECRET = "identity-cookie-test-secret";
+  try {
+    const firstRes = responseMock();
+    const first = await getAccount({ headers: { cookie: "" } }, firstRes);
+    const setCookie = firstRes.headers["Set-Cookie"];
+    assert.match(setCookie, /^vy_uid=[a-f0-9]{48}\.[A-Za-z0-9_-]+;/);
+    assert.match(setCookie, /HttpOnly/);
+    assert.match(setCookie, /Secure/);
+    assert.match(setCookie, /SameSite=Lax/);
+    assert.match(setCookie, /Max-Age=31536000/);
+
+    const cookieValue = setCookie.match(/^vy_uid=([^;]+)/)[1];
+    const resumed = await getAccount({ headers: { cookie: "vy_uid=" + cookieValue } }, responseMock());
+    assert.equal(resumed.uid, first.uid, "a valid signed cookie must preserve the account identity");
+
+    const tampered = cookieValue.replace(/^([a-f0-9])/, (_, firstChar) => firstChar === "0" ? "1" : "0");
+    const tamperedRes = responseMock();
+    const rotated = await getAccount({ headers: { cookie: "vy_uid=" + tampered } }, tamperedRes);
+    assert.notEqual(rotated.uid, first.uid, "a tampered identity must not be trusted");
+    assert.match(tamperedRes.headers["Set-Cookie"], /^vy_uid=/);
+  } finally {
+    process.env.APP_SECRET = secret;
+  }
+});
