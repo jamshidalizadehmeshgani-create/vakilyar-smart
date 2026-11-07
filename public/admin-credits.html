@@ -34,6 +34,20 @@ button.gold{background:#b18b42;color:#fff}button.danger{background:#8a3434}
 <script>
 const result=document.getElementById("result");
 let pendingCreditGrant=null;
+try{
+ const saved=sessionStorage.getItem("vy_pending_credit_grant");
+ if(saved){
+  const parsed=JSON.parse(saved);
+  if(parsed&&/^[a-f0-9]{32}$/.test(parsed.id||"")&&typeof parsed.user_id==="string"&&Number.isSafeInteger(parsed.credits)&&parsed.credits>0)pendingCreditGrant=parsed;
+  else sessionStorage.removeItem("vy_pending_credit_grant");
+ }
+}catch(e){}
+function persistPendingCreditGrant(){
+ try{
+  if(pendingCreditGrant)sessionStorage.setItem("vy_pending_credit_grant",JSON.stringify(pendingCreditGrant));
+  else sessionStorage.removeItem("vy_pending_credit_grant");
+ }catch(e){}
+}
 async function send(data){
  const key=document.getElementById("adminKey").value.trim();
  const user_id=document.getElementById("userId").value.trim();
@@ -47,6 +61,7 @@ async function send(data){
   if(!pendingCreditGrant){
    const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);
    pendingCreditGrant={id:Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join(""),user_id,credits:data.credits};
+   persistPendingCreditGrant();
   }
   data={...data,request_id:pendingCreditGrant.id};
  }
@@ -58,7 +73,7 @@ async function send(data){
   const d=await r.json();
   result.textContent=d.action==="lookup" ? `موجودی اعتبار: ${d.credits_balance}\nاعتبار نامحدود هدیه: ${d.unlimited ? "فعال" : "غیرفعال"}\nاشتراک Pro: ${d.pro ? "فعال" : "غیرفعال"}\nشناسه: ${d.user_id}` : (d.message||d.error||"پاسخ نامشخص");
   if(!r.ok) result.textContent+=" (کد "+r.status+")";
-  if(isCreditGrant&&(r.ok||r.status<500))pendingCreditGrant=null;
+  if(isCreditGrant&&(r.ok||r.status<500)){pendingCreditGrant=null;persistPendingCreditGrant();}
  }catch(e){result.textContent="ارتباط با سرور برقرار نشد. برای جلوگیری از شارژ دوباره، همان عملیات را با همان شناسه و مقدار تکرار کنید.";}
  finally{buttons.forEach(button=>button.disabled=false);}
 }
