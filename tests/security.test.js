@@ -953,6 +953,15 @@ test("admin authorization rejects cross-origin requests before checking credenti
   assert.equal(res.statusCode, 403);
 });
 
+test("admin authorization rejects cross-site fetch metadata even with a matching Origin", async () => {
+  const res = responseMock();
+  const ok = await authorizeAdmin({
+    headers: { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "cross-site", authorization: "Bearer test-admin-key", "x-real-ip": "192.0.2.122" }
+  }, res);
+  assert.equal(ok, false);
+  assert.equal(res.statusCode, 403);
+});
+
 test("admin authorization applies an atomic per-IP attempt limit before key validation", async () => {
   const previousSecret = process.env.APP_SECRET;
   process.env.APP_SECRET = "test-admin-rate-limit-secret";
