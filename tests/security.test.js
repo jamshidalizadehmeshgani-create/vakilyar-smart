@@ -414,12 +414,16 @@ test("admin can disable a lawyer and the existing session and new questions are 
   assert.equal(session, null);
   assert.match(sessionRes.headers["Set-Cookie"], /Max-Age=0/);
 
+  const previousSecret = process.env.APP_SECRET;
+  process.env.APP_SECRET = "test-disabled-lawyer-question-secret";
   const questionRes = responseMock();
   await createQuestion({
     method: "POST",
-    headers: { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "same-origin" },
+    headers: { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "same-origin", "x-real-ip": "192.0.2.45" },
     body: { consent: true, lawyer_id: lawyerId, question: "پرسش آزمایشی برای وکیل" }
   }, questionRes);
+  if (previousSecret === undefined) delete process.env.APP_SECRET;
+  else process.env.APP_SECRET = previousSecret;
   assert.equal(questionRes.statusCode, 403);
 });
 
