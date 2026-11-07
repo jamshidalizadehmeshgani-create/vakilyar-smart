@@ -70,11 +70,9 @@ global.fetch = async (_url, options) => {
     const rawSession = values.get(sessionKey);
     if (!rawSession) result = 0;
     else {
-      const lawyerId = String(rawSession).split(':')[0];
       values.delete(sessionKey);
-      if (/^[a-f0-9]{32}$/.test(lawyerId)) {
-        const indexKey = "vy:lawyer:" + lawyerId + ":sessions";
-        lists.set(indexKey, (lists.get(indexKey) || []).filter(key => key !== sessionKey));
+      for (const [key, entries] of lists.entries()) {
+        lists.set(key, entries.filter(value => value !== sessionKey));
       }
       result = 1;
     }
