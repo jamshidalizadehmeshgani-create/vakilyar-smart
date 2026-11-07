@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const { getLawyerSession, redis } = require("../../lib/lawyer-auth");
+const { consumeIpRateLimit } = require("../../lib/quota");
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
@@ -9,6 +10,11 @@ module.exports = async (req, res) => {
   try { originHost = new URL(req.headers.origin || "").host; } catch {}
   if (!host || !originHost || originHost !== host) return res.status(403).json({ error: "مبدأ درخواست معتبر نیست." });
   try {
+    const limit = await consumeIpRateLimit(req, { scope: "lawyer-reply", limit: 40, windowSeconds: 900 });
+    if (limit.count > limit.limit) {
+      res.setHeader("Retry-After", String(limit.windowSeconds));
+      return res.status(429).json({ code: "LAWYER_REPLY_RATE_LIMITED", error: "تعداد پاسخ‌های ارسالی از این اتصال بیش از حد مجاز است." });
+    }
     const session = await getLawyerSession(req, res);
     if (!session) return res.status(401).json({ error: "نشست معتبر نیست یا دسترسی شما غیرفعال است." });
     const id = typeof req.body?.question_id === "string" ? req.body.question_id.trim() : "";
