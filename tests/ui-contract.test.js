@@ -139,3 +139,25 @@ test("admin panels announce operation results and prevent repeated lawyer-manage
   assert.match(lawyers, /controls\.forEach\(button=>button\.disabled=true\)/);
   assert.match(lawyers, /finally\{controls\.forEach\(button=>button\.disabled=false\);\}/);
 });
+
+test("all public pages avoid dangerous HTML parsing and dynamic code execution sinks", () => {
+  const publicDir = path.join(root, "public");
+  const pages = fs.readdirSync(publicDir).filter(file => file.endsWith(".html"));
+  assert.ok(pages.length >= 8, "Expected the complete public HTML page set");
+
+  const forbidden = [
+    [/\\.innerHTML\\s*=/, "innerHTML assignment"],
+    [/\\.outerHTML\\s*=/, "outerHTML assignment"],
+    [/\\.insertAdjacentHTML\\s*\\(/, "insertAdjacentHTML"],
+    [/document\\.write\\s*\\(/, "document.write"],
+    [/\\beval\\s*\\(/, "eval"],
+    [/\\bnew\\s+Function\\s*\\(/, "dynamic Function constructor"]
+  ];
+
+  for (const page of pages) {
+    const html = read("public/" + page);
+    for (const [pattern, label] of forbidden) {
+      assert.doesNotMatch(html, pattern, page + " contains unsafe " + label);
+    }
+  }
+});
