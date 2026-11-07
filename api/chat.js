@@ -38,6 +38,23 @@ module.exports = async (req, res) => {
   if (!message) return res.status(400).json({ error: "لطفاً پرسش خود را وارد کنید." });
   if (message.length > 6000) return res.status(413).json({ error: "متن پرسش بیش از حد طولانی است." });
 
+  // Keep client-provided legal-scope metadata out of the system prompt unless
+  // it matches a small, bounded, plain-text format.
+  const requestedScopeInput = req.body?.legal_scope;
+  const requestedCountryInput = req.body?.country;
+  if (requestedScopeInput !== undefined &&
+      (typeof requestedScopeInput !== "string" ||
+       !["iran", "international", "foreign"].includes(requestedScopeInput.trim().toLowerCase()))) {
+    return res.status(400).json({ code: "INVALID_LEGAL_SCOPE", error: "حوزه حقوقی انتخاب‌شده معتبر نیست." });
+  }
+  if (requestedCountryInput !== undefined &&
+      (typeof requestedCountryInput !== "string" ||
+       requestedCountryInput.trim().length > 60 ||
+       !/^[\\p{L}\\p{M}][\\p{L}\\p{M} .’'-]{0,59}$/u.test(requestedCountryInput.trim()))) {
+    return res.status(400).json({ code: "INVALID_COUNTRY", error: "نام کشور باید کوتاه و فقط شامل حروف باشد." });
+  }
+  const countryLabel = typeof requestedCountryInput === "string" ? requestedCountryInput.trim() : "";
+
   // Support the earlier lowercase Vercel variable name as a backward-compatible fallback.
   const apiKey = process.env.AI_API_KEY || process.env.ai_api_key;
   if (!apiKey) {
@@ -70,8 +87,8 @@ module.exports = async (req, res) => {
 
   try {
     account = await getAccount(req, res);
-    const requestedScope = typeof req.body?.legal_scope === "string" ? req.body.legal_scope.trim().toLowerCase() : "";
-    const requestedCountry = typeof req.body?.country === "string" ? req.body.country.trim().toLowerCase() : "";
+    const requestedScope = typeof requestedScopeInput === "string" ? requestedScopeInput.trim().toLowerCase() : "";
+    const requestedCountry = countryLabel.toLowerCase();
     const iranAliases = new Set(["iran", "ایران", "ir"]);
     const foreignCountryNames = [
       "آلمان","ژاپن","چین","روسیه","آمریکا","ایالات متحده","انگلستان","بریتانیا","فرانسه","ترکیه",
@@ -102,7 +119,7 @@ module.exports = async (req, res) => {
       remainingCredits = await reserveCredits(account.key, charged, reservationId);
       if (remainingCredits < 0) return res.status(402).json({ code: "CREDITS_EXHAUSTED", error: "اعتبار رایگان شما به پایان رسیده است. برای ادامه، وکیل‌یار پرو را فعال کنید." });
     }
-    const scopeLabel = foreignRequest ? (req.body?.country || "حوزه حقوقی انتخاب‌شده") : "قوانین جمهوری اسلامی ایران";
+    const scopeLabel = foreignRequest ? (countryLabel || "حوزه حقوقی انتخاب‌شده") : "قوانین جمهوری اسلامی ایران";
     const upstream = await fetch(endpoint, {
       method: "POST",
       signal: AbortSignal.timeout(25000),
