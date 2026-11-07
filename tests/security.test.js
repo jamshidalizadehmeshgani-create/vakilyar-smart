@@ -1310,6 +1310,40 @@ test("chat refunds credits when the provider response contains invalid or oversi
   }
 });
 
+test("chat refunds credits when the AI provider returns oversized text", async () => {
+  const originalFetch = global.fetch;
+  const previous = { secret: process.env.APP_SECRET, key: process.env.AI_API_KEY, url: process.env.AI_API_URL };
+  const uid = "c".repeat(48), ip = "203.0.113.125";
+  process.env.APP_SECRET = "test-chat-oversized-output-secret";
+  process.env.AI_API_KEY = "test-ai-key";
+  process.env.AI_API_URL = "https://ai.test/oversized-output";
+  const signature = crypto.createHmac("sha256", process.env.APP_SECRET).update(uid).digest("base64url");
+  global.fetch = async (url, options) => String(url) === process.env.AI_API_URL
+    ? { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: "x".repeat(24001) } }] }) }
+    : originalFetch(url, options);
+  delete require.cache[require.resolve("../api/chat")];
+  const chat = require("../api/chat"), res = responseMock();
+  try {
+    await chat({
+      method: "POST",
+      headers: { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "same-origin", "x-real-ip": ip, cookie: "vy_uid=" + uid + "." + signature },
+      body: { consent: true, message: "پرسش حقوقی آزمایشی درباره مسئولیت مدنی" }
+    }, res);
+    assert.equal(res.statusCode, 502);
+    assert.match(res.body.error, /بیش از حد طولانی/);
+    assert.equal(values.get("vy:user:" + uid + ":credits"), "1000");
+    assert.ok([...values.keys()].some(key => key.startsWith("vy:refund:")));
+  } finally {
+    global.fetch = originalFetch;
+    delete require.cache[require.resolve("../api/chat")];
+    for (const [key, value] of Object.entries(previous)) {
+      const envKey = { secret: "APP_SECRET", key: "AI_API_KEY", url: "AI_API_URL" }[key];
+      if (value === undefined) delete process.env[envKey]; else process.env[envKey] = value;
+    }
+  }
+});
+
+
 test("chat refunds reserved credits after an AI provider network timeout", async () => {
   const originalFetch = global.fetch;
   const previous = { secret: process.env.APP_SECRET, key: process.env.AI_API_KEY, url: process.env.AI_API_URL };
