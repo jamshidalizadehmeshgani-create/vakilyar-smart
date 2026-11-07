@@ -618,6 +618,34 @@ test("public chat returns 429 with Retry-After after the IP request threshold", 
   assert.equal(res.body.code, "CHAT_RATE_LIMITED");
 });
 
+test("public usage and lawyer-directory reads enforce per-IP request ceilings", async () => {
+  const previousSecret = process.env.APP_SECRET;
+  process.env.APP_SECRET = "test-public-read-limits-secret";
+  const ip = "198.51.100.81";
+  try {
+    const usageDigest = crypto.createHmac("sha256", process.env.APP_SECRET).update(ip).digest("hex");
+    values.set("vy:ratelimit:usage:" + usageDigest, "120");
+    const usage = require("../api/usage");
+    const usageRes = responseMock();
+    await usage({ method: "GET", headers: { "x-real-ip": ip } }, usageRes);
+    assert.equal(usageRes.statusCode, 429);
+    assert.equal(usageRes.headers["Retry-After"], "900");
+    assert.equal(usageRes.body.code, "USAGE_RATE_LIMITED");
+
+    const lawyersDigest = crypto.createHmac("sha256", process.env.APP_SECRET).update(ip).digest("hex");
+    values.set("vy:ratelimit:lawyers-active:" + lawyersDigest, "60");
+    const activeLawyers = require("../api/lawyers/active");
+    const lawyersRes = responseMock();
+    await activeLawyers({ method: "GET", headers: { "x-real-ip": ip } }, lawyersRes);
+    assert.equal(lawyersRes.statusCode, 429);
+    assert.equal(lawyersRes.headers["Retry-After"], "900");
+    assert.equal(lawyersRes.body.code, "LAWYERS_LIST_RATE_LIMITED");
+  } finally {
+    if (previousSecret === undefined) delete process.env.APP_SECRET;
+    else process.env.APP_SECRET = previousSecret;
+  }
+});
+
 test("lawyer question submissions have an independent hashed IP limit", async () => {
   const previousSecret = process.env.APP_SECRET;
   process.env.APP_SECRET = "test-lawyer-question-ip-secret";
