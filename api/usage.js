@@ -24,7 +24,7 @@ module.exports = async (req, res) => {
       free_credits_initial: Number(process.env.FREE_CREDITS_INITIAL || 1000)
     });
   } catch (error) {
-    console.error("Usage API error:", error.message);
+    console.error("Usage API error:");
     const missing = [];
     if (!process.env.APP_SECRET) missing.push("APP_SECRET");
     if (!process.env.UPSTASH_REDIS_REST_URL) missing.push("UPSTASH_REDIS_REST_URL");
