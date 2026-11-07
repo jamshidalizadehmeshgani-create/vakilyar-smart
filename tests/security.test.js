@@ -1,6 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const crypto = require("crypto");
+const fs = require("node:fs");
 
 process.env.UPSTASH_REDIS_REST_URL = "https://redis.test";
 process.env.UPSTASH_REDIS_REST_TOKEN = "test-token";
