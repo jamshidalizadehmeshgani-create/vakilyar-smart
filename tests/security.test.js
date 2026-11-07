@@ -65,8 +65,11 @@ global.fetch = async (_url, options) => {
     const key=args[2], initial=Number(args[3]), amount=Number(args[4]);
     if(!values.has(key))values.set(key,String(initial));
     const balance=Number(values.get(key))+amount; values.set(key,String(balance)); result=balance;
+  } else if (op === "EVAL" && String(args[0]).includes("redis.call('SADD',KEYS[2],KEYS[1])")) {
+    const sessionKey=args[2], sessionIndex=args[3], lawyerId=args[4];
+    values.set(sessionKey,lawyerId); const set=lists.get(sessionIndex)||[]; if(!set.includes(sessionKey))set.push(sessionKey); lists.set(sessionIndex,set); result=1;
   } else if (op === "EVAL" && String(args[0]).includes("lawyer.password_hash=ARGV[2]")) {
-    const key = args[2], id = args[3], passwordHash = args[4], updatedAt = args[5];
+    const key = args[2], indexKey = args[3], id = args[4], passwordHash = args[5], updatedAt = args[6];
     const raw = values.get(key);
     if (!raw) result = -1;
     else {
@@ -74,10 +77,13 @@ global.fetch = async (_url, options) => {
       try { lawyer = JSON.parse(raw); } catch { lawyer = null; }
       if (!lawyer || lawyer.id !== id) result = -2;
       else {
+        const sessions = lists.get(indexKey) || [];
+        for (const sessionKey of sessions) values.delete(sessionKey);
+        lists.delete(indexKey);
         lawyer.password_hash = passwordHash;
         lawyer.password_updated_at = updatedAt;
         values.set(key, JSON.stringify(lawyer));
-        result = 1;
+        result = sessions.length;
       }
     }
   } else if (op === "EVAL" && String(args[0]).includes("lawyer.access=ARGV[2]")) {
@@ -314,6 +320,21 @@ test("admin password reset atomically preserves concurrent lawyer profile fields
   assert.equal(saved.access, "active");
   assert.match(saved.password_hash, /^[a-f0-9]{32}:[a-f0-9]{128}$/);
   assert.ok(saved.password_updated_at);
+});
+
+test("admin password reset revokes every previously issued lawyer session", async () => {
+  const lawyerId = "3".repeat(32);
+  const oldToken = "4".repeat(64);
+  const oldSessionKey = "vy:lawyer:session:" + hashToken(oldToken);
+  const sessionIndex = "vy:lawyer:" + lawyerId + ":sessions";
+  values.set("vy:lawyer:" + lawyerId, JSON.stringify({ id: lawyerId, name: "وکیل نشست", email: "session@example.test", access: "active" }));
+  values.set(oldSessionKey, lawyerId);
+  lists.set(sessionIndex, [oldSessionKey]);
+  const res = responseMock();
+  await adminLawyers({ method: "POST", headers: { authorization: "Bearer test-admin-key" }, body: { action: "set_password", lawyer_id: lawyerId, password: "a-new-strong-password" } }, res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(values.has(oldSessionKey), false);
+  assert.equal(lists.has(sessionIndex), false);
 });
 
 test("configuration diagnostics expose readiness flags without secret values", async () => {
