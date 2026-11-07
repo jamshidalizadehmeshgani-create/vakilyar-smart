@@ -247,6 +247,7 @@ global.fetch = async (_url, options) => {
 
 const { reserveCredits, refundReservation, commitReservation, redis } = require("../lib/quota");
 const adminLawyers = require("../api/admin/lawyers");
+const { authorizeAdmin } = require("../lib/admin-auth");
 const grantCredits = require("../api/admin/grant-credits");
 const createQuestion = require("../api/questions/create");
 const loginLawyer = require("../api/lawyer/login");
@@ -397,7 +398,7 @@ test("admin can disable a lawyer and the existing session and new questions are 
   const adminRes = responseMock();
   await adminLawyers({
     method: "POST",
-    headers: { authorization: "Bearer test-admin-key" },
+    headers: { authorization: "Bearer test-admin-key", host: "app.example.test", origin: "https://app.example.test", "x-real-ip": "192.0.2.101" },
     body: { action: "set_access", lawyer_id: lawyerId, enabled: false }
   }, adminRes);
 
@@ -405,7 +406,7 @@ test("admin can disable a lawyer and the existing session and new questions are 
   assert.equal(adminRes.body.lawyer.access, "disabled");
 
   const auditRes = responseMock();
-  await adminLawyers({ method: "POST", headers: { authorization: "Bearer test-admin-key" }, body: { action: "audit" } }, auditRes);
+  await adminLawyers({ method: "POST", headers: { authorization: "Bearer test-admin-key", host: "app.example.test", origin: "https://app.example.test", "x-real-ip": "192.0.2.101" }, body: { action: "audit" } }, auditRes);
   assert.equal(auditRes.statusCode, 200);
   assert.ok(auditRes.body.events.some(event => event.action === "lawyer_access_disabled" && event.lawyer_id === lawyerId));
 
@@ -435,7 +436,7 @@ test("admin password reset atomically preserves concurrent lawyer profile fields
   const res = responseMock();
   await adminLawyers({
     method: "POST",
-    headers: { authorization: "Bearer test-admin-key" },
+    headers: { authorization: "Bearer test-admin-key", host: "app.example.test", origin: "https://app.example.test", "x-real-ip": "192.0.2.101" },
     body: { action: "set_password", lawyer_id: lawyerId, password: "a-strong-test-password" }
   }, res);
   assert.equal(res.statusCode, 200);
@@ -454,7 +455,7 @@ test("admin password reset revokes every previously issued lawyer session", asyn
   values.set(oldSessionKey, lawyerId);
   lists.set(sessionIndex, [oldSessionKey]);
   const res = responseMock();
-  await adminLawyers({ method: "POST", headers: { authorization: "Bearer test-admin-key" }, body: { action: "set_password", lawyer_id: lawyerId, password: "a-new-strong-password" } }, res);
+  await adminLawyers({ method: "POST", headers: { authorization: "Bearer test-admin-key", host: "app.example.test", origin: "https://app.example.test", "x-real-ip": "192.0.2.101" }, body: { action: "set_password", lawyer_id: lawyerId, password: "a-new-strong-password" } }, res);
   assert.equal(res.statusCode, 200);
   assert.equal(values.has(oldSessionKey), false);
   assert.equal(lists.has(sessionIndex), false);
@@ -465,7 +466,7 @@ test("admin password reset revokes every previously issued lawyer session", asyn
   values.set("vy:lawyer:" + legacyLawyerId, JSON.stringify({ id: legacyLawyerId, name: "وکیل قدیمی", access: "active" }));
   values.set(legacySessionKey, legacyLawyerId);
   const resetLegacy = responseMock();
-  await adminLawyers({ method: "POST", headers: { authorization: "Bearer test-admin-key" }, body: { action: "set_password", lawyer_id: legacyLawyerId, password: "another-strong-password" } }, resetLegacy);
+  await adminLawyers({ method: "POST", headers: { authorization: "Bearer test-admin-key", host: "app.example.test", origin: "https://app.example.test", "x-real-ip": "192.0.2.101" }, body: { action: "set_password", lawyer_id: legacyLawyerId, password: "another-strong-password" } }, resetLegacy);
   assert.equal(resetLegacy.statusCode, 200);
   const { getLawyerSession } = require("../lib/lawyer-auth");
   const legacySession = await getLawyerSession({ headers: { cookie: "vy_lawyer_session=" + legacyToken } }, responseMock());
@@ -488,7 +489,7 @@ test("configuration diagnostics expose readiness flags without secret values", a
   const res = responseMock();
   await adminLawyers({
     method: "POST",
-    headers: { authorization: "Bearer test-admin-key" },
+    headers: { authorization: "Bearer test-admin-key", host: "app.example.test", origin: "https://app.example.test", "x-real-ip": "192.0.2.101" },
     body: { action: "config" }
   }, res);
   assert.equal(res.statusCode, 200);
@@ -499,7 +500,7 @@ test("configuration diagnostics expose readiness flags without secret values", a
 
 test("unlimited gift and Pro access remain independent", async () => {
   const userId = "f".repeat(48);
-  const headers = { authorization: "Bearer test-admin-key" };
+  const headers = { authorization: "Bearer test-admin-key", host: "app.example.test", origin: "https://app.example.test", "x-real-ip": "192.0.2.102" };
   const unlimitedRes = responseMock();
   await grantCredits({ method: "POST", headers, body: { user_id: userId, unlimited: true } }, unlimitedRes);
   assert.equal(unlimitedRes.statusCode, 200);
@@ -719,6 +720,36 @@ test("question deletion atomically verifies ownership and removes both indexes",
   }), 0);
 });
 
+test("admin authorization rejects cross-origin requests before checking credentials", async () => {
+  const res = responseMock();
+  const ok = await authorizeAdmin({
+    headers: { host: "app.example.test", origin: "https://attacker.example", authorization: "Bearer test-admin-key", "x-real-ip": "192.0.2.120" }
+  }, res);
+  assert.equal(ok, false);
+  assert.equal(res.statusCode, 403);
+});
+
+test("admin authorization applies an atomic per-IP attempt limit before key validation", async () => {
+  const previousSecret = process.env.APP_SECRET;
+  process.env.APP_SECRET = "test-admin-rate-limit-secret";
+  const ip = "192.0.2.121";
+  const digest = crypto.createHmac("sha256", process.env.APP_SECRET).update(ip).digest("hex");
+  values.set("vy:ratelimit:admin:" + digest, "30");
+  try {
+    const res = responseMock();
+    const ok = await authorizeAdmin({
+      headers: { host: "app.example.test", origin: "https://app.example.test", authorization: "Bearer wrong-key", "x-real-ip": ip }
+    }, res);
+    assert.equal(ok, false);
+    assert.equal(res.statusCode, 429);
+    assert.equal(res.headers["Retry-After"], "900");
+    assert.equal(res.body.code, "ADMIN_RATE_LIMITED");
+  } finally {
+    if (previousSecret === undefined) delete process.env.APP_SECRET;
+    else process.env.APP_SECRET = previousSecret;
+  }
+});
+
 test("admin lawyer endpoint rejects an invalid manager key", async () => {
   const res = responseMock();
   await adminLawyers({
@@ -913,17 +944,17 @@ test("admin lawyer lifecycle creates unique disabled accounts, hides password ha
 
 test("admin lawyer management validates method, key, and input before mutation", async () => {
   const wrongMethod=responseMock();
-  await adminLawyers({method:"GET",headers:{authorization:"Bearer test-admin-key"},body:{action:"list"}},wrongMethod);
+  await adminLawyers({method:"GET",headers:{authorization:"Bearer test-admin-key",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.105",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.103"},body:{action:"list"}},wrongMethod);
   assert.equal(wrongMethod.statusCode,405);
   assert.equal(wrongMethod.headers.Allow,"POST");
 
   const badKey=responseMock();
-  await adminLawyers({method:"POST",headers:{authorization:"Bearer wrong-key"},body:{action:"create",name:"نام معتبر",email:"valid@example.test"}},badKey);
+  await adminLawyers({method:"POST",headers:{authorization:"Bearer wrong-key",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.106",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.104"},body:{action:"create",name:"نام معتبر",email:"valid@example.test"}},badKey);
   assert.equal(badKey.statusCode,401);
 
   const beforeCount=lists.get("vy:lawyers:index")?.length||0;
   const badInput=responseMock();
-  await adminLawyers({method:"POST",headers:{authorization:"Bearer test-admin-key"},body:{action:"create",name:"x",email:"not-an-email"}},badInput);
+  await adminLawyers({method:"POST",headers:{authorization:"Bearer test-admin-key",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.105",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.103"},body:{action:"create",name:"x",email:"not-an-email"}},badInput);
   assert.equal(badInput.statusCode,400);
   assert.equal(lists.get("vy:lawyers:index")?.length||0,beforeCount);
 });
