@@ -744,6 +744,14 @@ test("lawyer question submissions have an independent hashed IP limit", async ()
   }
 });
 
+test("lawyer login uses a valid dummy scrypt hash for unknown and malformed accounts", () => {
+  const { passwordHashForVerification } = loginLawyer;
+  const dummy = passwordHashForVerification(null);
+  assert.match(dummy, /^[a-f0-9]{32}:[a-f0-9]{128}$/);
+  assert.equal(passwordHashForVerification({ password_hash: "broken" }), dummy);
+  assert.equal(passwordHashForVerification({ password_hash: "a".repeat(32) + ":" + "b".repeat(128) }), "a".repeat(32) + ":" + "b".repeat(128));
+});
+
 test("lawyer login trusts only a valid platform IP and ignores spoofable forwarding headers", async () => {
   const { trustedClientIp } = loginLawyer;
   assert.equal(trustedClientIp({ headers: { "x-real-ip": "203.0.113.10" } }), "203.0.113.10");
