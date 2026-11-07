@@ -1152,3 +1152,101 @@ test("chat rejects malformed legal scope and prompt-injection country metadata b
     else process.env.AI_API_KEY = previousKey;
   }
 });
+
+
+test("chat commits reserved credits only after a valid AI response", async () => {
+  const originalFetch = global.fetch;
+  const previous = {
+    secret: process.env.APP_SECRET, key: process.env.AI_API_KEY,
+    url: process.env.AI_API_URL, model: process.env.AI_MODEL
+  };
+  const uid = "e".repeat(48);
+  const ip = "203.0.113.121";
+  process.env.APP_SECRET = "test-chat-success-secret";
+  process.env.AI_API_KEY = "test-ai-key";
+  process.env.AI_API_URL = "https://ai.test/chat";
+  delete process.env.AI_MODEL;
+  const signature = crypto.createHmac("sha256", process.env.APP_SECRET).update(uid).digest("base64url");
+  global.fetch = async (url, options) => {
+    if (String(url) === process.env.AI_API_URL) {
+      return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: "پاسخ آزمایشی حقوقی" } }] }) };
+    }
+    return originalFetch(url, options);
+  };
+  delete require.cache[require.resolve("../api/chat")];
+  const chat = require("../api/chat");
+  const res = responseMock();
+  try {
+    await chat({
+      method: "POST",
+      headers: {
+        host: "app.example.test", origin: "https://app.example.test",
+        "sec-fetch-site": "same-origin", "x-real-ip": ip,
+        cookie: "vy_uid=" + uid + "." + signature
+      },
+      body: { consent: true, message: "یک پرسش حقوقی کوتاه درباره مسئولیت مدنی" }
+    }, res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.reply, "پاسخ آزمایشی حقوقی");
+    assert.equal(values.get("vy:user:" + uid + ":credits"), "990");
+    const commitKeys = [...values.keys()].filter(key => key.startsWith("vy:commit:"));
+    assert.ok(commitKeys.length > 0, "successful response must commit the reservation");
+    assert.ok(commitKeys.every(key => !values.has(key.replace("vy:commit:", "vy:reservation:"))));
+  } finally {
+    global.fetch = originalFetch;
+    delete require.cache[require.resolve("../api/chat")];
+    for (const [key, value] of Object.entries(previous)) {
+      const envKey = {secret:"APP_SECRET",key:"AI_API_KEY",url:"AI_API_URL",model:"AI_MODEL"}[key];
+      if (value === undefined) delete process.env[envKey];
+      else process.env[envKey] = value;
+    }
+  }
+});
+
+test("chat refunds reserved credits when the AI provider rejects the request", async () => {
+  const originalFetch = global.fetch;
+  const previous = {
+    secret: process.env.APP_SECRET, key: process.env.AI_API_KEY,
+    url: process.env.AI_API_URL, model: process.env.AI_MODEL
+  };
+  const uid = "d".repeat(48);
+  const ip = "203.0.113.122";
+  process.env.APP_SECRET = "test-chat-refund-secret";
+  process.env.AI_API_KEY = "test-ai-key";
+  process.env.AI_API_URL = "https://ai.test/failure";
+  delete process.env.AI_MODEL;
+  const signature = crypto.createHmac("sha256", process.env.APP_SECRET).update(uid).digest("base64url");
+  global.fetch = async (url, options) => {
+    if (String(url) === process.env.AI_API_URL) {
+      return { ok: false, status: 503, json: async () => ({ error: { message: "simulated provider outage" } }) };
+    }
+    return originalFetch(url, options);
+  };
+  delete require.cache[require.resolve("../api/chat")];
+  const chat = require("../api/chat");
+  const res = responseMock();
+  try {
+    await chat({
+      method: "POST",
+      headers: {
+        host: "app.example.test", origin: "https://app.example.test",
+        "sec-fetch-site": "same-origin", "x-real-ip": ip,
+        cookie: "vy_uid=" + uid + "." + signature
+      },
+      body: { consent: true, message: "یک پرسش حقوقی کوتاه درباره مسئولیت مدنی" }
+    }, res);
+    assert.equal(res.statusCode, 502);
+    assert.equal(values.get("vy:user:" + uid + ":credits"), "1000");
+    const refundKeys = [...values.keys()].filter(key => key.startsWith("vy:refund:"));
+    assert.ok(refundKeys.length > 0, "provider failure must record an idempotent refund");
+    assert.ok(refundKeys.every(key => !values.has(key.replace("vy:refund:", "vy:reservation:"))));
+  } finally {
+    global.fetch = originalFetch;
+    delete require.cache[require.resolve("../api/chat")];
+    for (const [key, value] of Object.entries(previous)) {
+      const envKey = {secret:"APP_SECRET",key:"AI_API_KEY",url:"AI_API_URL",model:"AI_MODEL"}[key];
+      if (value === undefined) delete process.env[envKey];
+      else process.env[envKey] = value;
+    }
+  }
+});
