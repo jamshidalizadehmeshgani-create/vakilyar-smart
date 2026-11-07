@@ -855,6 +855,17 @@ test("lawyer replies are idempotent and reject request IDs reused with different
   assert.equal(JSON.parse(values.get("vy:question:"+questionId)).replies.length,1);
 });
 
+test("lawyer login rejects overlong email addresses before rate-limit storage access", async () => {
+  const res = responseMock();
+  await loginLawyer({
+    method: "POST",
+    headers: { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "same-origin" },
+    body: { email: "a".repeat(180) + "@example.test", password: "test-password" }
+  }, res);
+  assert.equal(res.statusCode, 400);
+  assert.equal(res.body.error, "ایمیل یا رمز عبور معتبر نیست.");
+});
+
 test("lawyer login uses a valid dummy scrypt hash for unknown and malformed accounts", () => {
   const { passwordHashForVerification } = loginLawyer;
   const dummy = passwordHashForVerification(null);
