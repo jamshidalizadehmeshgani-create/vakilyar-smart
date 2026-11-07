@@ -21,7 +21,7 @@ module.exports = async (req, res) => {
     await redis(["EVAL", script, "1", sessionKey]);
     return res.status(200).json({ ok: true, message: "از حساب خارج شدید." });
   } catch (error) {
-    console.error("Lawyer logout error:", error.message);
+    console.error("Lawyer logout error:");
     return res.status(503).json({ error: "نشست از مرورگر پاک شد؛ پاک‌سازی سمت سرور موقتاً کامل نشد." });
   }
 };
