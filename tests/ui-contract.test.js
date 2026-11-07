@@ -52,6 +52,14 @@ test("question history and lawyer inbox announce updates accessibly", () => {
 });
 
 
+test("question submission UI retains a stable retry ID across reloads", () => {
+  const ask=read("public/ask-lawyer.html");
+  assert.match(ask,/sessionStorage\.getItem\("vy_pending_question"\)/);
+  assert.match(ask,/sessionStorage\.setItem\("vy_pending_question"/);
+  assert.match(ask,/request_id:pendingQuestion\.id/);
+  assert.match(ask,/برای جلوگیری از ثبت پرسش تکراری/);
+});
+
 test("lawyer reply UI retains the same operation ID after an uncertain network result", () => {
   const panel=read("public/lawyer-panel.html");
   assert.match(panel,/vy_pending_reply_/);
