@@ -52,6 +52,15 @@ test("question history and lawyer inbox announce updates accessibly", () => {
 });
 
 
+test("lawyer reply UI retains the same operation ID after an uncertain network result", () => {
+  const panel=read("public/lawyer-panel.html");
+  assert.match(panel,/vy_pending_reply_/);
+  assert.match(panel,/sessionStorage\.setItem\(pendingKey/);
+  assert.match(panel,/sessionStorage\.getItem\(pendingKey/);
+  assert.match(panel,/request_id:pendingReply\.id/);
+  assert.match(panel,/برای جلوگیری از ثبت پاسخ تکراری/);
+});
+
 test("all public pages declare Persian RTL document metadata", () => {
   const pages = [
     "index.html", "ask-lawyer.html", "lawyer-login.html", "lawyer-panel.html",
