@@ -63,7 +63,7 @@ module.exports = async (req, res) => {
     if (!raw) return res.status(404).json({ error: "وکیل یافت نشد." });
     let lawyer;
     try { lawyer = JSON.parse(raw); } catch { return res.status(503).json({ error: "اطلاعات وکیل قابل خواندن نیست." }); }
-    if (!lawyer || lawyer.id !== lawyerId || lawyer.access !== "active")
+    if (!lawyer || lawyer.id !== lawyerId || lawyer.access !== "active" || lawyer.email_verified === false)
       return res.status(403).json({ error: "این وکیل در حال حاضر پرسش جدید نمی‌پذیرد." });
     const account = await getAccount(req, res);
     // Validate retention configuration before mutating the daily quota counter.
