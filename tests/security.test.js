@@ -1682,3 +1682,31 @@ test("chat diagnostics never log raw exception messages or objects", () => {
   assert.equal(source.includes('console.error("Credit refund failed",'), false);
   assert.doesNotMatch(source, /console\.error\([^\n]*,\s*error\s*\)/);
 });
+
+test("API error logs do not include raw exception messages or objects", () => {
+  const apiFiles = [
+    "../api/admin/grant-credits",
+    "../api/admin/lawyers",
+    "../api/lawyer/login",
+    "../api/lawyer/logout",
+    "../api/lawyer/me",
+    "../api/lawyer/questions",
+    "../api/lawyer/reply",
+    "../api/lawyers/active",
+    "../api/questions/create",
+    "../api/questions/mine",
+    "../api/usage"
+  ];
+  for (const file of apiFiles) {
+    const source = fs.readFileSync(require.resolve(file), "utf8");
+    assert.doesNotMatch(source, /console\\.error\\([^\\n]*,\\s*(?:error|e)(?:\\.message)?\\s*\\)/, file);
+  }
+});
+
+
+test("usage API never returns raw storage exception details", () => {
+  const source = fs.readFileSync(require.resolve("../api/usage"), "utf8");
+  assert.doesNotMatch(source, /storage_detail/);
+  assert.doesNotMatch(source, /error\\.message/);
+  assert.match(source, /storage_diagnostic: missing\\.length \\? null : "REDIS_STORAGE_ERROR"/);
+});
