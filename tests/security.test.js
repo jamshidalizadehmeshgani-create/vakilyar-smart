@@ -1250,3 +1250,70 @@ test("chat refunds reserved credits when the AI provider rejects the request", a
     }
   }
 });
+
+
+test("chat refunds credits when the provider response contains invalid or oversized content", async () => {
+  const originalFetch = global.fetch;
+  const previous = { secret: process.env.APP_SECRET, key: process.env.AI_API_KEY, url: process.env.AI_API_URL };
+  const uid = "a".repeat(48), ip = "203.0.113.123";
+  process.env.APP_SECRET = "test-chat-invalid-output-secret";
+  process.env.AI_API_KEY = "test-ai-key";
+  process.env.AI_API_URL = "https://ai.test/invalid-output";
+  const signature = crypto.createHmac("sha256", process.env.APP_SECRET).update(uid).digest("base64url");
+  global.fetch = async (url, options) => String(url) === process.env.AI_API_URL
+    ? { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: { unsafe: true } } }] }) }
+    : originalFetch(url, options);
+  delete require.cache[require.resolve("../api/chat")];
+  const chat = require("../api/chat"), res = responseMock();
+  try {
+    await chat({
+      method: "POST",
+      headers: { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "same-origin", "x-real-ip": ip, cookie: "vy_uid=" + uid + "." + signature },
+      body: { consent: true, message: "پرسش حقوقی آزمایشی درباره مسئولیت مدنی" }
+    }, res);
+    assert.equal(res.statusCode, 502);
+    assert.match(res.body.error, /نامعتبر/);
+    assert.equal(values.get("vy:user:" + uid + ":credits"), "1000");
+    assert.ok([...values.keys()].some(key => key.startsWith("vy:refund:")));
+  } finally {
+    global.fetch = originalFetch;
+    delete require.cache[require.resolve("../api/chat")];
+    for (const [key, value] of Object.entries(previous)) {
+      const envKey = { secret: "APP_SECRET", key: "AI_API_KEY", url: "AI_API_URL" }[key];
+      if (value === undefined) delete process.env[envKey]; else process.env[envKey] = value;
+    }
+  }
+});
+
+test("chat refunds reserved credits after an AI provider network timeout", async () => {
+  const originalFetch = global.fetch;
+  const previous = { secret: process.env.APP_SECRET, key: process.env.AI_API_KEY, url: process.env.AI_API_URL };
+  const uid = "b".repeat(48), ip = "203.0.113.124";
+  process.env.APP_SECRET = "test-chat-timeout-secret";
+  process.env.AI_API_KEY = "test-ai-key";
+  process.env.AI_API_URL = "https://ai.test/timeout";
+  const signature = crypto.createHmac("sha256", process.env.APP_SECRET).update(uid).digest("base64url");
+  global.fetch = async (url, options) => {
+    if (String(url) === process.env.AI_API_URL) throw new Error("simulated provider network timeout");
+    return originalFetch(url, options);
+  };
+  delete require.cache[require.resolve("../api/chat")];
+  const chat = require("../api/chat"), res = responseMock();
+  try {
+    await chat({
+      method: "POST",
+      headers: { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "same-origin", "x-real-ip": ip, cookie: "vy_uid=" + uid + "." + signature },
+      body: { consent: true, message: "پرسش حقوقی آزمایشی درباره مسئولیت مدنی" }
+    }, res);
+    assert.equal(res.statusCode, 502);
+    assert.equal(values.get("vy:user:" + uid + ":credits"), "1000");
+    assert.ok([...values.keys()].some(key => key.startsWith("vy:refund:")));
+  } finally {
+    global.fetch = originalFetch;
+    delete require.cache[require.resolve("../api/chat")];
+    for (const [key, value] of Object.entries(previous)) {
+      const envKey = { secret: "APP_SECRET", key: "AI_API_KEY", url: "AI_API_URL" }[key];
+      if (value === undefined) delete process.env[envKey]; else process.env[envKey] = value;
+    }
+  }
+});
