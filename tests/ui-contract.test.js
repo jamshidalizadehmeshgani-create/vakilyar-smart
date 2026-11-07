@@ -128,3 +128,14 @@ test("lawyer reply feedback uses an accessible live status instead of alert dial
   assert.match(panel, /card\.append\(area,send,feedback\)/);
   assert.doesNotMatch(panel, /alert\(dd\.message/);
 });
+
+
+test("admin panels announce operation results and prevent repeated lawyer-management clicks", () => {
+  const lawyers = read("public/admin-lawyers.html");
+  const credits = read("public/admin-credits.html");
+  for (const html of [lawyers, credits]) {
+    assert.match(html, /id="result"[^>]*role="status"[^>]*aria-live="polite"[^>]*aria-atomic="true"/);
+  }
+  assert.match(lawyers, /controls\.forEach\(button=>button\.disabled=true\)/);
+  assert.match(lawyers, /finally\{controls\.forEach\(button=>button\.disabled=false\);\}/);
+});
