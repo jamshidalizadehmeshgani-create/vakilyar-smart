@@ -150,6 +150,25 @@ global.fetch = async (_url, options) => {
         result = 1;
       }
     }
+  } else if (op === "EVAL" && String(args[0]).includes("CREATE_OWNED_QUESTION_WITH_DAILY_LIMIT")) {
+    const counterKey = args[2], questionKey = args[3], lawyerListKey = args[4], userListKey = args[5];
+    const item = args[6], id = args[7], retentionSeconds = Number(args[8]);
+    const dailyLimit = Number(args[9]), ttl = Number(args[10]);
+    const count = Number(values.get(counterKey) || 0);
+    if (count >= dailyLimit) result = -1;
+    else {
+      const nextCount = count + 1;
+      values.set(counterKey, String(nextCount));
+      if (nextCount === 1) expirations.set(counterKey, ttl);
+      values.set(questionKey, item);
+      for (const key of [lawyerListKey, userListKey]) {
+        const list = lists.get(key) || [];
+        list.unshift(String(id));
+        lists.set(key, list.slice(0, 500));
+      }
+      expirations.set(questionKey, retentionSeconds);
+      result = nextCount;
+    }
   } else if (op === "EVAL" && String(args[0]).includes("redis.call('SET',KEYS[1],ARGV[1],'EX',ARGV[3])")) {
     const questionKey = args[2], lawyerListKey = args[3], userListKey = args[4];
     const item = args[5], id = args[6];
@@ -841,9 +860,9 @@ test("stale and expired question IDs are pruned from the user index", async () =
 test("invalid retention configuration is checked before daily quota mutation", () => {
   const source = require("fs").readFileSync(require.resolve("../api/questions/create"), "utf8");
   const validation = source.indexOf("const retentionSeconds = questionRetentionSeconds();");
-  const quotaMutation = source.indexOf("const count = await incrementDailyQuestionCount(limitKey);");
+  const quotaMutation = source.indexOf("await createQuestionWithDailyLimit({");
   assert.ok(validation >= 0 && quotaMutation > validation,
-    "retention configuration must be validated before incrementing the daily question counter");
+    "retention configuration must be validated before the atomic question/quota write");
   assert.match(source, /String\(retentionSeconds\)/);
 });
 
@@ -1073,4 +1092,30 @@ test("admin credit endpoint rejects invalid identities, amounts, and non-POST re
   const wrongMethod=responseMock();
   await grantCredits({method:"GET",headers,body:{user_id:"8".repeat(48),credits:10}},wrongMethod);
   assert.equal(wrongMethod.statusCode,405);
+});
+
+test("daily question limit and question storage are one atomic bounded operation", async () => {
+  const { createQuestionWithDailyLimit } = require("../api/questions/create");
+  const counterKey = "vy:user:" + "7".repeat(48) + ":question-limit";
+  const lawyerListKey = "vy:lawyer:" + "8".repeat(32) + ":questions";
+  const userListKey = "vy:user:" + "7".repeat(48) + ":questions";
+  for (let i = 1; i <= 5; i++) {
+    const id = String(i).padStart(32, "0");
+    const item = { id, user_id: "7".repeat(48), question: "پرسش آزمایشی " + i };
+    assert.equal(await createQuestionWithDailyLimit({
+      counterKey, questionKey: "vy:question:" + id, lawyerListKey, userListKey,
+      item, id, retentionSeconds: 90 * 86400, dailyLimit: 5
+    }), i);
+  }
+  const blockedId = "f".repeat(32);
+  assert.equal(await createQuestionWithDailyLimit({
+    counterKey, questionKey: "vy:question:" + blockedId, lawyerListKey, userListKey,
+    item: { id: blockedId }, id: blockedId, retentionSeconds: 90 * 86400, dailyLimit: 5
+  }), -1);
+  assert.equal(values.get(counterKey), "5", "blocked attempts must not increase the daily counter");
+  assert.equal(values.has("vy:question:" + blockedId), false, "blocked attempts must not create a question");
+  assert.equal(lists.get(lawyerListKey).length, 5);
+  assert.equal(lists.get(userListKey).length, 5);
+  assert.equal(expirations.get(counterKey), 86400);
+  assert.equal(expirations.get("vy:question:" + "1".padStart(32, "0")), 90 * 86400);
 });
