@@ -35,7 +35,7 @@ test("Content Security Policy keeps required restrictions and avoids wildcard so
   const csp = headers.get("content-security-policy") || "";
   const directives = new Map(
     csp.split(";").map(part => part.trim()).filter(Boolean).map(part => {
-      const [name, ...sources] = part.split(/\\s+/);
+      const [name, ...sources] = part.trim().split(" ");
       return [name, sources];
     })
   );
