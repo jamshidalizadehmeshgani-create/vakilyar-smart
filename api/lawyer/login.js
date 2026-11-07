@@ -11,6 +11,14 @@ async function incrementLoginAttempts(key, ttlSeconds = 900) {
   return Number(await redis(["EVAL", script, "1", key, String(ttlSeconds)]));
 }
 
+function loginAttemptKey(email, ip, secret) {
+  if (typeof email !== "string" || !email || typeof ip !== "string" || !net.isIP(ip) || typeof secret !== "string" || !secret) {
+    throw new Error("Invalid login rate-limit identity");
+  }
+  const digest = crypto.createHmac("sha256", secret).update(email + "\\n" + ip).digest("hex");
+  return "vy:lawyer:login-pair-attempts:" + digest;
+}
+
 function trustedClientIp(req) {
   const ip = String(req?.headers?.["x-real-ip"] || "").trim();
   return net.isIP(ip) ? ip : "";
@@ -52,14 +60,16 @@ module.exports = async (req, res) => {
     if (!secret || !ip) {
       return res.status(503).json({ code: "LOGIN_RATE_LIMIT_UNAVAILABLE", error: "کنترل امن تلاش‌های ورود موقتاً در دسترس نیست." });
     }
-    const rateId = crypto.createHash("sha256").update(email).digest("hex");
-    const rateKey = "vy:lawyer:login-attempts:" + rateId;
-    const attempts = await incrementLoginAttempts(rateKey);
-    if (attempts > 8) return res.status(429).json({ error: "تلاش‌های ورود بیش از حد است؛ ۱۵ دقیقه بعد دوباره تلاش کنید." });
     const ipId = crypto.createHmac("sha256", secret).update(ip).digest("hex");
     const ipKey = "vy:lawyer:login-ip-attempts:" + ipId;
     const ipAttempts = await incrementLoginAttempts(ipKey);
     if (ipAttempts > 30) return res.status(429).json({ error: "تلاش‌های ورود از این اتصال بیش از حد است؛ ۱۵ دقیقه بعد دوباره تلاش کنید." });
+    // Scope the account-specific throttle to this IP as well, preventing one
+    // remote client from locking a lawyer's account for every other client.
+    const pairKey = loginAttemptKey(email, ip, secret);
+    const attempts = await incrementLoginAttempts(pairKey);
+    if (attempts > 8) return res.status(429).json({ error: "تلاش‌های ورود برای این حساب از این اتصال بیش از حد است؛ ۱۵ دقیقه بعد دوباره تلاش کنید." });
+    const rateId = crypto.createHash("sha256").update(email).digest("hex");
     const emailKey = "vy:lawyer:email:" + rateId;
     const id = await redis(["GET", emailKey]);
     const raw = id ? await redis(["GET", "vy:lawyer:" + id]) : null;
@@ -71,7 +81,7 @@ module.exports = async (req, res) => {
     const passwordMatches = await verifyPassword(password, storedHash);
     const valid = Boolean(lawyer && lawyer.access === "active" && passwordMatches);
     if (!valid) return res.status(401).json({ error: "اطلاعات ورود نادرست است یا دسترسی حساب فعال نیست." });
-    await redis(["DEL", rateKey]);
+    await redis(["DEL", pairKey]);
     const token = crypto.randomBytes(32).toString("hex");
     const sessionKey = "vy:lawyer:session:" + hashToken(token);
     const sessionIndex = "vy:lawyer:" + lawyer.id + ":sessions";
@@ -86,5 +96,6 @@ module.exports = async (req, res) => {
 };
 
 module.exports.incrementLoginAttempts = incrementLoginAttempts;
+module.exports.loginAttemptKey = loginAttemptKey;
 module.exports.trustedClientIp = trustedClientIp;
 module.exports.passwordHashForVerification = passwordHashForVerification;
