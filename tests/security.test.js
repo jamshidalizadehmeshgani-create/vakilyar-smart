@@ -820,6 +820,7 @@ test("Redis transport exceptions never expose Authorization credentials", async 
 
 
 test("user-to-lawyer question lifecycle works across create, inbox, reply, history, and owned deletion", async () => {
+  const previousAppSecret = process.env.APP_SECRET;
   process.env.APP_SECRET = "test-app-secret-for-question-lifecycle";
   const userId = "a".repeat(48);
   const signature = crypto.createHmac("sha256", process.env.APP_SECRET).update(userId).digest("base64url");
@@ -917,7 +918,8 @@ test("user-to-lawyer question lifecycle works across create, inbox, reply, histo
   await mine({ method: "GET", headers: { cookie: userCookie } }, historyAfterDelete);
   assert.equal(historyAfterDelete.statusCode, 200);
   assert.deepEqual(historyAfterDelete.body.questions, []);
-  delete process.env.APP_SECRET;
+  if (previousAppSecret === undefined) delete process.env.APP_SECRET;
+  else process.env.APP_SECRET = previousAppSecret;
 });
 
 
