@@ -57,7 +57,7 @@ module.exports = async (req, res) => {
     const sessionKey = "vy:lawyer:session:" + hashToken(token);
     const sessionIndex = "vy:lawyer:" + lawyer.id + ":sessions";
     const createSessionScript = "redis.call('SET',KEYS[1],ARGV[1],'EX',ARGV[3]); redis.call('SADD',KEYS[2],KEYS[1]); redis.call('EXPIRE',KEYS[2],ARGV[3]); return 1";
-    await redis(["EVAL", createSessionScript, "2", sessionKey, sessionIndex, lawyer.id, String(SESSION_SECONDS)]);
+    await redis(["EVAL", createSessionScript, "2", sessionKey, sessionIndex, lawyer.id + ":" + (Number(lawyer.session_version) || 0), String(SESSION_SECONDS)]);
     res.setHeader("Set-Cookie", cookieHeader(token, SESSION_SECONDS));
     return res.status(200).json({ ok: true, lawyer: { id: lawyer.id, name: lawyer.name, email: lawyer.email }, message: "ورود موفق بود." });
   } catch (error) {
