@@ -1,4 +1,4 @@
-const { getAccount, redis } = require("../../lib/quota");
+const { getAccount, redis, consumeIpRateLimit } = require("../../lib/quota");
 
 const DELETE_OWNED_QUESTION_SCRIPT = `
 -- DELETE_OWNED_QUESTION
@@ -48,8 +48,6 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const account = await getAccount(req, res);
-
     if (req.method === "POST") {
       const host = req.headers.host || "";
       let originHost = "";
@@ -58,7 +56,25 @@ module.exports = async (req, res) => {
       if (!host || !originHost || originHost !== host || (fetchSite && fetchSite !== "same-origin")) {
         return res.status(403).json({ error: "مبدأ درخواست معتبر نیست." });
       }
+    }
 
+    const scope = req.method === "GET" ? "question-history" : "question-delete";
+    const limit = await consumeIpRateLimit(req, {
+      scope,
+      limit: req.method === "GET" ? 120 : 30,
+      windowSeconds: 900
+    });
+    if (limit.count > limit.limit) {
+      res.setHeader("Retry-After", String(limit.windowSeconds));
+      return res.status(429).json({
+        code: req.method === "GET" ? "QUESTION_HISTORY_RATE_LIMITED" : "QUESTION_DELETE_RATE_LIMITED",
+        error: "تعداد درخواست‌های پرونده پرسش از این اتصال بیش از حد مجاز است."
+      });
+    }
+
+    const account = await getAccount(req, res);
+
+    if (req.method === "POST") {
       const id = typeof req.body?.question_id === "string" ? req.body.question_id.trim() : "";
       if (!/^[a-f0-9]{32}$/.test(id)) {
         return res.status(400).json({ error: "شناسه پرسش معتبر نیست." });
