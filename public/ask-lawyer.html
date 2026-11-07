@@ -45,7 +45,8 @@ function persistPendingQuestion(){
  try{
   if(pendingQuestion)sessionStorage.setItem("vy_pending_question",JSON.stringify(pendingQuestion));
   else sessionStorage.removeItem("vy_pending_question");
- }catch{}
+  return true;
+ }catch{return false;}
 }
 async function loadLawyers(){
   const r=await fetch("/api/lawyers/active",{cache:"no-store"}),d=await r.json();
@@ -89,7 +90,7 @@ $("f").onsubmit=async e=>{
   if(!pendingQuestion){
     const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);
     pendingQuestion={id:Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join(""),lawyer_id,question};
-    try{persistPendingQuestion();}catch{$("msg").textContent="ذخیره شناسه امن عملیات ممکن نیست؛ پرسش ارسال نشد.";return;}
+    if(!persistPendingQuestion()){$("msg").textContent="ذخیره شناسه امن عملیات ممکن نیست؛ پرسش ارسال نشد.";pendingQuestion=null;return;}
   }
   const b=$("send");b.disabled=true;
   try{
