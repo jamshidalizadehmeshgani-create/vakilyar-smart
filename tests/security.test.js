@@ -521,6 +521,8 @@ test("unlimited credits do not bypass the foreign-law Pro gate", async () => {
     uid: "1".repeat(48), key: "vy:user:" + "1".repeat(48) + ":credits",
     credits: 1000, isPro: false, isUnlimited: true
   });
+  const previousSecret = process.env.APP_SECRET;
+  process.env.APP_SECRET = "test-foreign-law-gate-secret";
   process.env.AI_API_KEY = "test-ai-key";
   delete require.cache[require.resolve("../api/chat")];
   const chat = require("../api/chat");
@@ -528,13 +530,15 @@ test("unlimited credits do not bypass the foreign-law Pro gate", async () => {
   try {
     await chat({
       method: "POST",
-      headers: { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "same-origin" },
+      headers: { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "same-origin", "x-real-ip": "203.0.113.88" },
       body: { consent: true, message: "قوانین آلمان را توضیح بده" }
     }, res);
   } finally {
     quota.getAccount = originalGetAccount;
     delete require.cache[require.resolve("../api/chat")];
     delete process.env.AI_API_KEY;
+    if (previousSecret === undefined) delete process.env.APP_SECRET;
+    else process.env.APP_SECRET = previousSecret;
   }
   assert.equal(res.statusCode, 403);
   assert.equal(res.body.code, "PRO_REQUIRED");
