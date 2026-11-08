@@ -2,7 +2,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { shouldUseValkey, createValkeyClient, executeValkeyCommand, getValkeyDiagnostic } = require("../lib/valkey");
+const { shouldUseValkey, createValkeyClient, executeValkeyCommand, getValkeyDiagnostic, getValkeyUrlDiagnostic } = require("../lib/valkey");
 
 test("only Vercel Preview selects Valkey", () => {
   assert.equal(shouldUseValkey({ VERCEL_ENV: "preview", VALKEY_URL: "rediss://preview" }), true);
@@ -26,7 +26,10 @@ test("Valkey client enforces TLS and bounded connection behavior", () => {
   assert.equal(captured.options.retryStrategy(1), 250);
   assert.equal(captured.options.retryStrategy(2), 500);
   assert.equal(captured.options.retryStrategy(3), null);
-  assert.throws(() => createValkeyClient("redis://insecure", FakeRedis), /rediss/);
+  assert.throws(
+    () => createValkeyClient("redis://insecure", FakeRedis),
+    error => error.code === "VALKEY_URL_TLS_REQUIRED"
+  );
 });
 
 test("Valkey URL trims outer whitespace but rejects quoted or malformed values safely", () => {
@@ -38,12 +41,29 @@ test("Valkey URL trims outer whitespace but rejects quoted or malformed values s
   assert.equal(captured, "rediss://example:1234");
   assert.throws(
     () => createValkeyClient('"rediss://example:1234"', FakeRedis),
-    error => getValkeyDiagnostic(error) === "VALKEY_URL_FORMAT_ERROR"
+    error => getValkeyDiagnostic(error) === "VALKEY_URL_QUOTED"
   );
   assert.throws(
     () => createValkeyClient("not-a-url", FakeRedis),
-    error => getValkeyDiagnostic(error) === "VALKEY_URL_FORMAT_ERROR"
+    error => getValkeyDiagnostic(error) === "VALKEY_URL_SCHEME_MISSING"
   );
+});
+
+
+test("Valkey URL diagnostics identify the cause without exposing URL contents", () => {
+  assert.equal(getValkeyUrlDiagnostic(""), "VALKEY_URL_EMPTY");
+  assert.equal(getValkeyUrlDiagnostic('"rediss://secret-host:1234"'), "VALKEY_URL_QUOTED");
+  assert.equal(getValkeyUrlDiagnostic("rediss://secret host:1234"), "VALKEY_URL_WHITESPACE");
+  assert.equal(getValkeyUrlDiagnostic("not-a-url"), "VALKEY_URL_SCHEME_MISSING");
+  assert.equal(getValkeyUrlDiagnostic("VALKEY_URL=rediss://secret-host:1234"), "VALKEY_URL_ASSIGNMENT_INCLUDED");
+  assert.equal(getValkeyUrlDiagnostic("rediss://[invalid"), "VALKEY_URL_SYNTAX_ERROR");
+  assert.equal(getValkeyUrlDiagnostic("redis://secret-host:1234"), "VALKEY_URL_TLS_REQUIRED");
+  assert.equal(getValkeyUrlDiagnostic("rediss:///path"), "VALKEY_URL_HOST_MISSING");
+  assert.equal(getValkeyUrlDiagnostic("  rediss://secret-host:1234  "), null);
+
+  const error = Object.assign(new Error("private detail"), { code: "VALKEY_URL_QUOTED" });
+  assert.equal(getValkeyDiagnostic(error), "VALKEY_URL_QUOTED");
+  assert.equal(getValkeyDiagnostic(error).includes("secret-host"), false);
 });
 
 test("Valkey preserves raw Redis command arguments and results", async () => {
