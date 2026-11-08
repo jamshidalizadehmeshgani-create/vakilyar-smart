@@ -198,3 +198,16 @@ test("question history displays localized Persian timestamps for questions and r
   assert.match(ask, /formatHistoryDate\(a\.created_at\)/);
   assert.match(ask, /Number\.isNaN\(date\.getTime\(\)\)/);
 });
+
+
+test("users can delete all of their question history only after explicit confirmation", () => {
+  const ask = read("public/ask-lawyer.html");
+  const handler = read("handlers/questions/mine.js");
+  assert.match(ask, /id="deleteAll"[^>]*disabled/);
+  assert.match(ask, /confirm\("همه پرسش‌ها و پاسخ‌های پرونده شما حذف شوند؟ این عملیات قابل بازگشت نیست\."\)/);
+  assert.match(ask, /action:"delete_all"/);
+  assert.match(handler, /DELETE_ALL_OWNED_QUESTIONS/);
+  assert.match(handler, /question\.user_id == ARGV\[1\]/);
+  assert.match(handler, /LREM.*vy:lawyer:/);
+  assert.match(handler, /deleteAllOwnedQuestions\(\{ userListKey: "vy:user:" \+ account\.uid \+ ":questions", userId: account\.uid \}\)/);
+});
