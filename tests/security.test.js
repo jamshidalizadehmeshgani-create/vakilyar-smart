@@ -1777,7 +1777,7 @@ test("usage API never returns raw storage exception details", () => {
   const source = fs.readFileSync(require.resolve("../handlers/usage"), "utf8");
   assert.doesNotMatch(source, /storage_detail/);
   assert.doesNotMatch(source, /error\.message/);
-  assert.match(source, /storage_diagnostic: missing\\.length \\? null : \\(error\\?\\.safeDiagnosticCode \\|\\|/);
+  assert.match(source, /storage_diagnostic: missing\.length \? null : \(error\?\.safeDiagnosticCode \|\|/);
 });
 
 test("admin auth diagnostics never log raw rate-limit exception details", () => {
