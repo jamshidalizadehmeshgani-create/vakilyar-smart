@@ -1787,7 +1787,7 @@ test("admin auth diagnostics never log raw rate-limit exception details", () => 
 });
 
 
-test("lawyer email verification consumes the hashed token once and preserves disabled access", async () => {
+test("opening a lawyer verification link does not consume its token; explicit POST verifies once", async () => {
   const verify = require("../api/lawyer/verify-email");
   const id = "f".repeat(32);
   const token = "c".repeat(64);
@@ -1805,8 +1805,25 @@ test("lawyer email verification consumes the hashed token once and preserves dis
     r.send = function(body) { this.body = body; return this; };
     return r;
   };
+
+  // Email scanners commonly open links with GET. That must only show a
+  // confirmation page and must not read or consume the one-time token.
+  const opened = makeResponse();
+  await verify({ method: "GET", query: { token }, headers: {} }, opened);
+  assert.equal(opened.statusCode, 200);
+  assert.match(opened.body, /method="post"/i);
+  assert.match(opened.body, /بازکردن این صفحه به‌تنهایی ایمیل شما را تأیید نمی‌کند/);
+  assert.equal(values.get(tokenKey), id);
+  assert.equal(values.get(lawyerKey + ":verify-token"), tokenHash);
+  assert.equal(JSON.parse(values.get(lawyerKey)).email_verified, false);
+
+  // Only the user's explicit same-origin POST consumes and verifies the token.
   const first = makeResponse();
-  await verify({ method: "GET", query: { token }, headers: {} }, first);
+  await verify({
+    method: "POST",
+    body: { token },
+    headers: { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "same-origin" }
+  }, first);
   assert.equal(first.statusCode, 200);
   assert.match(first.body, /ایمیل شما با موفقیت تأیید شد/);
   const lawyer = JSON.parse(values.get(lawyerKey));
@@ -1816,7 +1833,11 @@ test("lawyer email verification consumes the hashed token once and preserves dis
   assert.equal(values.has(lawyerKey + ":verify-token"), false);
 
   const second = makeResponse();
-  await verify({ method: "GET", query: { token }, headers: {} }, second);
+  await verify({
+    method: "POST",
+    body: { token },
+    headers: { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "same-origin" }
+  }, second);
   assert.equal(second.statusCode, 410);
 });
 
