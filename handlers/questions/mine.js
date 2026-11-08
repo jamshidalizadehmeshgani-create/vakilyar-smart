@@ -23,6 +23,37 @@ async function pruneQuestionIndex(listKey, staleIds) {
   return results.reduce((sum, count) => sum + Number(count || 0), 0);
 }
 
+const DELETE_ALL_OWNED_QUESTIONS_SCRIPT = `
+-- DELETE_ALL_OWNED_QUESTIONS
+local ids = redis.call("LRANGE", KEYS[1], 0, 499)
+local deleted = 0
+for _, id in ipairs(ids) do
+  if string.len(id) == 32 and string.match(id, "^[a-f0-9]+$") then
+    local key = "vy:question:" .. id
+    local raw = redis.call("GET", key)
+    if raw then
+      local ok, question = pcall(cjson.decode, raw)
+      if ok and type(question) == "table" and question.user_id == ARGV[1] then
+        if type(question.lawyer_id) == "string" and string.len(question.lawyer_id) == 32 and string.match(question.lawyer_id, "^[a-f0-9]+$") then
+          redis.call("LREM", "vy:lawyer:" .. question.lawyer_id .. ":questions", 0, id)
+        end
+        redis.call("DEL", key)
+        deleted = deleted + 1
+      end
+    end
+  end
+end
+redis.call("DEL", KEYS[1])
+return deleted
+`;
+
+async function deleteAllOwnedQuestions({ userListKey, userId }) {
+  if (!userListKey || typeof userId !== "string" || !/^[a-f0-9]{48}$/.test(userId)) {
+    throw new Error("Invalid question-history owner");
+  }
+  return Number(await redis(["EVAL", DELETE_ALL_OWNED_QUESTIONS_SCRIPT, "1", userListKey, userId]));
+}
+
 async function deleteOwnedQuestion({ questionKey, userListKey, lawyerListKey, userId, questionId, removeLawyer }) {
   const result = await redis([
     "EVAL",
@@ -74,8 +105,7 @@ module.exports = async (req, res) => {
 
     const account = await getAccount(req, res);
 
-    if (req.method === "POST") {
-      const id = typeof req.body?.question_id === "string" ? req.body.question_id.trim() : "";
+    if (req.method === "POST") {\n      if (req.body?.action === "delete_all") {\n        const deletedCount = await deleteAllOwnedQuestions({ userListKey: "vy:user:" + account.uid + ":questions", userId: account.uid });\n        return res.status(200).json({ ok: true, deleted_count: deletedCount, message: "همه پرسش‌ها و پاسخ‌های متعلق به شما حذف شدند." });\n      }\n      const id = typeof req.body?.question_id === "string" ? req.body.question_id.trim() : "";
       if (!/^[a-f0-9]{32}$/.test(id)) {
         return res.status(400).json({ error: "شناسه پرسش معتبر نیست." });
       }
@@ -127,5 +157,5 @@ module.exports = async (req, res) => {
   }
 };
 
-module.exports.deleteOwnedQuestion = deleteOwnedQuestion;
+module.exports.deleteOwnedQuestion = deleteOwnedQuestion;\nmodule.exports.deleteAllOwnedQuestions = deleteAllOwnedQuestions;
 module.exports.pruneQuestionIndex = pruneQuestionIndex;
