@@ -1818,11 +1818,17 @@ test("opening a lawyer verification link does not consume its token; explicit PO
   assert.equal(JSON.parse(values.get(lawyerKey)).email_verified, false);
 
   // Only the user's explicit same-origin POST consumes and verifies the token.
+  const preview = makeResponse();
+  await verify({ method: "GET", query: { token }, headers: {} }, preview);
+  assert.equal(preview.statusCode, 200);
+  assert.match(preview.body, /method="post"/i);
+  assert.equal(JSON.parse(values.get(lawyerKey)).email_verified, false);
+  assert.equal(values.has(tokenKey), true);
+
   const first = makeResponse();
   await verify({
-    method: "POST",
-    body: { token },
-    headers: { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "same-origin" }
+    method: "POST", body: { token },
+    headers: { host: "app.example.test", origin: "https://app.example.test" }
   }, first);
   assert.equal(first.statusCode, 200);
   assert.match(first.body, /ایمیل شما با موفقیت تأیید شد/);
@@ -1834,9 +1840,8 @@ test("opening a lawyer verification link does not consume its token; explicit PO
 
   const second = makeResponse();
   await verify({
-    method: "POST",
-    body: { token },
-    headers: { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "same-origin" }
+    method: "POST", body: { token },
+    headers: { host: "app.example.test", origin: "https://app.example.test" }
   }, second);
   assert.equal(second.statusCode, 410);
 });
