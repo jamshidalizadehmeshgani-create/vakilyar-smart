@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const { getAccount, classifyRequest, reserveCredits, refundReservation, commitReservation, consumeIpRateLimit } = require("../lib/quota");
 const { getIranLeaseLawContext } = require("../lib/legal-sources/iran-civil-code-lease");
+const { buildChatSystemMessage } = require("../lib/legal-sources/chat-prompt");
 
 const SYSTEM_PROMPT = `تو «وکیل‌یار هوشمند» هستی؛ دستیار ارائه‌دهنده اطلاعات عمومی و آموزشی حقوقی.
 اصول الزامی:
@@ -136,7 +137,7 @@ module.exports = async (req, res) => {
         temperature: 0.2,
         max_tokens: 4096,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT + "\nحوزه حقوقی این درخواست: " + scopeLabel + (verifiedLegalContext ? "\n\n" + verifiedLegalContext : "") },
+          { role: "system", content: buildChatSystemMessage(SYSTEM_PROMPT, scopeLabel, foreignRequest, verifiedLegalContext) },
           { role: "user", content: message }
         ]
       })
