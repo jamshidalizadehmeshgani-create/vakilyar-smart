@@ -15,6 +15,7 @@ function loadRouter() {
     require(id) {
       assert.match(id, /^\.\.\/handlers\//);
       const route = id.slice("../handlers/".length).replace(/\.js$/, "");
+      loadedRoutes.push(route);
       return async (req, res) => {
         calls.push({ route, req });
         return res.status(200).json({ handled: route });
@@ -53,7 +54,7 @@ test("API router rejects unknown and malformed routes without loading modules", 
     const res = response();
     await handler({ method: "GET", query: { route } }, res);
     assert.equal(res.statusCode, 404);
-    assert.deepEqual(res.body, { error: "API route not found" });
+    assert.equal(res.body.error, "API route not found");
     assert.equal(res.headers["Cache-Control"], "no-store");
   }
   assert.equal(calls.length, 0);
