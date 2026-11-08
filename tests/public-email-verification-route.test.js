@@ -5,7 +5,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 function loadHandler() {
-  const source = fs.readFileSync(path.join(__dirname, "../api/users/verify.js"), "utf8");
+  const source = fs.readFileSync(path.join(__dirname, "../lib/api-handlers/users/verify.js"), "utf8");
   let redisCalls = 0;
   const module = { exports: null };
   const auth = {
@@ -17,16 +17,16 @@ function loadHandler() {
     module,
     exports: module.exports,
     require(id) {
-      if (id === "../../lib/user-auth") return auth;
-      if (id === "../../lib/email") return { sendWelcomeEmail: async () => ({ sent: false }) };
-      if (id === "../../lib/referrals") return { REFERRAL_REWARD: 250, REFERRAL_MAX_REWARDS: 5 };
+      if (id === "../../../lib/user-auth") return auth;
+      if (id === "../../../lib/email") return { sendWelcomeEmail: async () => ({ sent: false }) };
+      if (id === "../../../lib/referrals") return { REFERRAL_REWARD: 250, REFERRAL_MAX_REWARDS: 5 };
       throw new Error("Unexpected module: " + id);
     },
     process: { env: {} },
     Date,
     console
   };
-  vm.runInNewContext(source, sandbox, { filename: "api/users/verify.js" });
+  vm.runInNewContext(source, sandbox, { filename: "lib/api-handlers/users/verify.js" });
   return { handler: module.exports, getRedisCalls: () => redisCalls };
 }
 
