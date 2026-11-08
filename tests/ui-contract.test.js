@@ -23,7 +23,7 @@ test("all public entry pages and their internal navigation targets exist", () =>
   }
 });
 
-test("browser pages call API routes that exist in the serverless API tree", () => {
+test("browser pages call API routes registered in the central serverless router", () => {
   const pages = ["index.html", "ask-lawyer.html", "lawyer-login.html", "lawyer-panel.html", "admin-lawyers.html", "admin-credits.html", "user-register.html", "user-login.html"];
   const endpoints = new Set();
   for (const page of pages) {
@@ -31,9 +31,12 @@ test("browser pages call API routes that exist in the serverless API tree", () =
     for (const match of html.matchAll(/fetch\(["'](\/api\/[^"'?]+)["']/g)) endpoints.add(match[1]);
   }
   assert.ok(endpoints.size >= 8, "Expected the public UI to exercise its API contracts");
+  const router = read("api/router.js");
+  const registered = new Set([...router.matchAll(/"([^"]+)": require\("\.\.\/lib\/api-handlers\//g)].map(match => "/api/" + match[1]));
+  const config = JSON.parse(read("vercel.json"));
+  assert.ok(config.rewrites.some(rule => rule.source === "/api/:path*" && rule.destination === "/api/router?__vy_route=:path*"));
   for (const endpoint of endpoints) {
-    const file = path.join(root, endpoint.replace(/^\/api\//, "api/") + ".js");
-    assert.ok(fs.existsSync(file), "UI references missing API route: " + endpoint);
+    assert.ok(registered.has(endpoint), "UI references API route missing from central router: " + endpoint);
   }
 });
 

@@ -58,9 +58,9 @@ test("referral rewards are fixed, capped and granted inside email verification",
   const referral = require("../lib/referrals");
   assert.equal(referral.REFERRAL_REWARD, 250);
   assert.equal(referral.REFERRAL_MAX_REWARDS, 5);
-  const verify = fs.readFileSync(require.resolve("../api/users/verify"), "utf8");
-  const register = fs.readFileSync(require.resolve("../api/users/register"), "utf8");
-  const profile = fs.readFileSync(require.resolve("../api/users/me"), "utf8");
+  const verify = fs.readFileSync(require.resolve("../lib/api-handlers/users/verify"), "utf8");
+  const register = fs.readFileSync(require.resolve("../lib/api-handlers/users/register"), "utf8");
+  const profile = fs.readFileSync(require.resolve("../lib/api-handlers/users/me"), "utf8");
   assert.match(verify, /INCRBY/);
   assert.match(verify, /referral_successful_count/);
   assert.match(verify, /vy:referral:rewarded:/);

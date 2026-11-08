@@ -6,7 +6,7 @@ const vm = require("node:vm");
 const crypto = require("node:crypto");
 
 function loadHandler() {
-  const source = fs.readFileSync(path.join(__dirname, "../api/lawyer/verify-email.js"), "utf8");
+  const source = fs.readFileSync(path.join(__dirname, "../lib/api-handlers/lawyer/verify-email.js"), "utf8");
   let redisCalls = 0;
   const module = { exports: null };
   const auth = {
@@ -16,14 +16,14 @@ function loadHandler() {
     module, exports: module.exports,
     require(id) {
       if (id === "crypto") return crypto;
-      if (id === "../../lib/quota") return { redis: async () => { redisCalls++; return null; } };
-      if (id === "../../lib/email") return { sendWelcomeEmail: async () => ({ sent: false }) };
-      if (id === "../../lib/user-auth") return auth;
+      if (id === "../../../lib/quota") return { redis: async () => { redisCalls++; return null; } };
+      if (id === "../../../lib/email") return { sendWelcomeEmail: async () => ({ sent: false }) };
+      if (id === "../../../lib/user-auth") return auth;
       throw new Error("Unexpected module: " + id);
     },
     process: { env: {} }, Date, console
   };
-  vm.runInNewContext(source, sandbox, { filename: "api/lawyer/verify-email.js" });
+  vm.runInNewContext(source, sandbox, { filename: "lib/api-handlers/lawyer/verify-email.js" });
   return { handler: module.exports, getRedisCalls: () => redisCalls };
 }
 
