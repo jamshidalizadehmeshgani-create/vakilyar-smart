@@ -55,5 +55,6 @@ test("Valkey connection errors expose only allowlisted diagnostic codes", async 
 test("Valkey authentication and TLS diagnostics are sanitized", () => {
   assert.equal(getValkeyDiagnostic(Object.assign(new Error("WRONGPASS secret detail"), { code: "WRONGPASS" })), "WRONGPASS");
   assert.equal(getValkeyDiagnostic(new Error("certificate verify failed")), "TLS_ERROR");
+  assert.equal(getValkeyDiagnostic(new Error("Preview Valkey URL must use rediss:// TLS")), "VALKEY_TLS_CONFIGURATION_ERROR");
   assert.equal(getValkeyDiagnostic(new Error("opaque internal detail")), "VALKEY_CONNECTION_ERROR");
 });

@@ -1779,6 +1779,8 @@ test("usage API never returns raw storage exception details", () => {
   assert.doesNotMatch(source, /error\.message/);
   assert.match(source, /storage_backend: backend/);
   assert.match(source, /storage_diagnostic: diagnostic/);
+  assert.match(source, /getValkeyDiagnostic\(error\)/);
+  assert.doesNotMatch(source, /error && \(error\.code \|\| error\.name\)/);
   assert.match(source, /shouldUseValkey\(process\.env\)/);
 });
 
