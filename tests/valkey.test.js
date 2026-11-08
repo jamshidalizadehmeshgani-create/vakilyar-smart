@@ -49,4 +49,6 @@ test("Redis failures map to safe backend-specific diagnostics", () => {
   assert.equal(classifyRedisFailure({ message: "certificate TLS handshake failed" }, "VALKEY"), "VALKEY_TLS_FAILURE");
   assert.equal(classifyRedisFailure({ message: "sensitive server details" }, "VALKEY"), "VALKEY_UNAVAILABLE");
   assert.equal(classifyRedisFailure({ code: "WRONGPASS" }, "UPSTASH"), "UPSTASH_AUTH_REJECTED");
+  assert.equal(classifyRedisFailure({ message: "Preview Valkey URL must use rediss:// TLS" }, "VALKEY"), "VALKEY_URL_INVALID");
+  assert.equal(classifyRedisFailure({ code: "MODULE_NOT_FOUND" }, "VALKEY"), "VALKEY_CLIENT_LIBRARY_MISSING");
 });
