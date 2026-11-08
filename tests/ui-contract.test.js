@@ -182,5 +182,9 @@ test("users can export their own lawyer question history as a local JSON backup"
   assert.match(ask, /link\.download="vakilyar-question-history-/);
   assert.match(ask, /exportButton\.disabled=!r\.ok\|\|myQuestions\.length===0/);
   assert.match(ask, /id="refresh" type="button"/);
+  assert.match(ask, /id="print" type="button" disabled/);
+  assert.match(ask, /@media print/);
+  assert.match(ask, /window\.print\(\)/);
+  assert.match(ask, /\.history-actions,\.delete,body>main>p:first-of-type\{display:none!important\}/);
   assert.doesNotMatch(ask, /account_id:\s*myQuestions|password:\s*myQuestions/);
 });
