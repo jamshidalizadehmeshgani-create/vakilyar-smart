@@ -2,7 +2,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { shouldUseValkey, createValkeyClient, executeValkeyCommand } = require("../lib/valkey");
+const { shouldUseValkey, createValkeyClient, executeValkeyCommand, getValkeyDiagnostic } = require("../lib/valkey");
 
 test("only Vercel Preview selects Valkey", () => {
   assert.equal(shouldUseValkey({ VERCEL_ENV: "preview", VALKEY_URL: "rediss://preview" }), true);
@@ -38,4 +38,22 @@ test("Valkey preserves raw Redis command arguments and results", async () => {
   assert.deepEqual(received, ["EVAL", "return 1", "1", "key", "5"]);
   assert.equal(result, 37);
   await assert.rejects(() => executeValkeyCommand(client, []), /Invalid Valkey command/);
+});
+
+test("Valkey connection errors expose only allowlisted diagnostic codes", async () => {
+  const client = {
+    async call() { throw new Error("connect ECONNREFUSED private-host.example:16593"); }
+  };
+  await assert.rejects(
+    () => executeValkeyCommand(client, ["PING"]),
+    error => error.code === "ECONNREFUSED" &&
+      error.message === "Valkey command failed" &&
+      !error.message.includes("private-host")
+  );
+});
+
+test("Valkey authentication and TLS diagnostics are sanitized", () => {
+  assert.equal(getValkeyDiagnostic(Object.assign(new Error("WRONGPASS secret detail"), { code: "WRONGPASS" })), "WRONGPASS");
+  assert.equal(getValkeyDiagnostic(new Error("certificate verify failed")), "TLS_ERROR");
+  assert.equal(getValkeyDiagnostic(new Error("opaque internal detail")), "VALKEY_CONNECTION_ERROR");
 });
