@@ -26,7 +26,10 @@ test("Valkey client enforces TLS and bounded connection behavior", () => {
   assert.equal(captured.options.retryStrategy(1), 250);
   assert.equal(captured.options.retryStrategy(2), 500);
   assert.equal(captured.options.retryStrategy(3), null);
-  assert.throws(() => createValkeyClient("redis://insecure", FakeRedis), /rediss/);
+  assert.throws(
+    () => createValkeyClient("redis://insecure", FakeRedis),
+    error => error.code === "VALKEY_URL_TLS_REQUIRED"
+  );
 });
 
 test("Valkey URL trims outer whitespace but rejects quoted or malformed values safely", () => {
@@ -42,7 +45,7 @@ test("Valkey URL trims outer whitespace but rejects quoted or malformed values s
   );
   assert.throws(
     () => createValkeyClient("not-a-url", FakeRedis),
-    error => getValkeyDiagnostic(error) === "VALKEY_URL_PARSE_ERROR"
+    error => getValkeyDiagnostic(error) === "VALKEY_URL_SCHEME_MISSING"
   );
 });
 
