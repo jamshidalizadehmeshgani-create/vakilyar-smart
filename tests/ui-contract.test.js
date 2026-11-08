@@ -170,3 +170,44 @@ test("all public pages avoid dangerous HTML parsing and dynamic code execution s
     }
   }
 });
+
+
+test("users can export their own lawyer question history as a local JSON backup", () => {
+  const ask = read("public/ask-lawyer.html");
+  assert.match(ask, /id="export" type="button" disabled/);
+  assert.match(ask, /format:"vakilyar-question-history",version:1/);
+  assert.match(ask, /questions:myQuestions/);
+  assert.match(ask, /new Blob\(\[/);
+  assert.match(ask, /URL\.createObjectURL\(blob\)/);
+  assert.match(ask, /link\.download="vakilyar-question-history-/);
+  assert.match(ask, /exportButton\.disabled=!r\.ok\|\|myQuestions\.length===0/);
+  assert.match(ask, /id="refresh" type="button"/);
+  assert.match(ask, /id="print" type="button" disabled/);
+  assert.match(ask, /@media print/);
+  assert.match(ask, /window\.print\(\)/);
+  assert.match(ask, /\.history-actions,\.delete,body>main>p:first-of-type\{display:none!important\}/);
+  assert.doesNotMatch(ask, /account_id:\s*myQuestions|password:\s*myQuestions/);
+});
+
+
+test("question history displays localized Persian timestamps for questions and replies", () => {
+  const ask = read("public/ask-lawyer.html");
+  assert.match(ask, /function formatHistoryDate\(value\)/);
+  assert.match(ask, /Intl\.DateTimeFormat\("fa-IR"/);
+  assert.match(ask, /تاریخ ثبت: \"\+formatHistoryDate\(q\.created_at\)/);
+  assert.match(ask, /formatHistoryDate\(a\.created_at\)/);
+  assert.match(ask, /Number\.isNaN\(date\.getTime\(\)\)/);
+});
+
+
+test("users can delete all of their question history only after explicit confirmation", () => {
+  const ask = read("public/ask-lawyer.html");
+  const handler = read("handlers/questions/mine.js");
+  assert.match(ask, /id="deleteAll"[^>]*disabled/);
+  assert.match(ask, /confirm\("همه پرسش‌ها و پاسخ‌های پرونده شما حذف شوند؟ این عملیات قابل بازگشت نیست\."\)/);
+  assert.match(ask, /action:"delete_all"/);
+  assert.match(handler, /DELETE_ALL_OWNED_QUESTIONS/);
+  assert.match(handler, /question\.user_id == ARGV\[1\]/);
+  assert.match(handler, /LREM.*vy:lawyer:/);
+  assert.match(handler, /deleteAllOwnedQuestions\(\{ userListKey: "vy:user:" \+ account\.uid \+ ":questions", userId: account\.uid \}\)/);
+});

@@ -2,7 +2,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { shouldUseValkey, createValkeyClient, executeValkeyCommand } = require("../lib/valkey");
+const { shouldUseValkey, validateValkeyUrl, createValkeyClient, executeValkeyCommand } = require("../lib/valkey");
 const { classifyRedisFailure } = require("../lib/quota");
 
 test("only Vercel Preview selects Valkey", () => {
@@ -10,6 +10,36 @@ test("only Vercel Preview selects Valkey", () => {
   assert.equal(shouldUseValkey({ VERCEL_ENV: "production", VALKEY_URL: "rediss://preview" }), false);
   assert.equal(shouldUseValkey({ VERCEL_ENV: "development", VALKEY_URL: "rediss://preview" }), false);
   assert.equal(shouldUseValkey({ VERCEL_ENV: "preview" }), false);
+});
+
+test("Valkey URL validation accepts TLS URIs and trims outer whitespace", () => {
+  assert.equal(validateValkeyUrl("  rediss://user:p%40ss@cache.example:1234  "), "rediss://user:p%40ss@cache.example:1234");
+});
+
+test("Valkey URL validation rejects provider reveal placeholders without exposing credentials", () => {
+  assert.throws(
+    () => validateValkeyUrl("rediss://default:CLICK_TO:REVEAL_PASSWORD@cache.example:1234"),
+    error => error.code === "VALKEY_URL_REVEAL_PLACEHOLDER" && !error.message.includes("CLICK_TO")
+  );
+});
+
+test("Valkey URL validation detects URL-encoded provider reveal placeholders", () => {
+  assert.throws(
+    () => validateValkeyUrl("rediss://default:CLICK_TO%3AREVEAL_PASSWORD@cache.example:1234"),
+    error => error.code === "VALKEY_URL_REVEAL_PLACEHOLDER" && !error.message.includes("CLICK_TO")
+  );
+});
+
+test("Valkey URL validation rejects malformed credential encoding", () => {
+  assert.throws(
+    () => validateValkeyUrl("rediss://default:bad%2@cache.example:1234"),
+    error => error.code === "VALKEY_URL_INVALID_ENCODING"
+  );
+});
+
+test("Valkey URL validation rejects non-TLS and hostless URLs", () => {
+  assert.throws(() => validateValkeyUrl("redis://cache.example"), error => error.code === "VALKEY_URL_TLS_REQUIRED");
+  assert.throws(() => validateValkeyUrl("rediss:///missing-host"), error => error.code === "VALKEY_URL_MISSING_HOST");
 });
 
 test("Valkey client enforces TLS and bounded connection behavior", () => {
@@ -27,7 +57,6 @@ test("Valkey client enforces TLS and bounded connection behavior", () => {
   assert.equal(captured.options.retryStrategy(1), 250);
   assert.equal(captured.options.retryStrategy(2), 500);
   assert.equal(captured.options.retryStrategy(3), null);
-  assert.throws(() => createValkeyClient("redis://insecure", FakeRedis), /rediss/);
 });
 
 test("Valkey preserves raw Redis command arguments and results", async () => {
@@ -49,6 +78,10 @@ test("Redis failures map to safe backend-specific diagnostics", () => {
   assert.equal(classifyRedisFailure({ message: "certificate TLS handshake failed" }, "VALKEY"), "VALKEY_TLS_FAILURE");
   assert.equal(classifyRedisFailure({ message: "sensitive server details" }, "VALKEY"), "VALKEY_UNAVAILABLE");
   assert.equal(classifyRedisFailure({ code: "WRONGPASS" }, "UPSTASH"), "UPSTASH_AUTH_REJECTED");
-  assert.equal(classifyRedisFailure({ message: "Preview Valkey URL must use rediss:// TLS" }, "VALKEY"), "VALKEY_URL_INVALID");
+  assert.equal(classifyRedisFailure({ code: "VALKEY_URL_TLS_REQUIRED" }, "VALKEY"), "VALKEY_URL_TLS_REQUIRED");
   assert.equal(classifyRedisFailure({ code: "MODULE_NOT_FOUND" }, "VALKEY"), "VALKEY_CLIENT_LIBRARY_MISSING");
+  assert.equal(classifyRedisFailure({ code: "VALKEY_URL_REVEAL_PLACEHOLDER" }, "VALKEY"), "VALKEY_URL_REVEAL_PLACEHOLDER");
+  assert.equal(classifyRedisFailure({ code: "VALKEY_URL_INVALID_ENCODING" }, "VALKEY"), "VALKEY_URL_INVALID_ENCODING");
+  assert.equal(classifyRedisFailure({ code: "VALKEY_URL_MISSING_HOST" }, "VALKEY"), "VALKEY_URL_MISSING_HOST");
+  assert.equal(classifyRedisFailure({ code: "VALKEY_URL_PARSE_FAILURE" }, "VALKEY"), "VALKEY_URL_PARSE_FAILURE");
 });

@@ -11,6 +11,7 @@ select,textarea{box-sizing:border-box;width:100%;padding:12px;font:inherit}
 textarea{min-height:140px}
 button{padding:11px 15px;background:#20375d;color:white;border:0;border-radius:8px;cursor:pointer}
 button:disabled{opacity:.6;cursor:wait}
+@media print{body{background:#fff;padding:0}main{max-width:none;padding:0;border-radius:0}#f,#msg,.history-actions,.delete,body>main>p:first-of-type{display:none!important}#mine{display:block!important}.question-card{break-inside:avoid;border-top:1px solid #999}.reply{background:#fff;border:1px solid #ddd}}
 .delete{background:#8a3434;margin-top:10px}
 .question-card{border-top:1px solid #d8dce4;padding:14px 0;line-height:1.9}
 .reply{background:#f5f3ee;padding:10px;border-radius:8px;margin:8px 0}
@@ -30,11 +31,13 @@ button:disabled{opacity:.6;cursor:wait}
 </form>
 <p id="msg" role="status" aria-live="polite" aria-atomic="true"></p>
 <h2>پرسش‌ها و پاسخ‌ها</h2>
+<div class="history-actions" style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0"><button id="export" type="button" disabled>دریافت نسخه پشتیبان پرسش‌ها</button><button id="print" type="button" disabled>چاپ پرونده پرسش‌ها</button><button id="refresh" type="button">به‌روزرسانی سوابق</button><button id="deleteAll" class="delete" type="button" disabled>حذف همه سوابق</button></div>
 <div id="mine" aria-live="polite">در حال دریافت...</div>
 </main>
 <script>
 const $=id=>document.getElementById(id);
 let pendingQuestion=null;
+let myQuestions=[];
 try{
  const saved=sessionStorage.getItem("vy_pending_question");
  if(saved){
@@ -55,17 +58,28 @@ async function loadLawyers(){
   $("lawyer").replaceChildren(new Option("انتخاب وکیل",""));
   for(const w of d.lawyers||[]) $("lawyer").add(new Option(w.name,w.id));
 }
+function formatHistoryDate(value){
+  const date=new Date(value);
+  if(!value||Number.isNaN(date.getTime()))return "تاریخ ثبت نامشخص";
+  return new Intl.DateTimeFormat("fa-IR",{dateStyle:"medium",timeStyle:"short"}).format(date);
+}
 async function loadMine(){
+  const exportButton=$("export");
   try{
     const r=await fetch("/api/questions/mine",{credentials:"same-origin",cache:"no-store"}),d=await r.json();
     $("mine").replaceChildren();
-    if(!r.ok){$("mine").textContent=d.error||"فعلاً قابل دریافت نیست";return;}
-    if(!d.questions.length){$("mine").textContent="هنوز پرسشی ثبت نکرده‌اید.";return;}
-    for(const q of d.questions){
+    myQuestions=Array.isArray(d.questions)?d.questions:[];
+    exportButton.disabled=!r.ok||myQuestions.length===0;
+    $("print").disabled=!r.ok||myQuestions.length===0;
+    $("deleteAll").disabled=!r.ok||myQuestions.length===0;
+    if(!r.ok){myQuestions=[];exportButton.disabled=true;$("print").disabled=true;$("deleteAll").disabled=true;$("mine").textContent=d.error||"فعلاً قابل دریافت نیست";return;}
+    if(!myQuestions.length){$("mine").textContent="هنوز پرسشی ثبت نکرده‌اید.";return;}
+    for(const q of myQuestions){
       const box=document.createElement("section");box.className="question-card";
       const h=document.createElement("h3");h.textContent=q.lawyer_name+" | "+(q.status==="answered"?"پاسخ داده شده":"در انتظار پاسخ");
-      const p=document.createElement("p");p.textContent=q.question;box.append(h,p);
-      for(const a of q.replies||[]){const x=document.createElement("p");x.className="reply";x.textContent="پاسخ وکیل: "+a.message;box.append(x);}
+      const date=document.createElement("p");date.className="muted";date.textContent="تاریخ ثبت: "+formatHistoryDate(q.created_at);
+      const p=document.createElement("p");p.textContent=q.question;box.append(h,date,p);
+      for(const a of q.replies||[]){const x=document.createElement("p");x.className="reply";x.textContent="پاسخ وکیل · "+formatHistoryDate(a.created_at)+": "+a.message;box.append(x);}
       const del=document.createElement("button");del.className="delete";del.textContent="حذف این پرسش و پاسخ‌ها";
       del.onclick=async()=>{
         if(!confirm("این پرسش و تمام پاسخ‌های ثبت‌شده آن از پرونده شما حذف شود؟"))return;
@@ -79,8 +93,31 @@ async function loadMine(){
       };
       box.append(del);$("mine").append(box);
     }
-  }catch{$("mine").textContent="خطا در ارتباط با سرور";}
+  }catch{myQuestions=[];exportButton.disabled=true;$("print").disabled=true;$("deleteAll").disabled=true;$("mine").textContent="خطا در ارتباط با سرور";}
 }
+$("export").onclick=()=>{
+  if(!myQuestions.length)return;
+  const backup={format:"vakilyar-question-history",version:1,exported_at:new Date().toISOString(),questions:myQuestions};
+  const blob=new Blob(["\\uFEFF",JSON.stringify(backup,null,2)],{type:"application/json;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement("a");
+  link.href=url;
+  link.download="vakilyar-question-history-"+new Date().toISOString().slice(0,10)+".json";
+  document.body.append(link);link.click();link.remove();URL.revokeObjectURL(url);
+  $("msg").textContent="نسخه پشتیبان سوابق پرسش‌ها در دستگاه شما آماده شد.";
+};
+$("refresh").onclick=loadMine;
+$("print").onclick=()=>{if(myQuestions.length)window.print();};
+$("deleteAll").onclick=async()=>{
+  if(!myQuestions.length||!confirm("همه پرسش‌ها و پاسخ‌های پرونده شما حذف شوند؟ این عملیات قابل بازگشت نیست."))return;
+  const button=$("deleteAll");button.disabled=true;
+  try{
+    const r=await fetch("/api/questions/mine",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"delete_all"})});
+    const d=await r.json();$("msg").textContent=d.message||d.error||"نتیجه نامشخص";
+    if(r.ok)await loadMine();
+  }catch{$("msg").textContent="ارتباط با سرور برقرار نشد.";}
+  finally{button.disabled=myQuestions.length===0;}
+};
 $("f").onsubmit=async e=>{
   e.preventDefault();if(!$("consent").checked)return;
   const lawyer_id=$("lawyer").value,question=$("question").value.trim();
