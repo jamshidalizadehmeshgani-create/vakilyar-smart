@@ -28,7 +28,7 @@ jobs:
           node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8'))"
       - name: Check all API and library JavaScript syntax
         run: |
-          find api lib -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
+          find api handlers lib -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
       - name: Run security and quota unit tests
         run: node --test tests/*.test.js
       - name: Validate deployed public page inline scripts

@@ -7,6 +7,7 @@ const vm = require("node:vm");
 function loadRouter() {
   const source = fs.readFileSync(path.join(__dirname, "../api/index.js"), "utf8");
   const calls = [];
+  const loadedRoutes = [];
   const module = { exports: null };
   const sandbox = {
     module,
@@ -21,7 +22,7 @@ function loadRouter() {
     }
   };
   vm.runInNewContext(source, sandbox, { filename: "api/index.js" });
-  return { handler: module.exports, calls };
+  return { handler: module.exports, calls, loadedRoutes };
 }
 
 function response() {
@@ -56,4 +57,23 @@ test("API router rejects unknown and malformed routes without loading modules", 
     assert.equal(res.headers["Cache-Control"], "no-store");
   }
   assert.equal(calls.length, 0);
+});
+
+test("router registers every public API endpoint and Vercel rewrites preserve URL paths", () => {
+  const { loadedRoutes } = loadRouter();
+  const expected = [
+    "admin/grant-credits", "admin/lawyers", "chat",
+    "lawyer/login", "lawyer/logout", "lawyer/me", "lawyer/questions",
+    "lawyer/reply", "lawyer/resend-verification", "lawyer/verify-email",
+    "lawyers/active", "questions/create", "questions/mine", "usage",
+    "users/login", "users/logout", "users/me", "users/register",
+    "users/resend-verification", "users/verify"
+  ];
+  assert.deepEqual([...loadedRoutes].sort(), [...expected].sort());
+
+  const config = JSON.parse(fs.readFileSync(path.join(__dirname, "../vercel.json"), "utf8"));
+  assert.ok(config.rewrites.some(rule =>
+    rule.source === "/api/:path+" &&
+    rule.destination === "/api/index?route=:path+"
+  ));
 });
