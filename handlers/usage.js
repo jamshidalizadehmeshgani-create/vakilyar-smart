@@ -1,5 +1,5 @@
 const { getAccount, consumeIpRateLimit } = require("../lib/quota");
-const { shouldUseValkey } = require("../lib/valkey");
+const { shouldUseValkey, getValkeyDiagnostic } = require("../lib/valkey");
 
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -38,9 +38,9 @@ module.exports = async (req, res) => {
 
     // Expose only a bounded, allowlisted diagnostic code. Never return raw
     // Redis/ioredis messages because they may contain connection details.
-    const rawCode = String(error && (error.code || error.name) || "REDIS_STORAGE_ERROR").toUpperCase();
-    const safeCode = /^[A-Z0-9_]{2,40}$/.test(rawCode) ? rawCode : "REDIS_STORAGE_ERROR";
-    const diagnostic = missing.length ? null : safeCode;
+    const rawCode = String(error && error.code || "").toUpperCase();
+    const safeCode = /^[A-Z][A-Z0-9_]{1,39}$/.test(rawCode) ? rawCode : "REDIS_STORAGE_ERROR";
+    const diagnostic = missing.length ? null : usingValkey ? getValkeyDiagnostic(error) : safeCode;
     console.error("Usage API unavailable", { backend, diagnostic: diagnostic || "CONFIGURATION_MISSING" });
 
     return res.status(503).json({
