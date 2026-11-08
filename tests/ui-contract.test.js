@@ -170,3 +170,17 @@ test("all public pages avoid dangerous HTML parsing and dynamic code execution s
     }
   }
 });
+
+
+test("users can export their own lawyer question history as a local JSON backup", () => {
+  const ask = read("public/ask-lawyer.html");
+  assert.match(ask, /id="export" type="button" disabled/);
+  assert.match(ask, /format:"vakilyar-question-history",version:1/);
+  assert.match(ask, /questions:myQuestions/);
+  assert.match(ask, /new Blob\(\[/);
+  assert.match(ask, /URL\.createObjectURL\(blob\)/);
+  assert.match(ask, /link\.download="vakilyar-question-history-/);
+  assert.match(ask, /exportButton\.disabled=!r\.ok\|\|myQuestions\.length===0/);
+  assert.match(ask, /id="refresh" type="button"/);
+  assert.doesNotMatch(ask, /account_id:\s*myQuestions|password:\s*myQuestions/);
+});
