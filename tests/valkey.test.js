@@ -3,6 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { shouldUseValkey, createValkeyClient, executeValkeyCommand } = require("../lib/valkey");
+const { classifyRedisFailure } = require("../lib/quota");
 
 test("only Vercel Preview selects Valkey", () => {
   assert.equal(shouldUseValkey({ VERCEL_ENV: "preview", VALKEY_URL: "rediss://preview" }), true);
@@ -38,4 +39,14 @@ test("Valkey preserves raw Redis command arguments and results", async () => {
   assert.deepEqual(received, ["EVAL", "return 1", "1", "key", "5"]);
   assert.equal(result, 37);
   await assert.rejects(() => executeValkeyCommand(client, []), /Invalid Valkey command/);
+});
+
+test("Redis failures map to safe backend-specific diagnostics", () => {
+  assert.equal(classifyRedisFailure({ code: "WRONGPASS" }, "VALKEY"), "VALKEY_AUTH_REJECTED");
+  assert.equal(classifyRedisFailure({ code: "ETIMEDOUT" }, "VALKEY"), "VALKEY_TIMEOUT");
+  assert.equal(classifyRedisFailure({ code: "ENOTFOUND" }, "VALKEY"), "VALKEY_DNS_FAILURE");
+  assert.equal(classifyRedisFailure({ code: "ECONNREFUSED" }, "VALKEY"), "VALKEY_CONNECTION_REFUSED");
+  assert.equal(classifyRedisFailure({ message: "certificate TLS handshake failed" }, "VALKEY"), "VALKEY_TLS_FAILURE");
+  assert.equal(classifyRedisFailure({ message: "sensitive server details" }, "VALKEY"), "VALKEY_UNAVAILABLE");
+  assert.equal(classifyRedisFailure({ code: "WRONGPASS" }, "UPSTASH"), "UPSTASH_AUTH_REJECTED");
 });
