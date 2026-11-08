@@ -29,6 +29,23 @@ test("Valkey client enforces TLS and bounded connection behavior", () => {
   assert.throws(() => createValkeyClient("redis://insecure", FakeRedis), /rediss/);
 });
 
+test("Valkey URL trims outer whitespace but rejects quoted or malformed values safely", () => {
+  let captured;
+  class FakeRedis {
+    constructor(url) { captured = url; }
+  }
+  createValkeyClient("  rediss://example:1234  \n", FakeRedis);
+  assert.equal(captured, "rediss://example:1234");
+  assert.throws(
+    () => createValkeyClient('"rediss://example:1234"', FakeRedis),
+    error => getValkeyDiagnostic(error) === "VALKEY_URL_FORMAT_ERROR"
+  );
+  assert.throws(
+    () => createValkeyClient("not-a-url", FakeRedis),
+    error => getValkeyDiagnostic(error) === "VALKEY_URL_FORMAT_ERROR"
+  );
+});
+
 test("Valkey preserves raw Redis command arguments and results", async () => {
   let received;
   const client = {
@@ -56,5 +73,6 @@ test("Valkey authentication and TLS diagnostics are sanitized", () => {
   assert.equal(getValkeyDiagnostic(Object.assign(new Error("WRONGPASS secret detail"), { code: "WRONGPASS" })), "WRONGPASS");
   assert.equal(getValkeyDiagnostic(new Error("certificate verify failed")), "TLS_ERROR");
   assert.equal(getValkeyDiagnostic(new Error("Preview Valkey URL must use rediss:// TLS")), "VALKEY_TLS_CONFIGURATION_ERROR");
+  assert.equal(getValkeyDiagnostic(new Error("Preview Valkey URL has surrounding quotes")), "VALKEY_URL_FORMAT_ERROR");
   assert.equal(getValkeyDiagnostic(new Error("opaque internal detail")), "VALKEY_CONNECTION_ERROR");
 });
