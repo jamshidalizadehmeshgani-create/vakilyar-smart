@@ -39,7 +39,12 @@ module.exports = async (req, res) => {
     // Expose only a bounded, allowlisted diagnostic code. Never return raw
     // Redis/ioredis messages because they may contain connection details.
     const rawCode = String(error && error.code || "").toUpperCase();
-    const safeCode = /^[A-Z][A-Z0-9_]{1,39}$/.test(rawCode) ? rawCode : "REDIS_STORAGE_ERROR";
+    const safeStorageCodes = new Set([
+      "ECONNREFUSED", "ECONNRESET", "ETIMEDOUT", "ENOTFOUND", "EAI_AGAIN",
+      "EHOSTUNREACH", "ENETUNREACH", "EPIPE", "CERT_HAS_EXPIRED",
+      "ERR_TLS_CERT_ALTNAME_INVALID", "CLIENT_IP_UNAVAILABLE"
+    ]);
+    const safeCode = safeStorageCodes.has(rawCode) ? rawCode : "REDIS_STORAGE_ERROR";
     const diagnostic = missing.length ? null : usingValkey ? getValkeyDiagnostic(error) : safeCode;
     console.error("Usage API unavailable", { backend, diagnostic: diagnostic || "CONFIGURATION_MISSING" });
 
