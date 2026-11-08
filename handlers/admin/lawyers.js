@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const { redis } = require("../../lib/quota");
 const { authorizeAdmin } = require("../../lib/admin-auth");
-const { sendWelcomeEmail, sendLawyerVerificationEmail } = require("../../lib/email");
+const { sendWelcomeEmail, sendLawyerVerificationEmail, getAppBaseUrl } = require("../../lib/email");
 
 async function audit(event) {
   try {
@@ -140,7 +140,7 @@ module.exports = async (req, res) => {
             to: lawyer.email,
             name: lawyer.name,
             role: "وکیل همکار",
-            loginUrl: (process.env.APP_BASE_URL || "https://vakilyar-smart.vercel.app").replace(/\/$/, "") + "/lawyer-login.html",
+            loginUrl: getAppBaseUrl() + "/lawyer-login.html",
             details: [
               ["نام و نام خانوادگی", lawyer.name],
               ["ایمیل حساب", lawyer.email],

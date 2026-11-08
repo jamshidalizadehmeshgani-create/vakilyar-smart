@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 const { redis } = require("../../lib/quota");
-const { sendWelcomeEmail } = require("../../lib/email");
+const { sendWelcomeEmail, getAppBaseUrl } = require("../../lib/email");
 const { sameOrigin } = require("../../lib/user-auth");
 
 function verificationPage(token) {
@@ -46,7 +46,7 @@ module.exports = async (req, res) => {
       if (claimed === "OK") {
         welcome = await sendWelcomeEmail({
           to: lawyer.email, name: lawyer.name, role: "وکیل همکار",
-          loginUrl: (process.env.APP_BASE_URL || "https://vakilyar-smart.vercel.app").replace(/\/$/, "") + "/lawyer-login.html",
+          loginUrl: getAppBaseUrl() + "/lawyer-login.html",
           details: [
             ["نام و نام خانوادگی", lawyer.name],
             ["ایمیل حساب", lawyer.email],
