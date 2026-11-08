@@ -11,6 +11,7 @@ select,textarea{box-sizing:border-box;width:100%;padding:12px;font:inherit}
 textarea{min-height:140px}
 button{padding:11px 15px;background:#20375d;color:white;border:0;border-radius:8px;cursor:pointer}
 button:disabled{opacity:.6;cursor:wait}
+@media print{body{background:#fff;padding:0}main{max-width:none;padding:0;border-radius:0}#f,#msg,.history-actions,.delete,body>main>p:first-of-type{display:none!important}#mine{display:block!important}.question-card{break-inside:avoid;border-top:1px solid #999}.reply{background:#fff;border:1px solid #ddd}}
 .delete{background:#8a3434;margin-top:10px}
 .question-card{border-top:1px solid #d8dce4;padding:14px 0;line-height:1.9}
 .reply{background:#f5f3ee;padding:10px;border-radius:8px;margin:8px 0}
@@ -30,7 +31,7 @@ button:disabled{opacity:.6;cursor:wait}
 </form>
 <p id="msg" role="status" aria-live="polite" aria-atomic="true"></p>
 <h2>پرسش‌ها و پاسخ‌ها</h2>
-<div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0"><button id="export" type="button" disabled>دریافت نسخه پشتیبان پرسش‌ها</button><button id="refresh" type="button">به‌روزرسانی سوابق</button></div>
+<div class="history-actions" style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0"><button id="export" type="button" disabled>دریافت نسخه پشتیبان پرسش‌ها</button><button id="print" type="button" disabled>چاپ پرونده پرسش‌ها</button><button id="refresh" type="button">به‌روزرسانی سوابق</button></div>
 <div id="mine" aria-live="polite">در حال دریافت...</div>
 </main>
 <script>
@@ -64,7 +65,8 @@ async function loadMine(){
     $("mine").replaceChildren();
     myQuestions=Array.isArray(d.questions)?d.questions:[];
     exportButton.disabled=!r.ok||myQuestions.length===0;
-    if(!r.ok){myQuestions=[];exportButton.disabled=true;$("mine").textContent=d.error||"فعلاً قابل دریافت نیست";return;}
+    $("print").disabled=!r.ok||myQuestions.length===0;
+    if(!r.ok){myQuestions=[];exportButton.disabled=true;$("print").disabled=true;$("mine").textContent=d.error||"فعلاً قابل دریافت نیست";return;}
     if(!myQuestions.length){$("mine").textContent="هنوز پرسشی ثبت نکرده‌اید.";return;}
     for(const q of myQuestions){
       const box=document.createElement("section");box.className="question-card";
@@ -84,7 +86,7 @@ async function loadMine(){
       };
       box.append(del);$("mine").append(box);
     }
-  }catch{myQuestions=[];exportButton.disabled=true;$("mine").textContent="خطا در ارتباط با سرور";}
+  }catch{myQuestions=[];exportButton.disabled=true;$("print").disabled=true;$("mine").textContent="خطا در ارتباط با سرور";}
 }
 $("export").onclick=()=>{
   if(!myQuestions.length)return;
@@ -98,6 +100,7 @@ $("export").onclick=()=>{
   $("msg").textContent="نسخه پشتیبان سوابق پرسش‌ها در دستگاه شما آماده شد.";
 };
 $("refresh").onclick=loadMine;
+$("print").onclick=()=>{if(myQuestions.length)window.print();};
 $("f").onsubmit=async e=>{
   e.preventDefault();if(!$("consent").checked)return;
   const lawyer_id=$("lawyer").value,question=$("question").value.trim();
