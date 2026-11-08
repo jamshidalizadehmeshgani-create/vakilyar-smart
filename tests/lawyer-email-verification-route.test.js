@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
+const crypto = require("node:crypto");
 
 function loadHandler() {
   const source = fs.readFileSync(path.join(__dirname, "../api/lawyer/verify-email.js"), "utf8");
@@ -14,6 +15,7 @@ function loadHandler() {
   const sandbox = {
     module, exports: module.exports,
     require(id) {
+      if (id === "crypto") return crypto;
       if (id === "../../lib/quota") return { redis: async () => { redisCalls++; return null; } };
       if (id === "../../lib/email") return { sendWelcomeEmail: async () => ({ sent: false }) };
       if (id === "../../lib/user-auth") return auth;
