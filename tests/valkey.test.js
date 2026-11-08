@@ -71,6 +71,20 @@ test("Valkey URL diagnostics distinguish safe input-format causes", () => {
   }
 });
 
+test("Valkey reports safe diagnostics for common copied-URI mistakes", () => {
+  const cases = [
+    ["rediss://default:CLICK_TO:REVEAL_PASSWORD@host.example:16593", "VALKEY_URL_PASSWORD_PLACEHOLDER"],
+    ["default:password@host.example:16593", "VALKEY_URL_SCHEME_MISSING"],
+    ["rediss://default:bad%XZ@host.example:16593", "VALKEY_URL_CREDENTIALS_ENCODING_ERROR"]
+  ];
+  for (const [url, expected] of cases) {
+    assert.throws(
+      () => createValkeyClient(url, function FakeRedis() {}),
+      error => getValkeyDiagnostic(error) === expected
+    );
+  }
+});
+
 test("Valkey preserves raw Redis command arguments and results", async () => {
   let received;
   const client = {
