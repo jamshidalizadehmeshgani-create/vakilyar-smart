@@ -74,7 +74,7 @@ test("router registers every public API endpoint and Vercel rewrites preserve UR
 
   const config = JSON.parse(fs.readFileSync(path.join(__dirname, "../vercel.json"), "utf8"));
   assert.ok(config.rewrites.some(rule =>
-    rule.source === "/api/:path+" &&
-    rule.destination === "/api/index?route=:path+"
+    rule.source === "/api/:path*" &&
+    rule.destination === "/api/index?route=:path*"
   ));
 });
