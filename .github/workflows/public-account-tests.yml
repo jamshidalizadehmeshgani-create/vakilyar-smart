@@ -1,0 +1,27 @@
+name: Public Account Tests
+
+on:
+  push:
+    branches:
+      - feature/public-user-accounts-0.1.0
+  pull_request:
+    branches:
+      - main
+      - feat/vakilyar-pwa-install
+      - feat/verified-iran-lease-law-context
+
+permissions:
+  contents: read
+
+jobs:
+  node-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run public account and regression tests
+        run: npm test
