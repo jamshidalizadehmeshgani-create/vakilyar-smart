@@ -1,10 +1,25 @@
-const { hash, redis } = require("../../lib/user-auth");
+const { hash, redis, sameOrigin } = require("../../lib/user-auth");
 const { sendWelcomeEmail } = require("../../lib/email");
 const { REFERRAL_REWARD, REFERRAL_MAX_REWARDS } = require("../../lib/referrals");
+
+function verificationPage(token) {
+  return '<!doctype html><html lang="fa" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>تأیید ایمیل وکیل‌یار</title><body style="font-family:Tahoma;background:#f5f3ee;color:#14233f;padding:30px;text-align:center"><main style="max-width:560px;margin:40px auto;background:white;padding:28px;border-radius:14px"><h1>تأیید نشانی ایمیل</h1><p>برای فعال‌سازی حساب وکیل‌یار، دکمه زیر را لمس کنید.</p><form method="post" action="/api/users/verify"><input type="hidden" name="token" value="' + token + '"><button type="submit" style="background:#c9a45c;color:#14233f;padding:12px 22px;border:0;border-radius:8px;font:inherit;cursor:pointer">تأیید ایمیل و فعال‌سازی حساب</button></form><p style="font-size:13px;color:#667085">بازکردن این صفحه به‌تنهایی حساب شما را فعال نمی‌کند.</p></main></body></html>';
+}
+
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
-  if (req.method !== "GET") { res.setHeader("Allow", "GET"); return res.status(405).send("روش درخواست معتبر نیست."); }
-  const token = typeof req.query?.token === "string" ? req.query.token : "";
+  if (req.method === "GET") {
+    const token = typeof req.query?.token === "string" ? req.query.token : "";
+    if (!/^[a-f0-9]{64}$/.test(token)) return res.status(400).send("پیوند تأیید معتبر نیست.");
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    return res.status(200).send(verificationPage(token));
+  }
+  if (req.method !== "POST") {
+    res.setHeader("Allow", "GET, POST");
+    return res.status(405).send("روش درخواست معتبر نیست.");
+  }
+  if (!sameOrigin(req)) return res.status(403).send("مبدأ درخواست معتبر نیست.");
+  const token = typeof req.body?.token === "string" ? req.body.token : "";
   if (!/^[a-f0-9]{64}$/.test(token)) return res.status(400).send("پیوند تأیید معتبر نیست.");
   try {
     const tokenKey = "vy:user:verify:" + hash(token);
