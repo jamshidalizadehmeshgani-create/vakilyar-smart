@@ -1777,7 +1777,9 @@ test("usage API never returns raw storage exception details", () => {
   const source = fs.readFileSync(require.resolve("../handlers/usage"), "utf8");
   assert.doesNotMatch(source, /storage_detail/);
   assert.doesNotMatch(source, /error\.message/);
-  assert.match(source, /storage_diagnostic: missing\.length \? null : "REDIS_STORAGE_ERROR"/);
+  assert.match(source, /storage_backend: backend/);
+  assert.match(source, /storage_diagnostic: diagnostic/);
+  assert.match(source, /shouldUseValkey\(process\.env\)/);
 });
 
 test("admin auth diagnostics never log raw rate-limit exception details", () => {
