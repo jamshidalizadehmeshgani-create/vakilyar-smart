@@ -105,7 +105,12 @@ module.exports = async (req, res) => {
 
     const account = await getAccount(req, res);
 
-    if (req.method === "POST") {\n      if (req.body?.action === "delete_all") {\n        const deletedCount = await deleteAllOwnedQuestions({ userListKey: "vy:user:" + account.uid + ":questions", userId: account.uid });\n        return res.status(200).json({ ok: true, deleted_count: deletedCount, message: "همه پرسش‌ها و پاسخ‌های متعلق به شما حذف شدند." });\n      }\n      const id = typeof req.body?.question_id === "string" ? req.body.question_id.trim() : "";
+    if (req.method === "POST") {
+      if (req.body?.action === "delete_all") {
+        const deletedCount = await deleteAllOwnedQuestions({ userListKey: "vy:user:" + account.uid + ":questions", userId: account.uid });
+        return res.status(200).json({ ok: true, deleted_count: deletedCount, message: "همه پرسش‌ها و پاسخ‌های متعلق به شما حذف شدند." });
+      }
+      const id = typeof req.body?.question_id === "string" ? req.body.question_id.trim() : "";
       if (!/^[a-f0-9]{32}$/.test(id)) {
         return res.status(400).json({ error: "شناسه پرسش معتبر نیست." });
       }
