@@ -58,6 +58,11 @@ async function loadLawyers(){
   $("lawyer").replaceChildren(new Option("انتخاب وکیل",""));
   for(const w of d.lawyers||[]) $("lawyer").add(new Option(w.name,w.id));
 }
+function formatHistoryDate(value){
+  const date=new Date(value);
+  if(!value||Number.isNaN(date.getTime()))return "تاریخ ثبت نامشخص";
+  return new Intl.DateTimeFormat("fa-IR",{dateStyle:"medium",timeStyle:"short"}).format(date);
+}
 async function loadMine(){
   const exportButton=$("export");
   try{
@@ -71,8 +76,9 @@ async function loadMine(){
     for(const q of myQuestions){
       const box=document.createElement("section");box.className="question-card";
       const h=document.createElement("h3");h.textContent=q.lawyer_name+" | "+(q.status==="answered"?"پاسخ داده شده":"در انتظار پاسخ");
-      const p=document.createElement("p");p.textContent=q.question;box.append(h,p);
-      for(const a of q.replies||[]){const x=document.createElement("p");x.className="reply";x.textContent="پاسخ وکیل: "+a.message;box.append(x);}
+      const date=document.createElement("p");date.className="muted";date.textContent="تاریخ ثبت: "+formatHistoryDate(q.created_at);
+      const p=document.createElement("p");p.textContent=q.question;box.append(h,date,p);
+      for(const a of q.replies||[]){const x=document.createElement("p");x.className="reply";x.textContent="پاسخ وکیل · "+formatHistoryDate(a.created_at)+": "+a.message;box.append(x);}
       const del=document.createElement("button");del.className="delete";del.textContent="حذف این پرسش و پاسخ‌ها";
       del.onclick=async()=>{
         if(!confirm("این پرسش و تمام پاسخ‌های ثبت‌شده آن از پرونده شما حذف شود؟"))return;
