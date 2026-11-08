@@ -5,7 +5,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 function loadHandler() {
-  const source = fs.readFileSync(path.join(__dirname, "../api/users/verify.js"), "utf8");
+  const source = fs.readFileSync(path.join(__dirname, "../handlers/users/verify.js"), "utf8");
   let redisCalls = 0;
   const module = { exports: null };
   const auth = {
@@ -26,7 +26,7 @@ function loadHandler() {
     Date,
     console
   };
-  vm.runInNewContext(source, sandbox, { filename: "api/users/verify.js" });
+  vm.runInNewContext(source, sandbox, { filename: "handlers/users/verify.js" });
   return { handler: module.exports, getRedisCalls: () => redisCalls };
 }
 
