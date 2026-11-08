@@ -188,3 +188,13 @@ test("users can export their own lawyer question history as a local JSON backup"
   assert.match(ask, /\.history-actions,\.delete,body>main>p:first-of-type\{display:none!important\}/);
   assert.doesNotMatch(ask, /account_id:\s*myQuestions|password:\s*myQuestions/);
 });
+
+
+test("question history displays localized Persian timestamps for questions and replies", () => {
+  const ask = read("public/ask-lawyer.html");
+  assert.match(ask, /function formatHistoryDate\(value\)/);
+  assert.match(ask, /Intl\.DateTimeFormat\("fa-IR"/);
+  assert.match(ask, /تاریخ ثبت: \"\+formatHistoryDate\(q\.created_at\)/);
+  assert.match(ask, /formatHistoryDate\(a\.created_at\)/);
+  assert.match(ask, /Number\.isNaN\(date\.getTime\(\)\)/);
+});
