@@ -11,14 +11,15 @@ test("all public entry pages and their internal navigation targets exist", () =>
     "index.html", "ask-lawyer.html", "lawyer-login.html", "lawyer-panel.html",
     "admin-lawyers.html", "admin-credits.html", "privacy.html", "terms.html"
   ];
-  const known = new Set(pages);
   for (const page of pages) assert.ok(fs.existsSync(path.join(root, "public", page)), page + " is missing");
 
   for (const page of pages) {
     const html = read("public/" + page);
     const links = [...html.matchAll(/href=["']\/([^"'#?]+)["']/g)].map(match => match[1]);
     for (const target of links) {
-      if (target.includes(".")) assert.ok(known.has(target), page + " links to missing public page: " + target);
+      const targetPath = path.resolve(root, "public", target);
+      assert.ok(targetPath.startsWith(path.join(root, "public") + path.sep), page + " has an unsafe local link: " + target);
+      assert.ok(fs.existsSync(targetPath), page + " links to missing public asset or page: " + target);
     }
   }
 });
