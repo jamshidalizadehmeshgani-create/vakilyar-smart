@@ -51,7 +51,9 @@ test("Valkey URL diagnostics identify the cause without exposing URL contents", 
   assert.equal(getValkeyUrlDiagnostic(""), "VALKEY_URL_EMPTY");
   assert.equal(getValkeyUrlDiagnostic('"rediss://secret-host:1234"'), "VALKEY_URL_QUOTED");
   assert.equal(getValkeyUrlDiagnostic("rediss://secret host:1234"), "VALKEY_URL_WHITESPACE");
-  assert.equal(getValkeyUrlDiagnostic("not-a-url"), "VALKEY_URL_PARSE_ERROR");
+  assert.equal(getValkeyUrlDiagnostic("not-a-url"), "VALKEY_URL_SCHEME_MISSING");
+  assert.equal(getValkeyUrlDiagnostic("VALKEY_URL=rediss://secret-host:1234"), "VALKEY_URL_ASSIGNMENT_INCLUDED");
+  assert.equal(getValkeyUrlDiagnostic("rediss://[invalid"), "VALKEY_URL_SYNTAX_ERROR");
   assert.equal(getValkeyUrlDiagnostic("redis://secret-host:1234"), "VALKEY_URL_TLS_REQUIRED");
   assert.equal(getValkeyUrlDiagnostic("rediss:///path"), "VALKEY_URL_HOST_MISSING");
   assert.equal(getValkeyUrlDiagnostic("  rediss://secret-host:1234  "), null);
