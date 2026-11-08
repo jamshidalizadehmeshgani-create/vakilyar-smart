@@ -36,3 +36,28 @@ test("warns that contract type, date, and special statutes may change the analys
   assert.match(context, /تاریخ قرارداد/);
   assert.match(context, /قوانین خاص اجاره/);
 });
+
+test("marks common unsupported lease topics as requiring further review", () => {
+  const questions = [
+    "آیا موجر بدون اجازه می‌تواند وارد ملک شود؟",
+    "ودیعه یا پول پیش چه زمانی باید برگردانده شود؟",
+    "شرایط قانونی تخلیه ملک اجاره‌ای چیست؟",
+    "آیا قرارداد اجاره خودبه‌خود تمدید می‌شود؟"
+  ];
+  for (const question of questions) {
+    const context = getIranLeaseLawContext(question);
+    assert.notEqual(context, "", `expected lease context for: ${question}`);
+    assert.match(context, /ورود موجر به ملک/);
+    assert.match(context, /ودیعه/);
+    assert.match(context, /تخلیه/);
+    assert.match(context, /تمدید/);
+    assert.match(context, /ادعای قطعی نساز/);
+  }
+});
+
+test("handles missing and non-text input without throwing or adding a source", () => {
+  for (const value of [undefined, null, 42, {}, [], ""]) {
+    assert.equal(getIranLeaseLawContext(value), "");
+  }
+});
+
