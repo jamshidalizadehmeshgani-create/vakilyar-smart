@@ -23,6 +23,13 @@ test("Valkey URL validation rejects provider reveal placeholders without exposin
   );
 });
 
+test("Valkey URL validation detects URL-encoded provider reveal placeholders", () => {
+  assert.throws(
+    () => validateValkeyUrl("rediss://default:CLICK_TO%3AREVEAL_PASSWORD@cache.example:1234"),
+    error => error.code === "VALKEY_URL_REVEAL_PLACEHOLDER" && !error.message.includes("CLICK_TO")
+  );
+});
+
 test("Valkey URL validation rejects malformed credential encoding", () => {
   assert.throws(
     () => validateValkeyUrl("rediss://default:bad%2@cache.example:1234"),
