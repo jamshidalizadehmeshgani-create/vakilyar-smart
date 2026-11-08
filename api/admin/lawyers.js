@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const { redis } = require("../../lib/quota");
 const { authorizeAdmin } = require("../../lib/admin-auth");
-const { sendWelcomeEmail } = require("../../lib/email");
+const { sendWelcomeEmail, sendLawyerVerificationEmail } = require("../../lib/email");
 
 async function audit(event) {
   try {
@@ -77,13 +77,28 @@ module.exports = async (req, res) => {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 190) return res.status(400).json({ error: "ایمیل معتبر وارد کنید." });
       if (license.length > 80) return res.status(400).json({ error: "شماره پروانه بیش از حد طولانی است." });
       const id = crypto.randomBytes(16).toString("hex");
-      const lawyer = { id, name, email, license_number: license, access: "disabled", created_at: new Date().toISOString() };
+      const verificationToken = crypto.randomBytes(32).toString("hex");
+      const verificationKey = "vy:lawyer:verify:" + crypto.createHash("sha256").update(verificationToken).digest("hex");
+      const lawyer = {
+        id, name, email, license_number: license, access: "disabled",
+        email_verified: false, email_verification_created_at: new Date().toISOString(),
+        created_at: new Date().toISOString()
+      };
       const emailKey = "vy:lawyer:email:" + crypto.createHash("sha256").update(email).digest("hex");
-      const createScript = "if redis.call('EXISTS',KEYS[1])==1 then return 0 end; redis.call('SET',KEYS[1],ARGV[1]); redis.call('SET',KEYS[2],ARGV[2]); redis.call('SADD',KEYS[3],ARGV[1]); return 1";
-      const created = Number(await redis(["EVAL", createScript, "3", emailKey, `vy:lawyer:${id}`, "vy:lawyers:index", id, JSON.stringify(lawyer)]));
+      const createScript = "if redis.call('EXISTS',KEYS[1])==1 then return 0 end; redis.call('SET',KEYS[1],ARGV[1]); redis.call('SET',KEYS[2],ARGV[2]); redis.call('SADD',KEYS[3],ARGV[1]); redis.call('SET',KEYS[4],ARGV[3],'EX',ARGV[4]); redis.call('SET',KEYS[5],ARGV[5],'EX',ARGV[4]); return 1";
+      const created = Number(await redis(["EVAL", createScript, "5", emailKey, `vy:lawyer:${id}`, "vy:lawyers:index", verificationKey, `vy:lawyer:${id}:verify-token`, id, JSON.stringify(lawyer), id, "86400", crypto.createHash("sha256").update(verificationToken).digest("hex")]));
       if (created !== 1) return res.status(409).json({ error: "برای این ایمیل قبلاً حساب وکیل ثبت شده است." });
+      const verificationEmail = await sendLawyerVerificationEmail({ to: email, name, token: verificationToken });
       const audited = await audit({ action: "lawyer_created", lawyer_id: id, at: new Date().toISOString() });
-      return res.status(201).json({ ok: true, lawyer, audit_warning: !audited, message: "پرونده وکیل ایجاد شد؛ دسترسی پاسخ‌گویی به‌صورت پیش‌فرض غیرفعال است." });
+      const { password_hash, ...safeLawyer } = lawyer;
+      return res.status(201).json({
+        ok: true, lawyer: safeLawyer, audit_warning: !audited,
+        verification_email_sent: verificationEmail.sent,
+        verification_email_reason: verificationEmail.reason,
+        message: verificationEmail.sent
+          ? "پرونده وکیل ایجاد شد و پیوند تأیید ایمیل ارسال شد؛ دسترسی پاسخ‌گویی تا تکمیل مراحل مدیریتی غیرفعال است."
+          : "پرونده وکیل ایجاد شد، اما ارسال پیوند تأیید ایمیل انجام نشد؛ امکان ارسال مجدد از مسیر امن وجود دارد."
+      });
     }
     if (action === "set_password") {
       const id = typeof req.body?.lawyer_id === "string" ? req.body.lawyer_id.trim() : "";
@@ -117,7 +132,7 @@ module.exports = async (req, res) => {
       const updatedRaw = await redis(["GET", key]);
       const lawyer = JSON.parse(updatedRaw);
       let welcomeEmail = { sent: false, reason: "not_applicable" };
-      if (enabled && lawyer.password_hash) {
+      if (enabled && lawyer.password_hash && lawyer.email_verified !== false) {
         const welcomeKey = "vy:lawyer:" + id + ":welcome-email";
         const claimed = await redis(["SET", welcomeKey, "sending", "NX", "EX", "120"]);
         if (claimed === "OK") {

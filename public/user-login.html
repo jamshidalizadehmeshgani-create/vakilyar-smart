@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ورود کاربر | وکیل‌یار</title>
+<style>
+:root{--n:#14233f;--g:#c9a45c;--bg:#f5f3ee}*{box-sizing:border-box}body{margin:0;background:var(--bg);font:15px Tahoma,Arial;color:var(--n);line-height:1.9}main{max-width:520px;margin:35px auto;padding:24px;background:#fff;border:1px solid #e8e0d2;border-radius:16px;box-shadow:0 8px 30px #14233f12}h1{margin-top:0}label{display:block;margin:12px 0 5px;font-weight:bold}input{width:100%;padding:12px;border:1px solid #cbd1dc;border-radius:8px;font:inherit}button{background:var(--n);color:#fff;border:0;border-radius:8px;padding:12px 20px;font:inherit;cursor:pointer;margin-top:16px;width:100%}button:disabled{opacity:.6}#msg,.profile{padding:12px;background:#f7f6f2;border-radius:8px}.profile{display:none}.links a{color:var(--n)}.invite{margin-top:16px;padding:14px;border:1px solid #e8e0d2;border-radius:10px;background:#fff}.invite code{display:block;direction:ltr;text-align:center;font-size:20px;letter-spacing:2px;padding:8px;background:#f5f3ee;border-radius:8px}.invite a{word-break:break-all}.invite button{margin-top:8px;background:var(--g);color:var(--n)}
+</style></head><body><main><h1>ورود به حساب کاربری</h1>
+<form id="login"><label for="email">ایمیل</label><input id="email" type="email" autocomplete="username" required>
+<label for="password">گذرواژه</label><input id="password" type="password" autocomplete="current-password" required>
+<label style="font-weight:normal"><input id="show" type="checkbox" style="width:auto"> نمایش گذرواژه</label><button id="submit">ورود</button></form>
+<p id="msg" role="status" aria-live="polite"></p>
+<section id="profile" class="profile"><h2>مشخصات حساب شما</h2><p id="details"></p><button id="logout">خروج از حساب</button><p><a href="/ask-lawyer.html">مشاهده و ثبت پرسش‌ها</a></p>
+<div class="invite"><h3>دعوت از دوستان و دریافت اعتبار رایگان</h3>
+<p>با هر ثبت‌نام موفق و تأیید ایمیل از طریق لینک شما، <strong>۲۵۰ اعتبار رایگان</strong> دریافت می‌کنید؛ حداکثر برای ۵ معرفی موفق.</p>
+<code id="inviteCode">—</code><p id="inviteLink" dir="ltr"></p>
+<button type="button" id="copyInvite">کپی لینک دعوت</button>
+<p id="inviteStats" class="small">در حال دریافت آمار دعوت‌ها...</p><p id="copyMsg" class="small" role="status"></p></div></section>
+<p class="links"><a href="/user-register.html">ساخت حساب جدید</a> · <a href="/ask-lawyer.html">بازگشت به پرسش‌ها</a></p></main>
+<script>
+const form=document.getElementById("login"),msg=document.getElementById("msg"),profile=document.getElementById("profile"),btn=document.getElementById("submit");
+document.getElementById("show").onchange=e=>document.getElementById("password").type=e.target.checked?"text":"password";
+function showProfile(p){document.getElementById("details").textContent="نام: "+p.first_name+" "+p.last_name+" | ایمیل: "+p.email+" | وضعیت ایمیل: تأییدشده";profile.style.display="block";form.style.display="none";loadReferralInfo();}
+async function loadReferralInfo(){try{const r=await fetch("/api/users/me",{cache:"no-store",credentials:"same-origin"});const d=await r.json();if(!r.ok||!d.authenticated)return;const p=d.profile;document.getElementById("inviteCode").textContent=p.referral_code;const link=document.getElementById("inviteLink");link.textContent=p.referral_url;link.dataset.url=p.referral_url;document.getElementById("inviteStats").textContent="معرفی‌های موفق: "+p.successful_referrals+" از "+p.referral_max_rewards+" | اعتبار هدیه دریافت‌شده: "+p.referral_credits_earned;document.getElementById("copyInvite").onclick=async()=>{const message=document.getElementById("copyMsg");try{await navigator.clipboard.writeText(p.referral_url);message.textContent="لینک دعوت کپی شد؛ آن را برای دوستانتان بفرستید.";}catch{message.textContent="لطفاً لینک نمایش‌داده‌شده را به‌صورت دستی کپی کنید.";}};}catch{document.getElementById("inviteStats").textContent="دریافت اطلاعات دعوت موقتاً ممکن نیست.";}}
+async function loadProfile(){try{const r=await fetch("/api/users/me",{cache:"no-store",credentials:"same-origin"});const d=await r.json();if(r.ok&&d.authenticated)showProfile(d.profile);}catch{}}
+form.onsubmit=async e=>{e.preventDefault();btn.disabled=true;msg.textContent="در حال بررسی اطلاعات ورود...";
+try{const r=await fetch("/api/users/login",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({email:form.email.value.trim(),password:form.password.value})});const d=await r.json();if(!r.ok)throw new Error(d.error||"ورود انجام نشد");msg.textContent=d.message;showProfile(d.profile);}
+catch(e){msg.textContent=e.message||"ارتباط با سرور برقرار نشد."}finally{btn.disabled=false}};
+document.getElementById("logout").onclick=async()=>{try{const r=await fetch("/api/users/logout",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:"{}"});const d=await r.json();msg.textContent=d.message||d.error||"خروج انجام شد";profile.style.display="none";form.style.display="block";}catch{msg.textContent="خروج موقتاً ممکن نیست."}};
+loadProfile();
+</script></body></html>

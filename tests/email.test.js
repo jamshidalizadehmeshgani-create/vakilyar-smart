@@ -42,3 +42,60 @@ test("welcome email rejects malformed recipient before network request", async (
     else process.env.RESEND_FROM_EMAIL = oldFrom;
   }
 });
+
+test("lawyer verification email requires a valid token and provider configuration", async () => {
+  const old = {
+    key: process.env.RESEND_API_KEY, from: process.env.RESEND_FROM_EMAIL,
+    base: process.env.APP_BASE_URL
+  };
+  const { sendLawyerVerificationEmail } = require("../lib/email");
+  try {
+    delete process.env.RESEND_API_KEY;
+    delete process.env.RESEND_FROM_EMAIL;
+    assert.deepEqual(await sendLawyerVerificationEmail({
+      to: "lawyer@example.test", name: "وکیل آزمایشی", token: "a".repeat(64)
+    }), { sent: false, reason: "not_configured" });
+    process.env.RESEND_API_KEY = "test-key";
+    process.env.RESEND_FROM_EMAIL = "VakilYar <no-reply@example.test>";
+    assert.deepEqual(await sendLawyerVerificationEmail({
+      to: "lawyer@example.test", name: "وکیل آزمایشی", token: "invalid"
+    }), { sent: false, reason: "invalid_token" });
+  } finally {
+    if (old.key === undefined) delete process.env.RESEND_API_KEY; else process.env.RESEND_API_KEY = old.key;
+    if (old.from === undefined) delete process.env.RESEND_FROM_EMAIL; else process.env.RESEND_FROM_EMAIL = old.from;
+    if (old.base === undefined) delete process.env.APP_BASE_URL; else process.env.APP_BASE_URL = old.base;
+  }
+});
+
+test("lawyer verification email sends a one-time URL without exposing it in the result", async () => {
+  const originalFetch = global.fetch;
+  const old = {
+    key: process.env.RESEND_API_KEY, from: process.env.RESEND_FROM_EMAIL,
+    base: process.env.APP_BASE_URL
+  };
+  const token = "b".repeat(64);
+  process.env.RESEND_API_KEY = "test-key";
+  process.env.RESEND_FROM_EMAIL = "VakilYar <no-reply@example.test>";
+  process.env.APP_BASE_URL = "https://app.example.test";
+  let payload;
+  global.fetch = async (url, options) => {
+    assert.equal(String(url), "https://api.resend.com/emails");
+    payload = JSON.parse(options.body);
+    return { ok: true, status: 200 };
+  };
+  try {
+    const result = await require("../lib/email").sendLawyerVerificationEmail({
+      to: "LAWYER@example.test", name: "<وکیل>", token
+    });
+    assert.deepEqual(result, { sent: true });
+    assert.equal(payload.to[0], "lawyer@example.test");
+    assert.match(payload.html, new RegExp("/api/lawyer/verify-email\\?token=" + token));
+    assert.match(payload.html, /&lt;وکیل&gt;/);
+    assert.equal(JSON.stringify(result).includes(token), false);
+  } finally {
+    global.fetch = originalFetch;
+    if (old.key === undefined) delete process.env.RESEND_API_KEY; else process.env.RESEND_API_KEY = old.key;
+    if (old.from === undefined) delete process.env.RESEND_FROM_EMAIL; else process.env.RESEND_FROM_EMAIL = old.from;
+    if (old.base === undefined) delete process.env.APP_BASE_URL; else process.env.APP_BASE_URL = old.base;
+  }
+});
