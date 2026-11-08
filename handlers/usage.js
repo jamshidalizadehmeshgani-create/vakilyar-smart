@@ -1,4 +1,5 @@
 const { getAccount, consumeIpRateLimit } = require("../lib/quota");
+const { shouldUseValkey } = require("../lib/valkey");
 
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -24,19 +25,35 @@ module.exports = async (req, res) => {
       free_credits_initial: Number(process.env.FREE_CREDITS_INITIAL || 1000)
     });
   } catch (error) {
-    console.error("Usage API error:");
+    const usingValkey = shouldUseValkey(process.env);
+    const backend = usingValkey ? "valkey" : "upstash";
     const missing = [];
     if (!process.env.APP_SECRET) missing.push("APP_SECRET");
-    if (!process.env.UPSTASH_REDIS_REST_URL) missing.push("UPSTASH_REDIS_REST_URL");
-    if (!process.env.UPSTASH_REDIS_REST_TOKEN) missing.push("UPSTASH_REDIS_REST_TOKEN");
+    if (usingValkey) {
+      if (!process.env.VALKEY_URL) missing.push("VALKEY_URL");
+    } else {
+      if (!process.env.UPSTASH_REDIS_REST_URL) missing.push("UPSTASH_REDIS_REST_URL");
+      if (!process.env.UPSTASH_REDIS_REST_TOKEN) missing.push("UPSTASH_REDIS_REST_TOKEN");
+    }
+
+    // Expose only a bounded, allowlisted diagnostic code. Never return raw
+    // Redis/ioredis messages because they may contain connection details.
+    const rawCode = String(error && (error.code || error.name) || "REDIS_STORAGE_ERROR").toUpperCase();
+    const safeCode = /^[A-Z0-9_]{2,40}$/.test(rawCode) ? rawCode : "REDIS_STORAGE_ERROR";
+    const diagnostic = missing.length ? null : safeCode;
+    console.error("Usage API unavailable", { backend, diagnostic: diagnostic || "CONFIGURATION_MISSING" });
+
     return res.status(503).json({
       ok: false,
       code: missing.length ? "QUOTA_CONFIGURATION_MISSING" : "QUOTA_STORAGE_UNAVAILABLE",
+      storage_backend: backend,
       missing_configuration: missing,
-      storage_diagnostic: missing.length ? null : "REDIS_STORAGE_ERROR",
+      storage_diagnostic: diagnostic,
       error: missing.length
         ? "تنظیمات لازم برای سهمیه‌بندی در محیط استقرار کامل نیست."
-        : "پایگاه داده سهمیه در دسترس نیست؛ اتصال Upstash را بررسی کنید."
+        : backend === "valkey"
+          ? "پایگاه داده سهمیه آزمایشی (Valkey) در دسترس نیست؛ اتصال محیط آزمایشی را بررسی کنید."
+          : "پایگاه داده سهمیه در دسترس نیست؛ اتصال Upstash را بررسی کنید."
     });
   }
 };
