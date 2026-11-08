@@ -38,12 +38,37 @@ test("Valkey URL trims outer whitespace but rejects quoted or malformed values s
   assert.equal(captured, "rediss://example:1234");
   assert.throws(
     () => createValkeyClient('"rediss://example:1234"', FakeRedis),
-    error => getValkeyDiagnostic(error) === "VALKEY_URL_FORMAT_ERROR"
+    error => getValkeyDiagnostic(error) === "VALKEY_URL_QUOTES"
   );
   assert.throws(
     () => createValkeyClient("not-a-url", FakeRedis),
-    error => getValkeyDiagnostic(error) === "VALKEY_URL_FORMAT_ERROR"
+    error => getValkeyDiagnostic(error) === "VALKEY_URL_PARSE_ERROR"
   );
+});
+
+test("Aiven-style TLS URL accepts username and percent-encoded password without exposing credentials", () => {
+  let captured;
+  class FakeRedis {
+    constructor(url) { captured = url; }
+  }
+  const url = "rediss://default:p%40ss%3Aword@vakilyar-valkey-preview-jamshid-f994.c.aivencloud.com:16593";
+  createValkeyClient(url, FakeRedis);
+  assert.equal(captured, url);
+});
+
+test("Valkey URL diagnostics distinguish safe input-format causes", () => {
+  const cases = [
+    [undefined, "VALKEY_URL_EMPTY"],
+    ["rediss://host name:16593", "VALKEY_URL_WHITESPACE"],
+    ["https://example.com", "VALKEY_URL_TLS_REQUIRED"],
+    ["rediss://", "VALKEY_URL_HOST_MISSING"]
+  ];
+  for (const [url, expected] of cases) {
+    assert.throws(
+      () => createValkeyClient(url, function FakeRedis() {}),
+      error => getValkeyDiagnostic(error) === expected
+    );
+  }
 });
 
 test("Valkey preserves raw Redis command arguments and results", async () => {
