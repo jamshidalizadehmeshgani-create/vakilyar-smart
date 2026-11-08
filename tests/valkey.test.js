@@ -38,11 +38,11 @@ test("Valkey URL trims outer whitespace but rejects quoted or malformed values s
   assert.equal(captured, "rediss://example:1234");
   assert.throws(
     () => createValkeyClient('"rediss://example:1234"', FakeRedis),
-    error => getValkeyDiagnostic(error) === "VALKEY_URL_FORMAT_ERROR"
+    error => getValkeyDiagnostic(error) === "VALKEY_URL_QUOTED"
   );
   assert.throws(
     () => createValkeyClient("not-a-url", FakeRedis),
-    error => getValkeyDiagnostic(error) === "VALKEY_URL_FORMAT_ERROR"
+    error => getValkeyDiagnostic(error) === "VALKEY_URL_PARSE_ERROR"
   );
 });
 
