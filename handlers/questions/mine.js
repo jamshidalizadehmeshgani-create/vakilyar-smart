@@ -162,5 +162,6 @@ module.exports = async (req, res) => {
   }
 };
 
-module.exports.deleteOwnedQuestion = deleteOwnedQuestion;\nmodule.exports.deleteAllOwnedQuestions = deleteAllOwnedQuestions;
+module.exports.deleteOwnedQuestion = deleteOwnedQuestion;
+module.exports.deleteAllOwnedQuestions = deleteAllOwnedQuestions;
 module.exports.pruneQuestionIndex = pruneQuestionIndex;
