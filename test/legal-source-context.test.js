@@ -21,3 +21,18 @@ test("does not treat unsupported lease topics as settled law", () => {
   assert.match(context, /ورود موجر به ملک/);
   assert.match(context, /ادعای قطعی نساز/);
 });
+
+test("includes only the intended Civil Code lease article set", () => {
+  const context = getIranLeaseLawContext("قرارداد اجاره و تعهدات طرفین");
+  for (const article of [466, 476, 477, 478, 484, 485, 486, 490]) {
+    assert.match(context, new RegExp(`ماده ${article} قانون مدنی`));
+  }
+  assert.doesNotMatch(context, /ماده 173 قانون مدنی|ماده 174 قانون مدنی/);
+});
+
+test("warns that contract type, date, and special statutes may change the analysis", () => {
+  const context = getIranLeaseLawContext("شرایط تخلیه ملک اجاره‌ای چیست؟");
+  assert.match(context, /نوع اجاره/);
+  assert.match(context, /تاریخ قرارداد/);
+  assert.match(context, /قوانین خاص اجاره/);
+});
