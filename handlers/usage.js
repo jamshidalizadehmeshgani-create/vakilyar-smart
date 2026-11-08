@@ -1,4 +1,5 @@
 const { getAccount, consumeIpRateLimit } = require("../lib/quota");
+const { shouldUseValkey } = require("../lib/valkey");
 
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -27,16 +28,18 @@ module.exports = async (req, res) => {
     console.error("Usage API error:");
     const missing = [];
     if (!process.env.APP_SECRET) missing.push("APP_SECRET");
-    if (!process.env.UPSTASH_REDIS_REST_URL) missing.push("UPSTASH_REDIS_REST_URL");
-    if (!process.env.UPSTASH_REDIS_REST_TOKEN) missing.push("UPSTASH_REDIS_REST_TOKEN");
+    const usesValkey = shouldUseValkey(process.env);
+    if (usesValkey && !process.env.VALKEY_URL) missing.push("VALKEY_URL");
+    if (!usesValkey && !process.env.UPSTASH_REDIS_REST_URL) missing.push("UPSTASH_REDIS_REST_URL");
+    if (!usesValkey && !process.env.UPSTASH_REDIS_REST_TOKEN) missing.push("UPSTASH_REDIS_REST_TOKEN");
     return res.status(503).json({
       ok: false,
       code: missing.length ? "QUOTA_CONFIGURATION_MISSING" : "QUOTA_STORAGE_UNAVAILABLE",
       missing_configuration: missing,
-      storage_diagnostic: missing.length ? null : "REDIS_STORAGE_ERROR",
+      storage_diagnostic: missing.length ? null : (error?.safeDiagnosticCode || (usesValkey ? "VALKEY_UNAVAILABLE" : "UPSTASH_UNAVAILABLE")),
       error: missing.length
         ? "تنظیمات لازم برای سهمیه‌بندی در محیط استقرار کامل نیست."
-        : "پایگاه داده سهمیه در دسترس نیست؛ اتصال Upstash را بررسی کنید."
+        : "پایگاه داده سهمیه در دسترس نیست؛ اتصال سرویس ذخیره‌سازی را بررسی کنید."
     });
   }
 };
