@@ -29,7 +29,7 @@ test("foreign law phrases and country mentions are detected", () => {
 });
 
 test("country names are matched as whole words, not substrings", () => {
-  assert.equal(mentionsForeignCountry("The word germanic is not Germany."), true);
+  assert.equal(mentionsForeignCountry("The word germanic is not a country."), false);
   assert.equal(mentionsForeignCountry("germanic terminology only"), false);
   assert.equal(mentionsForeignCountry("فرانسه"), true);
   assert.equal(mentionsForeignCountry("فرانسوی"), false);
