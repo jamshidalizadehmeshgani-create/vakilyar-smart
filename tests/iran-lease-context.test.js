@@ -17,11 +17,14 @@ test("curated Iranian lease context is supplied only for lease-related questions
 
 test("curated lease context contains only the explicitly enumerated articles", () => {
   const context = getIranLeaseLawContext("در قرارداد اجاره تعمیرات با چه کسی است؟");
+  const articleSection = context.split("قواعد استفاده از منبع:")[0];
   const listedNumbers = IRAN_LEASE_ARTICLES.map((item) => item.number);
   assert.deepEqual(listedNumbers, [466, 476, 477, 478, 484, 485, 486, 490]);
-  for (const number of listedNumbers) assert.ok(context.includes("ماده " + number));
-  assert.ok(!context.includes("ماده 173"));
-  assert.ok(!context.includes("ماده 174"));
+  for (const number of listedNumbers) assert.ok(articleSection.includes("ماده " + number));
+  // The guidance section intentionally names 173/174 to prohibit hallucinated citations.
+  assert.ok(!articleSection.includes("ماده 173"));
+  assert.ok(!articleSection.includes("ماده 174"));
+  assert.match(context, /ماده 173 یا 174 را به عنوان مبنای اجاره ذکر نکن/);
 });
 
 test("lease context preserves the material qualifications and scope warnings", () => {
