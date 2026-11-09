@@ -57,7 +57,11 @@ test("country matching respects Unicode word boundaries", () => {
 });
 
 test("less common foreign jurisdictions are recognized for safe routing", () => {
-  for (const country of ["نپال", "بنگلادش", "ویتنام", "Nepal", "Bangladesh", "Vietnam", "Costa Rica"]) {
+  for (const country of [
+    "نپال", "بنگلادش", "ویتنام", "کاستاریکا", "فیلیپین", "کامبوج", "سریلانکا",
+    "Nepal", "Bangladesh", "Vietnam", "Costa Rica", "Philippines", "Cambodia",
+    "Sri Lanka", "North Macedonia", "Bosnia and Herzegovina"
+  ]) {
     assert.equal(isKnownCountry(country), true, country);
     assert.equal(mentionsForeignCountry("قانون کار " + country), true, country);
   }
