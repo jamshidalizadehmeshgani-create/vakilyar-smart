@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const { getAccount, classifyRequest, reserveCredits, refundReservation, commitReservation, consumeIpRateLimit } = require("../lib/quota");
 const { getIranLeaseLawContext } = require("../lib/legal-sources/iran-civil-code-lease");
 const { buildChatSystemMessage } = require("../lib/legal-sources/chat-prompt");
+const { isForeignLegalRequest } = require("../lib/legal-sources/jurisdiction");
 
 const SYSTEM_PROMPT = `تو «وکیل‌یار هوشمند» هستی؛ دستیار ارائه‌دهنده اطلاعات عمومی و آموزشی حقوقی.
 اصول الزامی:
@@ -91,7 +92,6 @@ module.exports = async (req, res) => {
 
   try {
     account = await getAccount(req, res);
-    const { isForeignLegalRequest } = require("../lib/legal-sources/jurisdiction");
     const foreignRequest = isForeignLegalRequest(message, requestedScopeInput, countryLabel);
     if (foreignRequest && !account.isPro) {
       return res.status(403).json({ code: "PRO_REQUIRED", error: "بررسی حقوق بین‌الملل و قوانین سایر کشورها در وکیل‌یار پرو ارائه می‌شود." });
