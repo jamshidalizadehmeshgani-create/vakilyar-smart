@@ -55,3 +55,22 @@ test("country matching respects Unicode word boundaries", () => {
   assert.equal(mentionsForeignCountry("قوانین هند"), true);
   assert.equal(mentionsForeignCountry("مهندسی نرم‌افزار"), false);
 });
+
+test("less common foreign jurisdictions are recognized for safe routing", () => {
+  for (const country of [
+    "نپال", "بنگلادش", "ویتنام", "کاستاریکا", "فیلیپین", "کامبوج", "سریلانکا",
+    "Nepal", "Bangladesh", "Vietnam", "Costa Rica", "Philippines", "Cambodia",
+    "Sri Lanka", "North Macedonia", "Bosnia and Herzegovina"
+  ]) {
+    assert.equal(isKnownCountry(country), true, country);
+    assert.equal(mentionsForeignCountry("قانون کار " + country), true, country);
+  }
+});
+
+test("the Persian word for cheque does not trigger Czech jurisdiction routing", () => {
+  assert.equal(mentionsForeignCountry("چک ضمانت چیست؟"), false);
+  assert.equal(isForeignLegalRequest("چک ضمانت چیست؟"), false);
+  assert.equal(isKnownCountry("جمهوری چک"), true);
+  assert.equal(mentionsForeignCountry("قانون کار جمهوری چک"), true);
+  assert.equal(isKnownCountry("Czechia"), true);
+});
