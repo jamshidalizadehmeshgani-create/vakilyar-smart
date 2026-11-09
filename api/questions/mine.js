@@ -122,6 +122,7 @@ module.exports = async (req, res) => {
     await pruneQuestionIndex("vy:user:" + account.uid + ":questions", staleIds);
     return res.status(200).json({ ok: true, questions: checked.map(item => item.question).filter(Boolean) });
   } catch (e) {
+    if (e?.code === "ACCOUNT_SUSPENDED") return res.status(403).json({ code: "ACCOUNT_SUSPENDED", error: "دسترسی این حساب موقتاً متوقف شده است. برای بررسی و بازگشایی از بخش پشتیبانی درخواست ثبت کنید." });
     console.error("User questions error:");
     return res.status(503).json({ error: "عملیات پرسش‌ها موقتاً ممکن نیست." });
   }
