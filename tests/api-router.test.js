@@ -43,6 +43,7 @@ test("API router delegates known routes without changing the request", async () 
   const res = response();
   await handler(req, res);
   assert.equal(res.statusCode, 200);
+  assert.equal(res.headers["Cache-Control"], "no-store");
   assert.deepEqual(res.body, { handled: "users/login" });
   assert.equal(calls.length, 1);
   assert.equal(calls[0].req, req);
