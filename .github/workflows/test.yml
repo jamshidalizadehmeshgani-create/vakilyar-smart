@@ -2,9 +2,15 @@ name: Tests
 
 on:
   pull_request:
-    branches: [main, feat/vakilyar-pwa-install]
   push:
     branches: [feat/verified-iran-lease-law-context]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   node-tests:
