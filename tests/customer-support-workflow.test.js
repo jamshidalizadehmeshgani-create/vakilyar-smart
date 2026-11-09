@@ -25,10 +25,14 @@ test("suspended accounts are blocked from quota and chat endpoints with support 
   const quota = read("lib/quota.js");
   const chat = read("api/chat.js");
   const usage = read("api/usage.js");
+  const questionCreate = read("api/questions/create.js");
+  const questionMine = read("api/questions/mine.js");
   assert.match(quota, /vy:user:\$\{uid\}:status/);
   assert.match(quota, /ACCOUNT_SUSPENDED/);
   assert.match(chat, /ACCOUNT_SUSPENDED/);
   assert.match(usage, /ACCOUNT_SUSPENDED/);
+  assert.match(questionCreate, /ACCOUNT_SUSPENDED/);
+  assert.match(questionMine, /ACCOUNT_SUSPENDED/);
 });
 
 test("customer and administrator support pages expose the workflow", () => {
