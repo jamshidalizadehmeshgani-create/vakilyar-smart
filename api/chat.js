@@ -91,29 +91,8 @@ module.exports = async (req, res) => {
 
   try {
     account = await getAccount(req, res);
-    const requestedScope = typeof requestedScopeInput === "string" ? requestedScopeInput.trim().toLowerCase() : "";
-    const requestedCountry = countryLabel.toLowerCase();
-    const iranAliases = new Set(["iran", "ایران", "ir"]);
-    const foreignCountryNames = [
-      "آلمان","ژاپن","چین","روسیه","آمریکا","ایالات متحده","انگلستان","بریتانیا","فرانسه","ترکیه",
-      "کانادا","استرالیا","ایتالیا","اسپانیا","هلند","بلژیک","سوئیس","اتریش","سوئد","نروژ","دانمارک",
-      "فنلاند","لهستان","اوکراین","هند","پاکستان","افغانستان","عراق","عربستان","امارات","قطر","کویت",
-      "بحرین","عمان","مصر","لبنان","سوریه","اردن","آذربایجان","ارمنستان","گرجستان","ژاپن","کره جنوبی",
-      "سنگاپور","مالزی","اندونزی","تایلند","برزیل","مکزیک","آفریقای جنوبی","نیوزیلند",
-      "germany","japan","china","russia","united states","usa","america","united kingdom","uk",
-      "england","france","turkey","canada","australia","italy","spain","netherlands","belgium",
-      "switzerland","austria","sweden","norway","denmark","finland","poland","ukraine","india",
-      "pakistan","afghanistan","iraq","saudi arabia","uae","qatar","kuwait","bahrain","oman",
-      "egypt","lebanon","syria","jordan","azerbaijan","armenia","georgia","south korea","singapore",
-      "malaysia","indonesia","thailand","brazil","mexico","south africa","new zealand"
-    ];
-    const foreignCountryMention = foreignCountryNames.some(name =>
-      new RegExp("(^|[^\\p{L}])" + name.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&") + "([^\\p{L}]|$)", "iu").test(message)
-    );
-    const explicitForeignLaw = /حقوق بین.?الملل|قوانین بین.?الملل|قانون بین.?الملل|حقوق خارجی|قوانین? خارجی|کشورهای خارجی|کشور خارجی|قوانین? (?:کشور|دولت) دیگر|قانون (?:کشور|دولت) دیگر/i.test(message);
-    const scopeRequestsForeign = (requestedScope && !iranAliases.has(requestedScope)) ||
-      (requestedCountry && !iranAliases.has(requestedCountry));
-    const foreignRequest = scopeRequestsForeign || explicitForeignLaw || foreignCountryMention;
+    const { isForeignLegalRequest } = require("../lib/legal-sources/jurisdiction");
+    const foreignRequest = isForeignLegalRequest(message, requestedScopeInput, countryLabel);
     if (foreignRequest && !account.isPro) {
       return res.status(403).json({ code: "PRO_REQUIRED", error: "بررسی حقوق بین‌الملل و قوانین سایر کشورها در وکیل‌یار پرو ارائه می‌شود." });
     }
