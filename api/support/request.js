@@ -8,6 +8,13 @@ module.exports = async (req, res) => {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "فقط درخواست POST پذیرفته می‌شود." });
   }
+  const host = String(req.headers?.host || "").toLowerCase();
+  let originHost = "";
+  try { originHost = new URL(req.headers?.origin || "").host.toLowerCase(); } catch {}
+  const fetchSite = String(req.headers?.["sec-fetch-site"] || "").toLowerCase();
+  if (!host || !originHost || originHost !== host || (fetchSite && fetchSite !== "same-origin")) {
+    return res.status(403).json({ error: "مبدأ درخواست معتبر نیست؛ صفحه را تازه‌سازی و دوباره تلاش کنید." });
+  }
   try {
     const limit = await consumeIpRateLimit(req, { scope: "support", limit: 5, windowSeconds: 3600 });
     if (limit.count > limit.limit) {
