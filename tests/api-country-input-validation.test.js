@@ -27,7 +27,7 @@ test("API country validation rejects unknown or injected labels", () => {
 });
 
 test("API country validation enforces the maximum label length", () => {
-  assert.equal(isValidCountryName("A".repeat(61)), false);
-  assert.equal(isValidCountryName("A".repeat(60)), false);
+  assert.equal(isValidCountryName(" ".repeat(30) + "Germany" + " ".repeat(24)), false);
+  assert.equal(isValidCountryName(" ".repeat(30) + "Germany" + " ".repeat(23)), true);
   assert.equal(isValidCountryName("  Germany  "), true);
 });
