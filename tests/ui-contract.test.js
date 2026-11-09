@@ -9,7 +9,7 @@ const read = file => fs.readFileSync(path.join(root, file), "utf8");
 test("all public entry pages and their internal navigation targets exist", () => {
   const pages = [
     "index.html", "ask-lawyer.html", "lawyer-login.html", "lawyer-panel.html",
-    "admin-lawyers.html", "admin-credits.html", "privacy.html", "terms.html"
+    "admin-lawyers.html", "admin-credits.html", "admin-support.html", "support.html", "privacy.html", "terms.html"
   ];
   const known = new Set(pages);
   for (const page of pages) assert.ok(fs.existsSync(path.join(root, "public", page)), page + " is missing");
@@ -24,7 +24,7 @@ test("all public entry pages and their internal navigation targets exist", () =>
 });
 
 test("browser pages call API routes that exist in the serverless API tree", () => {
-  const pages = ["index.html", "ask-lawyer.html", "lawyer-login.html", "lawyer-panel.html", "admin-lawyers.html", "admin-credits.html"];
+  const pages = ["index.html", "ask-lawyer.html", "lawyer-login.html", "lawyer-panel.html", "admin-lawyers.html", "admin-credits.html", "admin-support.html", "support.html"];
   const endpoints = new Set();
   for (const page of pages) {
     const html = read("public/" + page);
@@ -50,7 +50,6 @@ test("question history and lawyer inbox announce updates accessibly", () => {
   assert.match(read("public/ask-lawyer.html"), /id="mine"[^>]*aria-live="polite"/);
   assert.match(read("public/lawyer-panel.html"), /id="questions"[^>]*aria-live="polite"/);
 });
-
 
 test("question submission UI retains a stable retry ID across reloads", () => {
   const ask=read("public/ask-lawyer.html");
@@ -98,7 +97,6 @@ test("admin panels keep manager credentials in password fields and send them onl
   assert.match(credits, /sessionStorage\.getItem\(["']vy_pending_credit_grant["']/);
 });
 
-
 test("lawyer login form mirrors server input limits and prevents duplicate submits", () => {
   const login = read("public/lawyer-login.html");
   assert.match(login, /id="email" type="email"[^>]*maxlength="190"/);
@@ -110,7 +108,6 @@ test("lawyer login form mirrors server input limits and prevents duplicate submi
   assert.match(login, /aria-live="polite"/);
 });
 
-
 test("lawyer question form announces submission feedback accessibly", () => {
   const ask = read("public/ask-lawyer.html");
   assert.match(ask, /id="msg"[^>]*role="status"[^>]*aria-live="polite"[^>]*aria-atomic="true"/);
@@ -118,7 +115,6 @@ test("lawyer question form announces submission feedback accessibly", () => {
   assert.match(ask, /<select id="lawyer" required>/);
   assert.match(ask, /<input type="checkbox" id="consent" required>/);
 });
-
 
 test("lawyer reply feedback uses an accessible live status instead of alert dialogs", () => {
   const panel = read("public/lawyer-panel.html");
@@ -128,7 +124,6 @@ test("lawyer reply feedback uses an accessible live status instead of alert dial
   assert.match(panel, /card\.append\(area,send,feedback\)/);
   assert.doesNotMatch(panel, /alert\(dd\.message/);
 });
-
 
 test("admin panels announce operation results and prevent repeated lawyer-management clicks", () => {
   const lawyers = read("public/admin-lawyers.html");
@@ -160,4 +155,28 @@ test("all public pages avoid dangerous HTML parsing and dynamic code execution s
       assert.doesNotMatch(html, pattern, page + " contains unsafe " + label);
     }
   }
+});
+
+test("admin support inbox offers optional browser notifications without external services", () => {
+  const admin = read("public/admin-support.html");
+  assert.match(admin, /id="enableNotifications"/);
+  assert.match(admin, /Notification\.requestPermission\(\)/);
+  assert.match(admin, /new Notification\(/);
+  assert.match(admin, /setInterval\(\(\)=>\{if\(\$\("key"\)\.value\.trim\(\)\)load\(\);\},60000\)/);
+  assert.match(admin, /knownCaseIds/);
+});
+
+
+test("support form clearly explains retention and warns against sending sensitive data", () => {
+  const page = read("public/support.html");
+  assert.match(page, /۹۰ روز/);
+  assert.match(page, /شماره ملی/);
+  assert.match(page, /اطلاعات بانکی/);
+});
+
+test("support notifications degrade gracefully when system notifications are unavailable", () => {
+  const admin = read("public/admin-support.html");
+  assert.match(admin, /try\{const notification=new Notification/);
+  assert.match(admin, /اعلان سیستمی در این مرورگر پشتیبانی نشد/);
+  assert.match(admin, /درخواست پشتیبانی جدید ثبت شده است/);
 });
