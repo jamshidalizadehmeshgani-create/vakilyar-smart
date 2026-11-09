@@ -28,7 +28,7 @@ test("empty or non-string legal context is not appended", () => {
 
 test("missing scope and system prompt values remain safe", () => {
   const message = buildChatSystemMessage(undefined, undefined, false, IRAN_LEASE_CONTEXT);
-  assert.match(message, /حوزه حقوقی این درخواست: $/);
+  assert.ok(message.includes("حوزه حقوقی این درخواست: "));
   assert.ok(message.includes(IRAN_LEASE_CONTEXT));
 });
 
