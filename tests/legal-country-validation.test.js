@@ -66,3 +66,11 @@ test("less common foreign jurisdictions are recognized for safe routing", () => 
     assert.equal(mentionsForeignCountry("قانون کار " + country), true, country);
   }
 });
+
+test("the Persian word for cheque does not trigger Czech jurisdiction routing", () => {
+  assert.equal(mentionsForeignCountry("چک ضمانت چیست؟"), false);
+  assert.equal(isForeignLegalRequest("چک ضمانت چیست؟"), false);
+  assert.equal(isKnownCountry("جمهوری چک"), true);
+  assert.equal(mentionsForeignCountry("قانون کار جمهوری چک"), true);
+  assert.equal(isKnownCountry("Czechia"), true);
+});
