@@ -160,6 +160,7 @@ module.exports = async (req, res) => {
     }
     return res.status(200).json({ configured: true, reply, plan: account.isPro ? "pro" : "free", unlimited: account.isUnlimited, credits_used: charged, credits_remaining: (account.isPro || account.isUnlimited) ? null : remainingCredits });
   } catch (error) {
+    if (error?.code === "ACCOUNT_SUSPENDED") return res.status(403).json({ code: "ACCOUNT_SUSPENDED", error: "دسترسی این حساب موقتاً متوقف شده است. از بخش پشتیبانی درخواست بررسی و بازگشایی ثبت کنید." });
     if (account && reservationId) { try { await refundReservation(account.key, reservationId); reservationId = null; } catch (refundError) { console.error("Credit refund failed"); } }
     const diagnosticCode = typeof error?.code === "string" && /^[A-Z0-9_]{2,40}$/i.test(error.code) ? error.code.toUpperCase() : "UNCLASSIFIED";
     console.error("Chat API failure:", diagnosticCode);
