@@ -6,7 +6,7 @@ const vm = require("node:vm");
 const crypto = require("node:crypto");
 
 function loadHandler() {
-  const source = fs.readFileSync(path.join(__dirname, "../api/lawyer/verify-email.js"), "utf8");
+  const source = fs.readFileSync(path.join(__dirname, "../handlers/lawyer/verify-email.js"), "utf8");
   let redisCalls = 0;
   const module = { exports: null };
   const auth = {
@@ -23,7 +23,7 @@ function loadHandler() {
     },
     process: { env: {} }, Date, console
   };
-  vm.runInNewContext(source, sandbox, { filename: "api/lawyer/verify-email.js" });
+  vm.runInNewContext(source, sandbox, { filename: "handlers/lawyer/verify-email.js" });
   return { handler: module.exports, getRedisCalls: () => redisCalls };
 }
 

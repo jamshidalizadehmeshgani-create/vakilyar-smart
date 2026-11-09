@@ -372,11 +372,11 @@ global.fetch = async (_url, options) => {
 };
 
 const { reserveCredits, refundReservation, commitReservation, redis } = require("../lib/quota");
-const adminLawyers = require("../api/admin/lawyers");
+const adminLawyers = require("../handlers/admin/lawyers");
 const { authorizeAdmin } = require("../lib/admin-auth");
-const grantCredits = require("../api/admin/grant-credits");
-const createQuestion = require("../api/questions/create");
-const loginLawyer = require("../api/lawyer/login");
+const grantCredits = require("../handlers/admin/grant-credits");
+const createQuestion = require("../handlers/questions/create");
+const loginLawyer = require("../handlers/lawyer/login");
 const { getLawyerSession, hashToken } = require("../lib/lawyer-auth");
 
 function responseMock() {
@@ -468,7 +468,7 @@ test("lawyer logout deletes the session and removes its index entry", async () =
   const indexKey = "vy:lawyer:" + lawyerId + ":sessions";
   values.set(sessionKey, lawyerId + ":1");
   lists.set(indexKey, [sessionKey, "stale-session-key"]);
-  const logout = require("../api/lawyer/logout");
+  const logout = require("../handlers/lawyer/logout");
   const res = responseMock();
   await logout({
     method: "POST",
@@ -488,7 +488,7 @@ test("lawyer logout clears the browser cookie when Redis is unavailable", async 
   const originalFetch = global.fetch;
   global.fetch = async () => { throw new Error("simulated Redis outage"); };
   try {
-    const logout = require("../api/lawyer/logout");
+    const logout = require("../handlers/lawyer/logout");
     const res = responseMock();
     await logout({
       method: "POST",
@@ -509,7 +509,7 @@ test("lawyer logout rejects a cross-origin request without changing the session"
   const token = "3".repeat(64);
   const sessionKey = "vy:lawyer:session:" + hashToken(token);
   values.set(sessionKey, "4".repeat(32) + ":1");
-  const logout = require("../api/lawyer/logout");
+  const logout = require("../handlers/lawyer/logout");
   const res = responseMock();
   await logout({
     method: "POST",
@@ -527,7 +527,7 @@ test("lawyer logout rejects cross-site fetch metadata even with a matching Origi
   const token="7".repeat(64), lawyerId="8".repeat(32);
   const sessionKey="vy:lawyer:session:"+hashToken(token);
   values.set(sessionKey,lawyerId+":0");
-  const logout=require("../api/lawyer/logout"),res=responseMock();
+  const logout=require("../handlers/lawyer/logout"),res=responseMock();
   await logout({method:"POST",headers:{
     host:"app.example.test",origin:"https://app.example.test",
     "sec-fetch-site":"cross-site",cookie:"vy_lawyer_session="+token
@@ -623,7 +623,7 @@ test("admin password reset revokes every previously issued lawyer session", asyn
 
   const email = "session@example.test";
   values.set("vy:lawyer:email:" + crypto.createHash("sha256").update(email).digest("hex"), legacyLawyerId);
-  const login = require("../api/lawyer/login");
+  const login = require("../handlers/lawyer/login");
   const loginRes = responseMock();
   const sameOrigin = { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "same-origin", "x-real-ip": "192.0.2.44" };
   await login({ method: "POST", headers: sameOrigin, body: { email, password: "another-strong-password" } }, loginRes);
@@ -678,8 +678,8 @@ test("unlimited credits do not bypass the foreign-law Pro gate", async () => {
   const previousSecret = process.env.APP_SECRET;
   process.env.APP_SECRET = "test-foreign-law-gate-secret";
   process.env.AI_API_KEY = "test-ai-key";
-  delete require.cache[require.resolve("../api/chat")];
-  const chat = require("../api/chat");
+  delete require.cache[require.resolve("../handlers/chat")];
+  const chat = require("../handlers/chat");
   const res = responseMock();
   try {
     await chat({
@@ -689,7 +689,7 @@ test("unlimited credits do not bypass the foreign-law Pro gate", async () => {
     }, res);
   } finally {
     quota.getAccount = originalGetAccount;
-    delete require.cache[require.resolve("../api/chat")];
+    delete require.cache[require.resolve("../handlers/chat")];
     delete process.env.AI_API_KEY;
     if (previousSecret === undefined) delete process.env.APP_SECRET;
     else process.env.APP_SECRET = previousSecret;
@@ -699,17 +699,17 @@ test("unlimited credits do not bypass the foreign-law Pro gate", async () => {
 });
 
 test("lawyer question retention uses a validated default and preserves expiry on replies", async () => {
-  const { questionRetentionSeconds } = require("../api/questions/create");
+  const { questionRetentionSeconds } = require("../handlers/questions/create");
   assert.equal(questionRetentionSeconds(undefined), 90 * 86400);
   assert.equal(questionRetentionSeconds("30"), 30 * 86400);
   assert.throws(() => questionRetentionSeconds("0"), /QUESTION_RETENTION_DAYS/);
   assert.throws(() => questionRetentionSeconds("3651"), /QUESTION_RETENTION_DAYS/);
-  const replySource = require("fs").readFileSync(require.resolve("../api/lawyer/reply"), "utf8");
+  const replySource = require("fs").readFileSync(require.resolve("../handlers/lawyer/reply"), "utf8");
   assert.match(replySource, /'KEEPTTL'/);
 });
 
 test("daily lawyer-question counter increments through one atomic Redis operation", async () => {
-  const { incrementDailyQuestionCount } = require("../api/questions/create");
+  const { incrementDailyQuestionCount } = require("../handlers/questions/create");
   const key = "vy:user:" + "9".repeat(48) + ":question-limit";
   assert.equal(await incrementDailyQuestionCount(key), 1);
   assert.equal(await incrementDailyQuestionCount(key), 2);
@@ -747,8 +747,8 @@ test("public chat returns 429 with Retry-After after the IP request threshold", 
   const ip = "198.51.100.17";
   const digest = crypto.createHmac("sha256", process.env.APP_SECRET).update(ip).digest("hex");
   values.set("vy:ratelimit:chat:" + digest, "40");
-  delete require.cache[require.resolve("../api/chat")];
-  const chat = require("../api/chat");
+  delete require.cache[require.resolve("../handlers/chat")];
+  const chat = require("../handlers/chat");
   const res = responseMock();
   try {
     await chat({
@@ -757,7 +757,7 @@ test("public chat returns 429 with Retry-After after the IP request threshold", 
       body: { consent: true, message: "یک پرسش حقوقی آزمایشی" }
     }, res);
   } finally {
-    delete require.cache[require.resolve("../api/chat")];
+    delete require.cache[require.resolve("../handlers/chat")];
     if (previousSecret === undefined) delete process.env.APP_SECRET;
     else process.env.APP_SECRET = previousSecret;
     if (previousKey === undefined) delete process.env.AI_API_KEY;
@@ -775,7 +775,7 @@ test("public usage and lawyer-directory reads enforce per-IP request ceilings", 
   try {
     const usageDigest = crypto.createHmac("sha256", process.env.APP_SECRET).update(ip).digest("hex");
     values.set("vy:ratelimit:usage:" + usageDigest, "120");
-    const usage = require("../api/usage");
+    const usage = require("../handlers/usage");
     const usageRes = responseMock();
     await usage({ method: "GET", headers: { "x-real-ip": ip } }, usageRes);
     assert.equal(usageRes.statusCode, 429);
@@ -784,7 +784,7 @@ test("public usage and lawyer-directory reads enforce per-IP request ceilings", 
 
     const lawyersDigest = crypto.createHmac("sha256", process.env.APP_SECRET).update(ip).digest("hex");
     values.set("vy:ratelimit:lawyers-active:" + lawyersDigest, "60");
-    const activeLawyers = require("../api/lawyers/active");
+    const activeLawyers = require("../handlers/lawyers/active");
     const lawyersRes = responseMock();
     await activeLawyers({ method: "GET", headers: { "x-real-ip": ip } }, lawyersRes);
     assert.equal(lawyersRes.statusCode, 429);
@@ -803,7 +803,7 @@ test("question history and deletion endpoints enforce independent IP limits befo
   const digest = crypto.createHmac("sha256", process.env.APP_SECRET).update(ip).digest("hex");
   try {
     values.set("vy:ratelimit:question-history:" + digest, "120");
-    const mine = require("../api/questions/mine");
+    const mine = require("../handlers/questions/mine");
     const historyRes = responseMock();
     await mine({ method: "GET", headers: { "x-real-ip": ip } }, historyRes);
     assert.equal(historyRes.statusCode, 429);
@@ -830,9 +830,9 @@ test("lawyer profile, inbox, and reply endpoints enforce independent IP limits",
   const ip = "198.51.100.91";
   const digest = crypto.createHmac("sha256", process.env.APP_SECRET).update(ip).digest("hex");
   const scenarios = [
-    { path: "lawyer-me", limit: 120, module: "../api/lawyer/me", method: "GET", headers: { "x-real-ip": ip }, code: "LAWYER_PROFILE_RATE_LIMITED" },
-    { path: "lawyer-inbox", limit: 60, module: "../api/lawyer/questions", method: "GET", headers: { "x-real-ip": ip }, code: "LAWYER_INBOX_RATE_LIMITED" },
-    { path: "lawyer-reply", limit: 40, module: "../api/lawyer/reply", method: "POST", headers: { host: "app.example.test", origin: "https://app.example.test", "x-real-ip": ip }, code: "LAWYER_REPLY_RATE_LIMITED" }
+    { path: "lawyer-me", limit: 120, module: "../handlers/lawyer/me", method: "GET", headers: { "x-real-ip": ip }, code: "LAWYER_PROFILE_RATE_LIMITED" },
+    { path: "lawyer-inbox", limit: 60, module: "../handlers/lawyer/questions", method: "GET", headers: { "x-real-ip": ip }, code: "LAWYER_INBOX_RATE_LIMITED" },
+    { path: "lawyer-reply", limit: 40, module: "../handlers/lawyer/reply", method: "POST", headers: { host: "app.example.test", origin: "https://app.example.test", "x-real-ip": ip }, code: "LAWYER_REPLY_RATE_LIMITED" }
   ];
   try {
     for (const item of scenarios) {
@@ -857,7 +857,7 @@ test("lawyer question submissions have an independent hashed IP limit", async ()
   const digest = crypto.createHmac("sha256", process.env.APP_SECRET).update(ip).digest("hex");
   values.set("vy:ratelimit:lawyer-question:" + digest, "10");
   try {
-    const createQuestion = require("../api/questions/create");
+    const createQuestion = require("../handlers/questions/create");
     const res = responseMock();
     await createQuestion({
       method: "POST",
@@ -874,7 +874,7 @@ test("lawyer question submissions have an independent hashed IP limit", async ()
 });
 
 test("lawyer replies are idempotent and reject request IDs reused with different content", async () => {
-  const replyHandler=require("../api/lawyer/reply");
+  const replyHandler=require("../handlers/lawyer/reply");
   const lawyerId="c".repeat(32), questionId="d".repeat(32), token="e".repeat(64);
   const sessionKey="vy:lawyer:session:"+crypto.createHash("sha256").update(token).digest("hex");
   values.set(sessionKey,lawyerId+":0");
@@ -981,7 +981,7 @@ test("lawyer login rate limits increment atomically with a bounded TTL", async (
 
 
 test("question deletion atomically verifies ownership and removes both indexes", async () => {
-  const { deleteOwnedQuestion } = require("../api/questions/mine");
+  const { deleteOwnedQuestion } = require("../handlers/questions/mine");
   const questionId = "7".repeat(32);
   const userId = "8".repeat(48);
   const lawyerId = "9".repeat(32);
@@ -1084,7 +1084,7 @@ test("admin lawyer endpoint rejects an invalid manager key", async () => {
 
 
 test("stale and expired question IDs are pruned from the user index", async () => {
-  const { pruneQuestionIndex } = require("../api/questions/mine");
+  const { pruneQuestionIndex } = require("../handlers/questions/mine");
   const key = "vy:user:" + "6".repeat(48) + ":questions";
   const stale = "a".repeat(32);
   const live = "b".repeat(32);
@@ -1096,7 +1096,7 @@ test("stale and expired question IDs are pruned from the user index", async () =
 
 
 test("invalid retention configuration is checked before daily quota mutation", () => {
-  const source = require("fs").readFileSync(require.resolve("../api/questions/create"), "utf8");
+  const source = require("fs").readFileSync(require.resolve("../handlers/questions/create"), "utf8");
   const validation = source.indexOf("const retentionSeconds = questionRetentionSeconds();");
   const quotaMutation = source.indexOf("await createQuestionWithDailyLimit({");
   assert.ok(validation >= 0 && quotaMutation > validation,
@@ -1174,12 +1174,12 @@ test("user-to-lawyer question lifecycle works across create, inbox, reply, histo
   values.set("vy:lawyer:email:" + crypto.createHash("sha256").update("lifecycle@example.test").digest("hex"), lawyerId);
 
   const sameOrigin = { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "same-origin", "x-real-ip": "192.0.2.44" };
-  const createQuestion = require("../api/questions/create");
-  const mine = require("../api/questions/mine");
-  const login = require("../api/lawyer/login");
-  const me = require("../api/lawyer/me");
-  const inbox = require("../api/lawyer/questions");
-  const reply = require("../api/lawyer/reply");
+  const createQuestion = require("../handlers/questions/create");
+  const mine = require("../handlers/questions/mine");
+  const login = require("../handlers/lawyer/login");
+  const me = require("../handlers/lawyer/me");
+  const inbox = require("../handlers/lawyer/questions");
+  const reply = require("../handlers/lawyer/reply");
 
   const createRes = responseMock();
   await createQuestion({ method: "POST", headers: { ...sameOrigin, cookie: userCookie },
@@ -1424,7 +1424,7 @@ test("admin credit endpoint rejects invalid identities, amounts, and non-POST re
 });
 
 test("daily question limit and question storage are one atomic bounded operation", async () => {
-  const { createQuestionWithDailyLimit } = require("../api/questions/create");
+  const { createQuestionWithDailyLimit } = require("../handlers/questions/create");
   const counterKey = "vy:user:" + "7".repeat(48) + ":question-limit";
   const lawyerListKey = "vy:lawyer:" + "8".repeat(32) + ":questions";
   const userListKey = "vy:user:" + "7".repeat(48) + ":questions";
@@ -1457,7 +1457,7 @@ test("daily question limit and question storage are one atomic bounded operation
 
 
 test("country validation accepts Persian and Latin names but rejects prompt-injection text", () => {
-  const { isValidCountryName } = require("../api/chat");
+  const { isValidCountryName } = require("../handlers/chat");
   assert.equal(isValidCountryName("ایران"), true);
   assert.equal(isValidCountryName("Germany"), true);
   assert.equal(isValidCountryName("United States"), true);
@@ -1469,8 +1469,8 @@ test("country validation accepts Persian and Latin names but rejects prompt-inje
 test("chat rejects malformed legal scope and prompt-injection country metadata before provider access", async () => {
   const previousKey = process.env.AI_API_KEY;
   process.env.AI_API_KEY = "test-ai-key";
-  delete require.cache[require.resolve("../api/chat")];
-  const chat = require("../api/chat");
+  delete require.cache[require.resolve("../handlers/chat")];
+  const chat = require("../handlers/chat");
   const headers = {
     host: "app.example.test", origin: "https://app.example.test",
     "sec-fetch-site": "same-origin", "x-real-ip": "203.0.113.91"
@@ -1492,7 +1492,7 @@ test("chat rejects malformed legal scope and prompt-injection country metadata b
     assert.equal(badCountry.statusCode, 400);
     assert.equal(badCountry.body.code, "INVALID_COUNTRY");
   } finally {
-    delete require.cache[require.resolve("../api/chat")];
+    delete require.cache[require.resolve("../handlers/chat")];
     if (previousKey === undefined) delete process.env.AI_API_KEY;
     else process.env.AI_API_KEY = previousKey;
   }
@@ -1518,8 +1518,8 @@ test("chat commits reserved credits only after a valid AI response", async () =>
     }
     return originalFetch(url, options);
   };
-  delete require.cache[require.resolve("../api/chat")];
-  const chat = require("../api/chat");
+  delete require.cache[require.resolve("../handlers/chat")];
+  const chat = require("../handlers/chat");
   const res = responseMock();
   try {
     await chat({
@@ -1539,7 +1539,7 @@ test("chat commits reserved credits only after a valid AI response", async () =>
     assert.ok(commitKeys.every(key => !values.has(key.replace("vy:commit:", "vy:reservation:"))));
   } finally {
     global.fetch = originalFetch;
-    delete require.cache[require.resolve("../api/chat")];
+    delete require.cache[require.resolve("../handlers/chat")];
     for (const [key, value] of Object.entries(previous)) {
       const envKey = {secret:"APP_SECRET",key:"AI_API_KEY",url:"AI_API_URL",model:"AI_MODEL"}[key];
       if (value === undefined) delete process.env[envKey];
@@ -1570,8 +1570,8 @@ test("chat refunds reserved credits when the AI provider rejects the request", a
     }
     return originalFetch(url, options);
   };
-  delete require.cache[require.resolve("../api/chat")];
-  const chat = require("../api/chat");
+  delete require.cache[require.resolve("../handlers/chat")];
+  const chat = require("../handlers/chat");
   const res = responseMock();
   try {
     await chat({
@@ -1593,7 +1593,7 @@ test("chat refunds reserved credits when the AI provider rejects the request", a
   } finally {
     global.fetch = originalFetch;
     console.error = originalConsoleError;
-    delete require.cache[require.resolve("../api/chat")];
+    delete require.cache[require.resolve("../handlers/chat")];
     for (const [key, value] of Object.entries(previous)) {
       const envKey = {secret:"APP_SECRET",key:"AI_API_KEY",url:"AI_API_URL",model:"AI_MODEL"}[key];
       if (value === undefined) delete process.env[envKey];
@@ -1614,8 +1614,8 @@ test("chat refunds credits when the provider response contains invalid or oversi
   global.fetch = async (url, options) => String(url) === process.env.AI_API_URL
     ? { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: { unsafe: true } } }] }) }
     : originalFetch(url, options);
-  delete require.cache[require.resolve("../api/chat")];
-  const chat = require("../api/chat"), res = responseMock();
+  delete require.cache[require.resolve("../handlers/chat")];
+  const chat = require("../handlers/chat"), res = responseMock();
   try {
     await chat({
       method: "POST",
@@ -1628,7 +1628,7 @@ test("chat refunds credits when the provider response contains invalid or oversi
     assert.ok([...values.keys()].some(key => key.startsWith("vy:refund:")));
   } finally {
     global.fetch = originalFetch;
-    delete require.cache[require.resolve("../api/chat")];
+    delete require.cache[require.resolve("../handlers/chat")];
     for (const [key, value] of Object.entries(previous)) {
       const envKey = { secret: "APP_SECRET", key: "AI_API_KEY", url: "AI_API_URL" }[key];
       if (value === undefined) delete process.env[envKey]; else process.env[envKey] = value;
@@ -1647,8 +1647,8 @@ test("chat refunds credits when the AI provider returns oversized text", async (
   global.fetch = async (url, options) => String(url) === process.env.AI_API_URL
     ? { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: "x".repeat(24001) } }] }) }
     : originalFetch(url, options);
-  delete require.cache[require.resolve("../api/chat")];
-  const chat = require("../api/chat"), res = responseMock();
+  delete require.cache[require.resolve("../handlers/chat")];
+  const chat = require("../handlers/chat"), res = responseMock();
   try {
     await chat({
       method: "POST",
@@ -1661,7 +1661,7 @@ test("chat refunds credits when the AI provider returns oversized text", async (
     assert.ok([...values.keys()].some(key => key.startsWith("vy:refund:")));
   } finally {
     global.fetch = originalFetch;
-    delete require.cache[require.resolve("../api/chat")];
+    delete require.cache[require.resolve("../handlers/chat")];
     for (const [key, value] of Object.entries(previous)) {
       const envKey = { secret: "APP_SECRET", key: "AI_API_KEY", url: "AI_API_URL" }[key];
       if (value === undefined) delete process.env[envKey]; else process.env[envKey] = value;
@@ -1682,8 +1682,8 @@ test("chat refunds reserved credits after an AI provider network timeout", async
     if (String(url) === process.env.AI_API_URL) throw new Error("simulated provider network timeout");
     return originalFetch(url, options);
   };
-  delete require.cache[require.resolve("../api/chat")];
-  const chat = require("../api/chat"), res = responseMock();
+  delete require.cache[require.resolve("../handlers/chat")];
+  const chat = require("../handlers/chat"), res = responseMock();
   try {
     await chat({
       method: "POST",
@@ -1695,7 +1695,7 @@ test("chat refunds reserved credits after an AI provider network timeout", async
     assert.ok([...values.keys()].some(key => key.startsWith("vy:refund:")));
   } finally {
     global.fetch = originalFetch;
-    delete require.cache[require.resolve("../api/chat")];
+    delete require.cache[require.resolve("../handlers/chat")];
     for (const [key, value] of Object.entries(previous)) {
       const envKey = { secret: "APP_SECRET", key: "AI_API_KEY", url: "AI_API_URL" }[key];
       if (value === undefined) delete process.env[envKey]; else process.env[envKey] = value;
@@ -1734,7 +1734,7 @@ test("anonymous user identity cookie is signed, HttpOnly, Secure, and tampering 
 
 
 test("chat diagnostics never log raw exception messages or objects", () => {
-  const source = fs.readFileSync(require.resolve("../api/chat"), "utf8");
+  const source = fs.readFileSync(require.resolve("../handlers/chat"), "utf8");
   assert.ok(source.includes('console.error("Chat IP rate-limit failure:", diagnosticCode)'));
   assert.ok(source.includes('console.error("Chat API failure:", diagnosticCode)'));
   assert.ok(source.includes('console.error("Credit refund failed")'));
@@ -1746,25 +1746,25 @@ test("chat diagnostics never log raw exception messages or objects", () => {
 
 test("API error logs do not include raw exception messages or objects", () => {
   const apiFiles = [
-    "../api/admin/grant-credits",
-    "../api/admin/lawyers",
-    "../api/lawyer/login",
-    "../api/lawyer/logout",
-    "../api/lawyer/me",
-    "../api/lawyer/questions",
-    "../api/lawyer/reply",
-    "../api/lawyers/active",
-    "../api/questions/create",
-    "../api/questions/mine",
-    "../api/users/register",
-    "../api/users/login",
-    "../api/users/verify",
-    "../api/users/me",
-    "../api/users/logout",
-    "../api/users/resend-verification",
-    "../api/lawyer/verify-email",
-    "../api/lawyer/resend-verification",
-    "../api/usage"
+    "../handlers/admin/grant-credits",
+    "../handlers/admin/lawyers",
+    "../handlers/lawyer/login",
+    "../handlers/lawyer/logout",
+    "../handlers/lawyer/me",
+    "../handlers/lawyer/questions",
+    "../handlers/lawyer/reply",
+    "../handlers/lawyers/active",
+    "../handlers/questions/create",
+    "../handlers/questions/mine",
+    "../handlers/users/register",
+    "../handlers/users/login",
+    "../handlers/users/verify",
+    "../handlers/users/me",
+    "../handlers/users/logout",
+    "../handlers/users/resend-verification",
+    "../handlers/lawyer/verify-email",
+    "../handlers/lawyer/resend-verification",
+    "../handlers/usage"
   ];
   for (const file of apiFiles) {
     const source = fs.readFileSync(require.resolve(file), "utf8");
@@ -1774,7 +1774,7 @@ test("API error logs do not include raw exception messages or objects", () => {
 
 
 test("usage API never returns raw storage exception details", () => {
-  const source = fs.readFileSync(require.resolve("../api/usage"), "utf8");
+  const source = fs.readFileSync(require.resolve("../handlers/usage"), "utf8");
   assert.doesNotMatch(source, /storage_detail/);
   assert.doesNotMatch(source, /error\.message/);
   assert.match(source, /storage_diagnostic: missing\.length \? null : "REDIS_STORAGE_ERROR"/);
@@ -1788,7 +1788,7 @@ test("admin auth diagnostics never log raw rate-limit exception details", () => 
 
 
 test("opening a lawyer verification link does not consume its token; explicit POST verifies once", async () => {
-  const verify = require("../api/lawyer/verify-email");
+  const verify = require("../handlers/lawyer/verify-email");
   const id = "f".repeat(32);
   const token = "c".repeat(64);
   const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
@@ -1848,7 +1848,7 @@ test("opening a lawyer verification link does not consume its token; explicit PO
 
 
 test("lawyer verification resend rotates the active token and applies an IP limit", async () => {
-  const resend = require("../api/lawyer/resend-verification");
+  const resend = require("../handlers/lawyer/resend-verification");
   const id = "e".repeat(32);
   const email = "resend-lawyer@example.test";
   const lawyerKey = "vy:lawyer:" + id;

@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { sendWelcomeEmail, escapeHtml } = require("../lib/email");
+const { sendWelcomeEmail, escapeHtml, getAppBaseUrl } = require("../lib/email");
 
 test("welcome email safely escapes user-provided HTML", () => {
   assert.equal(escapeHtml('<script a="b">&'), '&lt;script a=&quot;b&quot;&gt;&amp;');
@@ -97,5 +97,20 @@ test("lawyer verification email sends a one-time URL without exposing it in the 
     if (old.key === undefined) delete process.env.RESEND_API_KEY; else process.env.RESEND_API_KEY = old.key;
     if (old.from === undefined) delete process.env.RESEND_FROM_EMAIL; else process.env.RESEND_FROM_EMAIL = old.from;
     if (old.base === undefined) delete process.env.APP_BASE_URL; else process.env.APP_BASE_URL = old.base;
+  }
+});
+
+test("preview email links use the current Vercel deployment when APP_BASE_URL is unset", () => {
+  const oldBase = process.env.APP_BASE_URL;
+  const oldVercelUrl = process.env.VERCEL_URL;
+  try {
+    delete process.env.APP_BASE_URL;
+    process.env.VERCEL_URL = "vakilyar-preview.example.vercel.app";
+    assert.equal(getAppBaseUrl(), "https://vakilyar-preview.example.vercel.app");
+    process.env.APP_BASE_URL = "https://custom.example.test/";
+    assert.equal(getAppBaseUrl(), "https://custom.example.test");
+  } finally {
+    if (oldBase === undefined) delete process.env.APP_BASE_URL; else process.env.APP_BASE_URL = oldBase;
+    if (oldVercelUrl === undefined) delete process.env.VERCEL_URL; else process.env.VERCEL_URL = oldVercelUrl;
   }
 });
