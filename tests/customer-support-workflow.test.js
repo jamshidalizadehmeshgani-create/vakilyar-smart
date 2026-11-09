@@ -7,6 +7,8 @@ const read = path => fs.readFileSync(path, "utf8");
 test("support requests are authenticated to the signed guest UID and rate limited", () => {
   const source = read("api/support/request.js");
   assert.match(source, /consumeIpRateLimit/);
+  assert.match(source, /originHost !== host/);
+  assert.match(source, /sec-fetch-site/);
   assert.match(source, /getUid\(req, res\)/);
   assert.match(source, /vy:support:inbox/);
   assert.match(source, /7776000/);
