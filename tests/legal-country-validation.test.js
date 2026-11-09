@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 const { isKnownCountry } = require("../lib/legal-sources/jurisdiction");
 
 test("country labels accept known Persian and English jurisdictions", () => {
-  for (const country of ["ایران", "آلمان", "ژاپن", "Germany", "United States"]) {
+  for (const country of ["ایران", "آلمان", "ژاپن", "Germany", "United States", "ایسلند", "Portugal", "Ireland"]) {
     assert.equal(isKnownCountry(country), true, country);
   }
 });
