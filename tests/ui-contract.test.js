@@ -51,7 +51,6 @@ test("question history and lawyer inbox announce updates accessibly", () => {
   assert.match(read("public/lawyer-panel.html"), /id="questions"[^>]*aria-live="polite"/);
 });
 
-
 test("question submission UI retains a stable retry ID across reloads", () => {
   const ask=read("public/ask-lawyer.html");
   assert.match(ask,/sessionStorage\.getItem\("vy_pending_question"\)/);
@@ -98,7 +97,6 @@ test("admin panels keep manager credentials in password fields and send them onl
   assert.match(credits, /sessionStorage\.getItem\(["']vy_pending_credit_grant["']/);
 });
 
-
 test("lawyer login form mirrors server input limits and prevents duplicate submits", () => {
   const login = read("public/lawyer-login.html");
   assert.match(login, /id="email" type="email"[^>]*maxlength="190"/);
@@ -110,7 +108,6 @@ test("lawyer login form mirrors server input limits and prevents duplicate submi
   assert.match(login, /aria-live="polite"/);
 });
 
-
 test("lawyer question form announces submission feedback accessibly", () => {
   const ask = read("public/ask-lawyer.html");
   assert.match(ask, /id="msg"[^>]*role="status"[^>]*aria-live="polite"[^>]*aria-atomic="true"/);
@@ -118,7 +115,6 @@ test("lawyer question form announces submission feedback accessibly", () => {
   assert.match(ask, /<select id="lawyer" required>/);
   assert.match(ask, /<input type="checkbox" id="consent" required>/);
 });
-
 
 test("lawyer reply feedback uses an accessible live status instead of alert dialogs", () => {
   const panel = read("public/lawyer-panel.html");
@@ -129,7 +125,6 @@ test("lawyer reply feedback uses an accessible live status instead of alert dial
   assert.doesNotMatch(panel, /alert\(dd\.message/);
 });
 
-
 test("admin panels announce operation results and prevent repeated lawyer-management clicks", () => {
   const lawyers = read("public/admin-lawyers.html");
   const credits = read("public/admin-credits.html");
@@ -137,7 +132,7 @@ test("admin panels announce operation results and prevent repeated lawyer-manage
     assert.match(html, /id="result"[^>]*role="status"[^>]*aria-live="polite"[^>]*aria-atomic="true"/);
   }
   assert.match(lawyers, /controls\.forEach\(button=>button\.disabled=true\)/);
-  assert.match(lawyers, /finally\{controls\.forEach\(button=>button\.disabled=false\);\}/);
+  assert.match(lawyers, /finally\{controls\.forEach\(button=>button\.disabled=false;\}\)/);
 });
 
 test("all public pages avoid dangerous HTML parsing and dynamic code execution sinks", () => {
@@ -160,4 +155,13 @@ test("all public pages avoid dangerous HTML parsing and dynamic code execution s
       assert.doesNotMatch(html, pattern, page + " contains unsafe " + label);
     }
   }
+});
+
+test("admin support inbox offers optional browser notifications without external services", () => {
+  const admin = read("public/admin-support.html");
+  assert.match(admin, /id="enableNotifications"/);
+  assert.match(admin, /Notification\.requestPermission\(\)/);
+  assert.match(admin, /new Notification\(/);
+  assert.match(admin, /setInterval\(\(\)=>\{if\(\$\("key"\)\.value\.trim\(\)\)load\(\);\},60000\)/);
+  assert.match(admin, /knownCaseIds/);
 });
