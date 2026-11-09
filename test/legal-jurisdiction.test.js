@@ -23,7 +23,7 @@ test("explicit foreign scope or country is classified as foreign", () => {
 
 test("foreign law phrases and country mentions are detected", () => {
   assert.equal(isForeignLegalRequest("قوانین آلمان درباره اجاره", "", ""), true);
-  assert.equal(isForeignLegalRequest("حقوق بین‌الملل خصوصی چیست؟", "", ""), true);
+  assert.equal(isForeignLegalRequest("حقوق بین‌الملل خصوصی چیست؟", "", ""), true);\n  assert.equal(isForeignLegalRequest("حقوق بین‌الملل خصوصی چیست؟", "", ""), true);
   assert.equal(mentionsForeignCountry("I live in Germany."), true);
   assert.equal(mentionsForeignCountry("قانون کشور ژاپن"), true);
 });
@@ -31,7 +31,7 @@ test("foreign law phrases and country mentions are detected", () => {
 test("country names are matched as whole words, not substrings", () => {
   assert.equal(mentionsForeignCountry("The word germanic is not a country."), false);
   assert.equal(mentionsForeignCountry("germanic terminology only"), false);
-  assert.equal(mentionsForeignCountry("فرانسه"), true);
+  assert.equal(mentionsForeignCountry("فرانسه"), true);\n  assert.equal(mentionsForeignCountry("آفریقای‌جنوبی"), true);\n  assert.equal(mentionsForeignCountry("كويت"), true);\n  assert.equal(isIranScope("ايـران"), false);
   assert.equal(mentionsForeignCountry("فرانسوی"), false);
 });
 
