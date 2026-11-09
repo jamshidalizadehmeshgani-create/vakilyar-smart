@@ -165,3 +165,18 @@ test("admin support inbox offers optional browser notifications without external
   assert.match(admin, /setInterval\(\(\)=>\{if\(\$\("key"\)\.value\.trim\(\)\)load\(\);\},60000\)/);
   assert.match(admin, /knownCaseIds/);
 });
+
+
+test("support form clearly explains retention and warns against sending sensitive data", () => {
+  const page = read("public/support.html");
+  assert.match(page, /۹۰ روز/);
+  assert.match(page, /شماره ملی/);
+  assert.match(page, /اطلاعات بانکی/);
+});
+
+test("support notifications degrade gracefully when system notifications are unavailable", () => {
+  const admin = read("public/admin-support.html");
+  assert.match(admin, /try\{const notification=new Notification/);
+  assert.match(admin, /اعلان سیستمی در این مرورگر پشتیبانی نشد/);
+  assert.match(admin, /درخواست پشتیبانی جدید ثبت شده است/);
+});
