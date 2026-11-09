@@ -68,13 +68,14 @@ test("usage endpoint preserves only the documented safe storage error codes", as
   process.env.UPSTASH_REDIS_REST_TOKEN = "test-token";
 
   try {
-    const handler = require("../handlers/usage");
     for (const code of safeCodes) {
       quota.consumeIpRateLimit = async () => {
         const error = new Error("internal failure");
         error.code = code;
         throw error;
       };
+      delete require.cache[require.resolve("../handlers/usage")];
+      const handler = require("../handlers/usage");
 
       let payload;
       let statusCode;
