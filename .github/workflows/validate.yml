@@ -35,7 +35,7 @@ jobs:
         run: |
           node <<'NODE'
           const fs = require('node:fs');
-          const required = new Set(['public/admin-credits.html', 'public/admin-lawyers.html', 'public/lawyer-login.html', 'public/lawyer-panel.html', 'public/index.html']);
+          const required = new Set(['public/admin-credits.html', 'public/admin-lawyers.html', 'public/lawyer-login.html', 'public/lawyer-panel.html', 'public/index.html', 'public/support.html', 'public/admin-support.html']);
           const files = [...required, 'public/ask-lawyer.html'];
           for (const file of files) {
             const html = fs.readFileSync(file, 'utf8');
