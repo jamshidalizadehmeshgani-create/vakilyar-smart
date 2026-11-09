@@ -26,5 +26,5 @@ test("country labels reject arbitrary text and prompt-injection payloads", () =>
 test("country matching is whitespace and Arabic/Persian normalization safe", () => {
   assert.equal(isKnownCountry("  آلمان  "), true);
   assert.equal(isKnownCountry("ایالات متحده"), true);
-  assert.equal(isKnownCountry("كندا"), false);
+  assert.equal(isKnownCountry("كندا"), true);
 });
