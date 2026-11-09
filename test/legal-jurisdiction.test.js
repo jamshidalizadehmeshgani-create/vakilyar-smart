@@ -31,7 +31,7 @@ test("foreign law phrases and country mentions are detected", () => {
 test("country names are matched as whole words, not substrings", () => {
   assert.equal(mentionsForeignCountry("The word germanic is not a country."), false);
   assert.equal(mentionsForeignCountry("germanic terminology only"), false);
-  assert.equal(mentionsForeignCountry("فرانسه"), true);\n  assert.equal(mentionsForeignCountry("آفریقای‌جنوبی"), true);\n  assert.equal(mentionsForeignCountry("كويت"), true);\n  assert.equal(isIranScope("ايـران"), false);
+  assert.equal(mentionsForeignCountry("فرانسه"), true);\n  assert.equal(mentionsForeignCountry("آفریقای‌جنوبی"), true);\n  assert.equal(mentionsForeignCountry("كويت"), true);\n  assert.equal(isIranScope("ايـران"), true);
   assert.equal(mentionsForeignCountry("فرانسوی"), false);
 });
 
