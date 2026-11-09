@@ -2,7 +2,7 @@ const crypto = require("crypto");
 const { getAccount, classifyRequest, reserveCredits, refundReservation, commitReservation, consumeIpRateLimit } = require("../lib/quota");
 const { getIranLeaseLawContext } = require("../lib/legal-sources/iran-civil-code-lease");
 const { buildChatSystemMessage } = require("../lib/legal-sources/chat-prompt");
-const { isForeignLegalRequest, isKnownCountry } = require("../lib/legal-sources/jurisdiction");
+const { isForeignLegalRequest, isValidCountryLabel } = require("../lib/legal-sources/jurisdiction");
 
 const SYSTEM_PROMPT = `تو «وکیل‌یار هوشمند» هستی؛ دستیار ارائه‌دهنده اطلاعات عمومی و آموزشی حقوقی.
 اصول الزامی:
@@ -19,9 +19,6 @@ const SYSTEM_PROMPT = `تو «وکیل‌یار هوشمند» هستی؛ دست
 - در صورت تناسب، پاسخ را با بخش‌های «خلاصه پاسخ»، «مبنای حقوقی و حدود اطمینان»، «اقدام‌های پیشنهادی» و «اطلاعات تکمیلی لازم» تنظیم کن.
 - اگر منبع رسمی یا پایگاه قوانین به تو متصل نیست، ادعا نکن که قانون را جست‌وجو یا آخرین اصلاحات را بررسی کرده‌ای.`;
 
-function isValidCountryName(value) {
-  return typeof value === "string" && value.length <= 60 && isKnownCountry(value);
-}
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
@@ -53,7 +50,7 @@ module.exports = async (req, res) => {
        !["iran", "international", "foreign"].includes(requestedScopeInput.trim().toLowerCase()))) {
     return res.status(400).json({ code: "INVALID_LEGAL_SCOPE", error: "حوزه حقوقی انتخاب‌شده معتبر نیست." });
   }
-  if (requestedCountryInput !== undefined && !isValidCountryName(requestedCountryInput)) {
+  if (requestedCountryInput !== undefined && !isValidCountryLabel(requestedCountryInput)) {
     return res.status(400).json({ code: "INVALID_COUNTRY", error: "نام کشور باید کوتاه و فقط شامل حروف باشد." });
   }
   const countryLabel = typeof requestedCountryInput === "string" ? requestedCountryInput.trim() : "";
@@ -149,4 +146,4 @@ module.exports = async (req, res) => {
 };
 
 
-module.exports.isValidCountryName = isValidCountryName;
+module.exports.isValidCountryLabel = isValidCountryLabel;
