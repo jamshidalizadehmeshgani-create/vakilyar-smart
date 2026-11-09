@@ -20,7 +20,7 @@ const SYSTEM_PROMPT = `تو «وکیل‌یار هوشمند» هستی؛ دست
 - اگر منبع رسمی یا پایگاه قوانین به تو متصل نیست، ادعا نکن که قانون را جست‌وجو یا آخرین اصلاحات را بررسی کرده‌ای.`;
 
 function isValidCountryName(value) {
-  return typeof value === "string" && value.trim().length <= 60 && isKnownCountry(value);
+  return typeof value === "string" && value.length <= 60 && isKnownCountry(value);
 }
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
