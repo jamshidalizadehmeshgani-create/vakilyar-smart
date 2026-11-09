@@ -132,7 +132,7 @@ test("admin panels announce operation results and prevent repeated lawyer-manage
     assert.match(html, /id="result"[^>]*role="status"[^>]*aria-live="polite"[^>]*aria-atomic="true"/);
   }
   assert.match(lawyers, /controls\.forEach\(button=>button\.disabled=true\)/);
-  assert.match(lawyers, /finally\{controls\.forEach\(button=>button\.disabled=false;\}/);
+  assert.match(lawyers, /finally\{controls\.forEach\(button=>button\.disabled=false;\)\}/);
 });
 
 test("all public pages avoid dangerous HTML parsing and dynamic code execution sinks", () => {
