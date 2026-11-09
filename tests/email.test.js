@@ -182,7 +182,7 @@ test("user password reset email uses the deployment origin, escapes the name and
     assert.equal(requestUrl, "https://api.resend.com/emails");
     assert.deepEqual(payload.to, ["user@example.test"]);
     assert.equal(payload.subject, "پیوند امن بازیابی گذرواژه وکیل‌یار");
-    assert.match(payload.html, new RegExp("https://preview\\\\.example\\\\.vercel\\\\.app/user-reset-password\\\\.html\\\\?token=" + token));
+    assert.ok(payload.html.includes("https://preview.example.vercel.app/user-reset-password.html?token=" + token));
     assert.match(payload.html, /&lt;کاربر&gt;/);
     assert.equal(JSON.stringify(result).includes(token), false);
     assert.equal(JSON.stringify(result).includes("USER@example.test"), false);
