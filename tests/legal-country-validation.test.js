@@ -2,7 +2,12 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { isKnownCountry } = require("../lib/legal-sources/jurisdiction");
+const {
+  isKnownCountry,
+  isForeignLegalRequest,
+  mentionsForeignCountry,
+  isIranScope
+} = require("../lib/legal-sources/jurisdiction");
 
 test("country labels accept known Persian and English jurisdictions", () => {
   for (const country of ["ایران", "آلمان", "ژاپن", "Germany", "United States", "ایسلند", "Portugal", "Ireland"]) {
@@ -27,4 +32,26 @@ test("country matching is whitespace and Arabic/Persian normalization safe", () 
   assert.equal(isKnownCountry("  آلمان  "), true);
   assert.equal(isKnownCountry("ایالات متحده"), true);
   assert.equal(isKnownCountry("كندا"), true);
+});
+
+test("foreign legal routing detects a listed foreign country in a legal question", () => {
+  assert.equal(isForeignLegalRequest("قانون کار آلمان چگونه است؟"), true);
+  assert.equal(isForeignLegalRequest("قانون مدنی ژاپن", "iran"), true);
+});
+
+test("explicit foreign scope is isolated from the Iran legal context", () => {
+  assert.equal(isForeignLegalRequest("Explain contract law", "foreign", ""), true);
+  assert.equal(isForeignLegalRequest("Explain treaty law", "international", ""), true);
+});
+
+test("Iran aliases remain domestic unless the message explicitly names foreign law", () => {
+  assert.equal(isIranScope("ایران"), true);
+  assert.equal(isIranScope("IR"), true);
+  assert.equal(isForeignLegalRequest("شرایط اجاره در ایران", "iran", "ایران"), false);
+  assert.equal(isForeignLegalRequest("قانون آلمان درباره اجاره", "iran", "ایران"), true);
+});
+
+test("country matching respects Unicode word boundaries", () => {
+  assert.equal(mentionsForeignCountry("قوانین هند"), true);
+  assert.equal(mentionsForeignCountry("مهندسی نرم‌افزار"), false);
 });
