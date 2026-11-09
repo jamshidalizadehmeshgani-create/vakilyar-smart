@@ -2,7 +2,7 @@ const crypto = require("crypto");
 const { getAccount, classifyRequest, reserveCredits, refundReservation, commitReservation, consumeIpRateLimit } = require("../lib/quota");
 const { getIranLeaseLawContext } = require("../lib/legal-sources/iran-civil-code-lease");
 const { buildChatSystemMessage } = require("../lib/legal-sources/chat-prompt");
-const { isForeignLegalRequest } = require("../lib/legal-sources/jurisdiction");
+const { isForeignLegalRequest, isKnownCountry } = require("../lib/legal-sources/jurisdiction");
 
 const SYSTEM_PROMPT = `تو «وکیل‌یار هوشمند» هستی؛ دستیار ارائه‌دهنده اطلاعات عمومی و آموزشی حقوقی.
 اصول الزامی:
@@ -20,9 +20,8 @@ const SYSTEM_PROMPT = `تو «وکیل‌یار هوشمند» هستی؛ دست
 - اگر منبع رسمی یا پایگاه قوانین به تو متصل نیست، ادعا نکن که قانون را جست‌وجو یا آخرین اصلاحات را بررسی کرده‌ای.`;
 
 function isValidCountryName(value) {
-  return typeof value === "string" && value.trim().length <= 60 && /^[\p{L}\p{M}][\p{L}\p{M} .’'-]{0,59}$/u.test(value.trim());
+  return typeof value === "string" && value.trim().length <= 60 && isKnownCountry(value);
 }
-
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
