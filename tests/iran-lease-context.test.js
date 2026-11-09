@@ -42,3 +42,10 @@ test("lease article entries expose a number, subject, and non-empty source text"
     assert.ok(article.text.trim().length > 0);
   }
 });
+
+test("Article 485 states the lessee's cancellation right affirmatively", () => {
+  const article = IRAN_LEASE_ARTICLES.find((item) => item.number === 485);
+  assert.ok(article);
+  assert.match(article.text, /در این صورت حق فسخ اجاره را خواهد داشت/);
+  assert.doesNotMatch(article.text, /مگر اینکه حق فسخ اجاره را داشته باشد/);
+});
