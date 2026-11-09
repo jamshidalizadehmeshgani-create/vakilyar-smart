@@ -26,10 +26,12 @@ const handlers = new Map([
 ]);
 
 module.exports = async function apiRouter(req, res) {
+  // API responses may contain account, billing, or legal-question data.
+  // Apply the no-store policy to successful and rejected routes alike.
+  res.setHeader("Cache-Control", "no-store");
   const route = req.query && req.query.route;
 
   if (typeof route !== "string" || !handlers.has(route)) {
-    res.setHeader("Cache-Control", "no-store");
     return res.status(404).json({ error: "API route not found" });
   }
 
