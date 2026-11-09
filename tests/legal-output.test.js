@@ -41,3 +41,22 @@ test("preserves following sections even when their heading is not in the known l
   assert.match(result, /نکات تکمیلی/);
   assert.match(result, /این توضیح عمومی باید باقی بماند/);
 });
+
+test("replaces common named statute titles even without article numbers", () => {
+  const input = "طبق قانون مدنی و قانون مجازات اسلامی، همچنین قانون آیین دادرسی کیفری اقدام کنید.";
+  const result = sanitizeLegalReply(input);
+  assert.doesNotMatch(result, /قانون مدنی|قانون مجازات اسلامی|قانون آیین دادرسی کیفری/);
+  assert.equal((result.match(/عنوان قانون در این پاسخ تأیید نشده است/g) || []).length, 3);
+});
+
+test("replaces named statute titles with ZWNJ and Persian spacing variants", () => {
+  const input = "قانون حمایت خانواده و قانون روابط موجر و مستأجر باید بررسی شوند.";
+  const result = sanitizeLegalReply(input);
+  assert.doesNotMatch(result, /قانون حمایت خانواده|قانون روابط موجر و مستأجر/);
+  assert.equal((result.match(/عنوان قانون در این پاسخ تأیید نشده است/g) || []).length, 2);
+});
+
+test("does not rewrite generic use of the word law", () => {
+  const input = "قانون در این زمینه باید از منبع رسمی بررسی شود.";
+  assert.equal(sanitizeLegalReply(input), input);
+});
