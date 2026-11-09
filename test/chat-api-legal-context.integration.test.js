@@ -27,6 +27,7 @@ function createHarness(options = {}) {
     if (id === "../lib/quota") return quota;
     if (id === "../lib/legal-sources/iran-civil-code-lease") return legalSources;
     if (id === "../lib/legal-sources/chat-prompt") return chatPrompt;
+    if (id === "../lib/legal-sources/jurisdiction") return require("../lib/legal-sources/jurisdiction");
     throw new Error("Unexpected dependency in API test: " + id);
   };
   const sandbox = {
