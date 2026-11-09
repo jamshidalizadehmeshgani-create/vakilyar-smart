@@ -170,3 +170,18 @@ test("all public pages avoid dangerous HTML parsing and dynamic code execution s
     }
   }
 });
+
+
+test("password recovery navigation and pages preserve the safe reset-link flow", () => {
+  const login = read("public/user-login.html");
+  const forgot = read("public/user-forgot-password.html");
+  const reset = read("public/user-reset-password.html");
+  assert.match(login, /href="\/user-forgot-password\.html"/);
+  assert.match(forgot, /id="request"/);
+  assert.match(forgot, /\/api\/users\/request-password-reset/);
+  assert.match(reset, /name="referrer" content="no-referrer"/);
+  assert.match(reset, /history\.replaceState\(null,"",location\.pathname\)/);
+  assert.match(reset, /\/api\/users\/reset-password/);
+  assert.match(reset, /autocomplete="new-password"/);
+  assert.match(reset, /نشست‌های قبلی/);
+});
