@@ -114,3 +114,102 @@ test("preview email links use the current Vercel deployment when APP_BASE_URL is
     if (oldVercelUrl === undefined) delete process.env.VERCEL_URL; else process.env.VERCEL_URL = oldVercelUrl;
   }
 });
+
+
+test("user password reset email stays disabled without provider configuration", async () => {
+  const old = { key: process.env.RESEND_API_KEY, from: process.env.RESEND_FROM_EMAIL };
+  const originalFetch = global.fetch;
+  let calls = 0;
+  delete process.env.RESEND_API_KEY; delete process.env.RESEND_FROM_EMAIL;
+  global.fetch = async () => { calls++; throw new Error("network must not be called"); };
+  try {
+    const result = await require("../lib/email").sendUserPasswordResetEmail({
+      to: "user@example.test", name: "کاربر", token: "a".repeat(64)
+    });
+    assert.deepEqual(result, { sent: false, reason: "not_configured" });
+    assert.equal(calls, 0);
+  } finally {
+    global.fetch = originalFetch;
+    if (old.key === undefined) delete process.env.RESEND_API_KEY; else process.env.RESEND_API_KEY = old.key;
+    if (old.from === undefined) delete process.env.RESEND_FROM_EMAIL; else process.env.RESEND_FROM_EMAIL = old.from;
+  }
+});
+
+test("user password reset email rejects invalid tokens and insecure application URLs", async () => {
+  const old = { key: process.env.RESEND_API_KEY, from: process.env.RESEND_FROM_EMAIL, base: process.env.APP_BASE_URL };
+  const originalFetch = global.fetch;
+  let calls = 0;
+  process.env.RESEND_API_KEY = "test-key";
+  process.env.RESEND_FROM_EMAIL = "VakilYar <no-reply@example.test>";
+  global.fetch = async () => { calls++; throw new Error("network must not be called"); };
+  try {
+    const send = require("../lib/email").sendUserPasswordResetEmail;
+    assert.deepEqual(await send({ to: "user@example.test", name: "کاربر", token: "invalid" }), { sent: false, reason: "invalid_input" });
+    process.env.APP_BASE_URL = "http://app.example.test";
+    assert.deepEqual(await send({ to: "user@example.test", name: "کاربر", token: "a".repeat(64) }), { sent: false, reason: "invalid_app_url" });
+    assert.deepEqual(await send({ to: "bad-email", name: "کاربر", token: "a".repeat(64) }), { sent: false, reason: "invalid_input" });
+    assert.equal(calls, 0);
+  } finally {
+    global.fetch = originalFetch;
+    if (old.key === undefined) delete process.env.RESEND_API_KEY; else process.env.RESEND_API_KEY = old.key;
+    if (old.from === undefined) delete process.env.RESEND_FROM_EMAIL; else process.env.RESEND_FROM_EMAIL = old.from;
+    if (old.base === undefined) delete process.env.APP_BASE_URL; else process.env.APP_BASE_URL = old.base;
+  }
+});
+
+test("user password reset email uses the deployment origin, escapes the name and never returns the token", async () => {
+  const old = {
+    key: process.env.RESEND_API_KEY, from: process.env.RESEND_FROM_EMAIL,
+    base: process.env.APP_BASE_URL, vercel: process.env.VERCEL_URL
+  };
+  const originalFetch = global.fetch;
+  const token = "c".repeat(64);
+  let payload, requestUrl;
+  process.env.RESEND_API_KEY = "test-key";
+  process.env.RESEND_FROM_EMAIL = "VakilYar <no-reply@example.test>";
+  delete process.env.APP_BASE_URL;
+  process.env.VERCEL_URL = "preview.example.vercel.app";
+  global.fetch = async (url, options) => {
+    requestUrl = String(url);
+    payload = JSON.parse(options.body);
+    return { ok: true, status: 200 };
+  };
+  try {
+    const result = await require("../lib/email").sendUserPasswordResetEmail({
+      to: "USER@example.test", name: "<کاربر>", token
+    });
+    assert.deepEqual(result, { sent: true });
+    assert.equal(requestUrl, "https://api.resend.com/emails");
+    assert.deepEqual(payload.to, ["user@example.test"]);
+    assert.equal(payload.subject, "پیوند امن بازیابی گذرواژه وکیل‌یار");
+    assert.match(payload.html, new RegExp("https://preview\\\\.example\\\\.vercel\\\\.app/user-reset-password\\\\.html\\\\?token=" + token));
+    assert.match(payload.html, /&lt;کاربر&gt;/);
+    assert.equal(JSON.stringify(result).includes(token), false);
+    assert.equal(JSON.stringify(result).includes("USER@example.test"), false);
+  } finally {
+    global.fetch = originalFetch;
+    if (old.key === undefined) delete process.env.RESEND_API_KEY; else process.env.RESEND_API_KEY = old.key;
+    if (old.from === undefined) delete process.env.RESEND_FROM_EMAIL; else process.env.RESEND_FROM_EMAIL = old.from;
+    if (old.base === undefined) delete process.env.APP_BASE_URL; else process.env.APP_BASE_URL = old.base;
+    if (old.vercel === undefined) delete process.env.VERCEL_URL; else process.env.VERCEL_URL = old.vercel;
+  }
+});
+
+test("user password reset email hides provider failures from callers", async () => {
+  const old = { key: process.env.RESEND_API_KEY, from: process.env.RESEND_FROM_EMAIL, base: process.env.APP_BASE_URL };
+  const originalFetch = global.fetch;
+  process.env.RESEND_API_KEY = "test-key";
+  process.env.RESEND_FROM_EMAIL = "VakilYar <no-reply@example.test>";
+  process.env.APP_BASE_URL = "https://app.example.test";
+  global.fetch = async () => ({ ok: false, status: 422, json: async () => ({ message: "private provider detail" }) });
+  try {
+    assert.deepEqual(await require("../lib/email").sendUserPasswordResetEmail({
+      to: "user@example.test", name: "کاربر", token: "d".repeat(64)
+    }), { sent: false, reason: "provider_error" });
+  } finally {
+    global.fetch = originalFetch;
+    if (old.key === undefined) delete process.env.RESEND_API_KEY; else process.env.RESEND_API_KEY = old.key;
+    if (old.from === undefined) delete process.env.RESEND_FROM_EMAIL; else process.env.RESEND_FROM_EMAIL = old.from;
+    if (old.base === undefined) delete process.env.APP_BASE_URL; else process.env.APP_BASE_URL = old.base;
+  }
+});
