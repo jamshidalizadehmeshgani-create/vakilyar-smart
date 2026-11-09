@@ -55,3 +55,10 @@ test("country matching respects Unicode word boundaries", () => {
   assert.equal(mentionsForeignCountry("قوانین هند"), true);
   assert.equal(mentionsForeignCountry("مهندسی نرم‌افزار"), false);
 });
+
+test("less common foreign jurisdictions are recognized for safe routing", () => {
+  for (const country of ["نپال", "بنگلادش", "ویتنام", "Nepal", "Bangladesh", "Vietnam", "Costa Rica"]) {
+    assert.equal(isKnownCountry(country), true, country);
+    assert.equal(mentionsForeignCountry("قانون کار " + country), true, country);
+  }
+});
