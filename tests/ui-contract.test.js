@@ -81,7 +81,7 @@ test("lawyer reply UI retains the same operation ID after an uncertain network r
 test("all public pages declare Persian RTL document metadata", () => {
   const pages = [
     "index.html", "ask-lawyer.html", "lawyer-login.html", "lawyer-panel.html",
-    "admin-lawyers.html", "admin-credits.html", "privacy.html", "terms.html", "user-register.html", "user-login.html", "user-forgot-password.html", "user-reset-password.html"
+    "admin-lawyers.html", "admin-credits.html", "admin-support.html", "support.html", "privacy.html", "terms.html", "user-register.html", "user-login.html", "user-forgot-password.html", "user-reset-password.html"
   ];
   for (const page of pages) {
     const html = read("public/" + page);
