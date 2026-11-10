@@ -208,7 +208,8 @@ test("administrator secret fields and dynamically created lawyer passwords have 
   const credits = read("public/admin-credits.html");
   assert.match(lawyers, /data-password-toggle="key"/);
   assert.match(lawyers, /attachPasswordToggle\(\$\("key"\)/);
-  assert.match(lawyers, /attachPasswordToggle\(pass,"رمز وکیل"\)/);
+  assert.match(lawyers, /const passWrap=attachPasswordToggle\(pass,"رمز وکیل"\)/);
+  assert.match(lawyers, /box\.append\(title,detail,btn,passWrap,setPass\)/);
   assert.match(lawyers, /toggle\.setAttribute\("aria-pressed"/);
   assert.match(credits, /id="toggleAdminKey"[^>]*aria-controls="adminKey"/);
   assert.match(credits, /toggleAdminKey\.addEventListener\("click"/);
