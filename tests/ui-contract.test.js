@@ -190,7 +190,7 @@ test("password recovery navigation and pages preserve the safe reset-link flow",
 test("public user login and password reset pages expose accessible show/hide controls", () => {
   const login = read("public/user-login.html");
   const reset = read("public/user-reset-password.html");
-  assert.match(login, /id="togglePassword"[^>]*type="button"/);
+  assert.match(login, /<button\\b(?=[^>]*id="togglePassword")(?=[^>]*type="button")/);
   assert.match(login, /aria-controls="password"/);
   assert.match(login, /aria-pressed="false"/);
   assert.match(login, /passwordToggle\.addEventListener\("click"/);
