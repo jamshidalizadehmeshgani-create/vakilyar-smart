@@ -181,5 +181,5 @@ test("admin suspension review sends one atomic pending-case decision and audit t
   assert.equal(command[6], "بررسی امنیتی");
   assert.match(command[1], /item\.status~='pending'/);
   assert.match(command[1], /redis\.call\('SET',statusKey,'suspended'\)/);
-  assert.match(command[1], /vy:admin:audit/);
+  assert.equal(command[4], "vy:admin:audit");
 });
