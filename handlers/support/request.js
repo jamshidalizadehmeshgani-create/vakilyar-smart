@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const { getUid, consumeIpRateLimit, redis } = require("../../lib/quota");
+const { getUserSessionUid } = require("../../lib/user-auth");
 
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -26,7 +27,8 @@ module.exports = async (req, res) => {
     const contact = typeof req.body?.contact === "string" ? req.body.contact.trim().slice(0, 190) : "";
     if (message.length < 10 || message.length > 3000) return res.status(400).json({ error: "شرح مشکل باید بین ۱۰ تا ۳۰۰۰ نویسه باشد." });
     if (!["account", "access", "technical", "other"].includes(category)) return res.status(400).json({ error: "دسته‌بندی درخواست معتبر نیست." });
-    const uid = getUid(req, res);
+    // Match getAccount(): bind a signed-in user to the same UID used by credits and suspension.
+    const uid = await getUserSessionUid(req) || getUid(req, res);
     const id = crypto.randomBytes(16).toString("hex");
     const now = new Date().toISOString();
     const item = { id, user_id: uid, category, message, contact, status: "pending", created_at: now, updated_at: now };
