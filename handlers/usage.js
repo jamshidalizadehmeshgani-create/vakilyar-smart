@@ -24,6 +24,7 @@ module.exports = async (req, res) => {
       free_credits_initial: Number(process.env.FREE_CREDITS_INITIAL || 1000)
     });
   } catch (error) {
+    if (error?.code === "ACCOUNT_SUSPENDED") return res.status(403).json({ code: "ACCOUNT_SUSPENDED", error: "دسترسی این حساب موقتاً متوقف شده است. از بخش پشتیبانی درخواست بررسی و بازگشایی ثبت کنید." });
     console.error("Usage API error:");
     const missing = [];
     if (!process.env.APP_SECRET) missing.push("APP_SECRET");
