@@ -88,6 +88,7 @@ module.exports = async (req, res) => {
     if (created.conflict) return res.status(409).json({ error: "شناسه این عملیات قبلاً برای متن یا وکیل دیگری استفاده شده است." });
     return res.status(201).json({ ok: true, duplicate: created.duplicate, question_id: created.questionId, message: created.duplicate ? "این پرسش قبلاً ثبت شده بود؛ پرسش تکراری ایجاد نشد." : "پرسش برای وکیل منتخب ارسال شد." });
   } catch (e) {
+    if (e?.code === "ACCOUNT_SUSPENDED") return res.status(403).json({ code: "ACCOUNT_SUSPENDED", error: "دسترسی این حساب موقتاً متوقف شده است. از بخش پشتیبانی درخواست بررسی و بازگشایی ثبت کنید." });
     console.error("Question create error:");
     return res.status(503).json({ error: "ارسال پرسش موقتاً ممکن نیست." });
   }
