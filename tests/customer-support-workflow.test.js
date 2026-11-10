@@ -112,3 +112,74 @@ test("support tickets use the authenticated account identity so admin suspension
   assert.equal(guest.storedUid, "c".repeat(48));
   assert.equal(guest.guestUidCalls, 1);
 });
+
+
+test("admin support endpoint rejects unauthenticated requests before reading or changing cases", async () => {
+  const source = read("handlers/admin/support-cases.js");
+  let redisCalls = 0;
+  const module = { exports: null };
+  const sandbox = {
+    module,
+    exports: module.exports,
+    Date,
+    console,
+    require(id) {
+      if (id === "../../lib/quota") return { redis: async () => { redisCalls++; return "1"; } };
+      if (id === "../../lib/admin-auth") return { authorizeAdmin: async (_req, res) => { res.status(401).json({ error: "unauthorized" }); return false; } };
+      throw new Error("Unexpected module: " + id);
+    }
+  };
+  vm.runInNewContext(source, sandbox, { filename: "handlers/admin/support-cases.js" });
+  const res = {
+    statusCode: 200, body: null,
+    setHeader() {},
+    status(code) { this.statusCode = code; return this; },
+    json(value) { this.body = value; return this; }
+  };
+  await module.exports({ method: "POST", body: { action: "list" }, headers: {} }, res);
+  assert.equal(res.statusCode, 401);
+  assert.equal(redisCalls, 0);
+});
+
+test("admin suspension review sends one atomic pending-case decision and audit to Redis", async () => {
+  const source = read("handlers/admin/support-cases.js");
+  const redisCalls = [];
+  const module = { exports: null };
+  const sandbox = {
+    module,
+    exports: module.exports,
+    Date,
+    console,
+    require(id) {
+      if (id === "../../lib/quota") return { redis: async args => { redisCalls.push(args); return "1"; } };
+      if (id === "../../lib/admin-auth") return { authorizeAdmin: async () => true };
+      throw new Error("Unexpected module: " + id);
+    }
+  };
+  vm.runInNewContext(source, sandbox, { filename: "handlers/admin/support-cases.js" });
+  const res = {
+    statusCode: 200, body: null,
+    setHeader() {},
+    status(code) { this.statusCode = code; return this; },
+    json(value) { this.body = value; return this; }
+  };
+  const caseId = "d".repeat(32);
+  await module.exports({
+    method: "POST",
+    headers: {},
+    body: { action: "review", case_id: caseId, decision: "suspend", note: "بررسی امنیتی" }
+  }, res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.ok, true);
+  assert.equal(redisCalls.length, 1);
+  const command = redisCalls[0];
+  assert.equal(command[0], "EVAL");
+  assert.equal(command[2], "2");
+  assert.equal(command[3], "vy:support:case:" + caseId);
+  assert.equal(command[4], "vy:admin:audit");
+  assert.equal(command[5], "suspend");
+  assert.equal(command[6], "بررسی امنیتی");
+  assert.match(command[1], /item\.status~='pending'/);
+  assert.match(command[1], /redis\.call\('SET',statusKey,'suspended'\)/);
+  assert.match(command[1], /vy:admin:audit/);
+});
