@@ -69,7 +69,7 @@ test("router registers every public API endpoint and Vercel rewrites preserve UR
     "lawyer/reply", "lawyer/resend-verification", "lawyer/verify-email",
     "lawyers/active", "questions/create", "questions/mine", "usage",
     "users/login", "users/logout", "users/me", "users/register",
-    "users/resend-verification", "users/verify"
+    "users/resend-verification", "users/request-password-reset", "users/reset-password", "users/verify"
   ];
   assert.deepEqual([...loadedRoutes].sort(), [...expected].sort());
 

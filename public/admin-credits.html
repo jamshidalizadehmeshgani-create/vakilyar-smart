@@ -9,7 +9,7 @@ main{max-width:620px;margin:30px auto;background:#fff;padding:24px;border-radius
 h1{font-size:22px;color:#14233f}p{line-height:1.9;color:#586174}
 label{display:block;margin:16px 0 7px;font-size:14px}
 input{box-sizing:border-box;width:100%;padding:13px;border:1px solid #ccd2dc;border-radius:9px;font:inherit}
-button{border:0;border-radius:9px;padding:12px 18px;margin:10px 5px 0 0;font:inherit;cursor:pointer;background:#20375d;color:white}
+button{border:0;border-radius:9px;padding:12px 18px;margin:10px 5px 0 0;font:inherit;cursor:pointer;background:#20375d;color:white}.password-wrap{display:flex;align-items:center;gap:7px}.password-wrap input{flex:1;min-width:0}.password-toggle{width:auto;flex:0 0 48px;margin:0;padding:10px 8px;background:#f0eadf;color:#17243d;border:1px solid #ccd2dc}
 button.gold{background:#b18b42;color:#fff}button.danger{background:#8a3434}
 #result{white-space:pre-wrap;background:#f5f3ee;padding:14px;border-radius:9px;margin-top:18px;line-height:1.8}
 .note{font-size:12px;background:#fff7e6;padding:12px;border-radius:8px}
@@ -18,7 +18,7 @@ button.gold{background:#b18b42;color:#fff}button.danger{background:#8a3434}
 <h1>پنل هدیه اعتبار وکیل‌یار</h1>
 <p>مدیر می‌تواند اعتبار حجمی، دسترسی نامحدود یا اشتراک آزمایشی Pro را برای یک کاربر مدیریت کند. فعال‌سازی Pro در این نسخه دستی است و به معنی پرداخت یا تمدید خودکار نیست.</p>
 <p class="note">این صفحه به‌تنهایی مجوز مدیریت نیست. کلید مدیر فقط در درخواست امن به سرور ارسال می‌شود؛ آن را در اختیار دیگران نگذارید و در مرورگر ذخیره نکنید.</p>
-<p><a href="/admin-lawyers.html">مدیریت حساب و دسترسی وکلا</a></p>\n<label for="adminKey">کلید مدیر (ADMIN_API_KEY)</label><input id="adminKey" type="password" autocomplete="off">
+<p><a href="/admin-lawyers.html">مدیریت حساب و دسترسی وکلا</a></p>\n<label for="adminKey">کلید مدیر (ADMIN_API_KEY)</label><div class="password-wrap"><input id="adminKey" type="password" autocomplete="off"><button class="password-toggle" type="button" id="toggleAdminKey" aria-label="نمایش کلید مدیر" aria-controls="adminKey" aria-pressed="false">👁</button></div>
 <label for="userId">شناسه کاربر (از مسیر /api/usage)</label><input id="userId" placeholder="شناسه ۴۸ رقمی هگز">
 <label for="amount">مقدار اعتبار هدیه</label><input id="amount" type="number" min="1" max="10000000" value="500">
 <div>
@@ -33,6 +33,8 @@ button.gold{background:#b18b42;color:#fff}button.danger{background:#8a3434}
 </main>
 <script>
 const result=document.getElementById("result");
+const adminKey=document.getElementById("adminKey"),toggleAdminKey=document.getElementById("toggleAdminKey");
+toggleAdminKey.addEventListener("click",()=>{const reveal=adminKey.type==="password";adminKey.type=reveal?"text":"password";toggleAdminKey.textContent=reveal?"🙈":"👁";toggleAdminKey.setAttribute("aria-pressed",String(reveal));toggleAdminKey.setAttribute("aria-label",reveal?"پنهان‌کردن کلید مدیر":"نمایش کلید مدیر");adminKey.focus({preventScroll:true});});
 let pendingCreditGrant=null;
 try{
  const saved=sessionStorage.getItem("vy_pending_credit_grant");
