@@ -201,3 +201,17 @@ test("public user login and password reset pages expose accessible show/hide con
   assert.match(reset, /querySelectorAll\("\[data-toggle\]"\)/);
   assert.match(reset, /field\.focus\(\{preventScroll:true\}\)/);
 });
+
+
+test("administrator secret fields and dynamically created lawyer passwords have accessible visibility controls", () => {
+  const lawyers = read("public/admin-lawyers.html");
+  const credits = read("public/admin-credits.html");
+  assert.match(lawyers, /data-password-toggle="key"/);
+  assert.match(lawyers, /attachPasswordToggle\(\$\("key"\)/);
+  assert.match(lawyers, /attachPasswordToggle\(pass,"رمز وکیل"\)/);
+  assert.match(lawyers, /toggle\.setAttribute\("aria-pressed"/);
+  assert.match(credits, /id="toggleAdminKey"[^>]*aria-controls="adminKey"/);
+  assert.match(credits, /toggleAdminKey\.addEventListener\("click"/);
+  assert.doesNotMatch(lawyers, /localStorage/);
+  assert.doesNotMatch(credits, /localStorage/);
+});
