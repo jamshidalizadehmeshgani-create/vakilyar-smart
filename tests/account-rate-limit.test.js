@@ -34,7 +34,7 @@ test("account rate limits use an HMAC key and an atomic expiring Redis counter",
     assert.equal(command[3].includes(uid), false);
     assert.match(command[1], /INCR/);
     assert.match(command[1], /EXPIRE/);
-    assert.match(command[1], /\\nlocal/);
+    assert.match(command[1], /\nlocal/);
     assert.equal(command[4], "3600");
   } finally {
     global.fetch = originalFetch;
