@@ -177,12 +177,12 @@ test("customer and administrator support pages expose the router-backed workflow
   const customer = read("public/support.html");
   const admin = read("public/admin-support.html");
   const home = read("public/index.html");
-  assert.match(customer, /\\/api\\/support\\/request/);
-  assert.match(admin, /\\/api\\/admin\\/support-cases/);
-  assert.match(admin, /decision,label/);
-  assert.match(home, /\\/support\\.html/);
-  assert.match(read("api/index.js"), /support\\/request/);
-  assert.match(read("api/index.js"), /admin\\/support-cases/);
+  assert.ok(customer.includes("/api/support/request"));
+  assert.ok(admin.includes("/api/admin/support-cases"));
+  assert.ok(admin.includes("decision,label"));
+  assert.ok(home.includes("/support.html"));
+  assert.ok(read("api/index.js").includes("support/request"));
+  assert.ok(read("api/index.js").includes("admin/support-cases"));
 });
 
 test("password recovery navigation and pages preserve the safe reset-link flow", () => {
