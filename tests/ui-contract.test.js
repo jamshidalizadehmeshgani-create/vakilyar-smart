@@ -9,7 +9,7 @@ const read = file => fs.readFileSync(path.join(root, file), "utf8");
 test("all public entry pages and their internal navigation targets exist", () => {
   const pages = [
     "index.html", "ask-lawyer.html", "lawyer-login.html", "lawyer-panel.html",
-    "admin-lawyers.html", "admin-credits.html", "privacy.html", "terms.html", "user-register.html", "user-login.html", "user-forgot-password.html", "user-reset-password.html"
+    "admin-lawyers.html", "admin-credits.html", "admin-support.html", "support.html", "privacy.html", "terms.html", "user-register.html", "user-login.html", "user-forgot-password.html", "user-reset-password.html"
   ];
   const known = new Set(pages);
   for (const page of pages) assert.ok(fs.existsSync(path.join(root, "public", page)), page + " is missing");
@@ -24,7 +24,7 @@ test("all public entry pages and their internal navigation targets exist", () =>
 });
 
 test("browser pages call API routes registered by the consolidated serverless router", () => {
-  const pages = ["index.html", "ask-lawyer.html", "lawyer-login.html", "lawyer-panel.html", "admin-lawyers.html", "admin-credits.html", "user-register.html", "user-login.html", "user-forgot-password.html", "user-reset-password.html"];
+  const pages = ["index.html", "ask-lawyer.html", "lawyer-login.html", "lawyer-panel.html", "admin-lawyers.html", "admin-credits.html", "admin-support.html", "support.html", "user-register.html", "user-login.html", "user-forgot-password.html", "user-reset-password.html"];
   const endpoints = new Set();
   for (const page of pages) {
     const html = read("public/" + page);
@@ -81,7 +81,7 @@ test("lawyer reply UI retains the same operation ID after an uncertain network r
 test("all public pages declare Persian RTL document metadata", () => {
   const pages = [
     "index.html", "ask-lawyer.html", "lawyer-login.html", "lawyer-panel.html",
-    "admin-lawyers.html", "admin-credits.html", "privacy.html", "terms.html", "user-register.html", "user-login.html", "user-forgot-password.html", "user-reset-password.html"
+    "admin-lawyers.html", "admin-credits.html", "admin-support.html", "support.html", "privacy.html", "terms.html", "user-register.html", "user-login.html", "user-forgot-password.html", "user-reset-password.html"
   ];
   for (const page of pages) {
     const html = read("public/" + page);
@@ -171,6 +171,19 @@ test("all public pages avoid dangerous HTML parsing and dynamic code execution s
   }
 });
 
+
+
+test("customer and administrator support pages expose the router-backed workflow", () => {
+  const customer = read("public/support.html");
+  const admin = read("public/admin-support.html");
+  const home = read("public/index.html");
+  assert.ok(customer.includes("/api/support/request"));
+  assert.ok(admin.includes("/api/admin/support-cases"));
+  assert.ok(admin.includes("decision,label"));
+  assert.ok(home.includes("/support.html"));
+  assert.ok(read("api/index.js").includes("support/request"));
+  assert.ok(read("api/index.js").includes("admin/support-cases"));
+});
 
 test("password recovery navigation and pages preserve the safe reset-link flow", () => {
   const login = read("public/user-login.html");

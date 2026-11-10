@@ -64,10 +64,10 @@ test("API router rejects unknown and malformed routes without loading modules", 
 test("router registers every public API endpoint and Vercel rewrites preserve URL paths", () => {
   const { loadedRoutes } = loadRouter();
   const expected = [
-    "admin/grant-credits", "admin/lawyers", "chat",
+    "admin/grant-credits", "admin/lawyers", "admin/support-cases", "chat",
     "lawyer/login", "lawyer/logout", "lawyer/me", "lawyer/questions",
     "lawyer/reply", "lawyer/resend-verification", "lawyer/verify-email",
-    "lawyers/active", "questions/create", "questions/mine", "usage",
+    "lawyers/active", "questions/create", "questions/mine", "support/request", "usage",
     "users/login", "users/logout", "users/me", "users/register",
     "users/resend-verification", "users/request-password-reset", "users/reset-password", "users/verify"
   ];
