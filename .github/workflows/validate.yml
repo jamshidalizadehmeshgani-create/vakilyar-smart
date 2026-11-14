@@ -36,6 +36,7 @@ jobs:
           node <<'NODE'
           const fs = require('node:fs');
           const required = new Set(['public/admin-credits.html', 'public/admin-lawyers.html', 'public/lawyer-login.html', 'public/lawyer-panel.html', 'public/index.html']);
+          const executableTypes = new Set(['module', 'text/javascript', 'application/javascript', 'text/ecmascript', 'application/ecmascript']);
           const files = [...required, 'public/ask-lawyer.html'];
           for (const file of files) {
             const html = fs.readFileSync(file, 'utf8');
@@ -47,11 +48,16 @@ jobs:
               const openEnd = rest.indexOf('>', start);
               const close = rest.indexOf('</script>', openEnd);
               if (openEnd < 0 || close < 0) throw new Error('Malformed script tag in ' + file);
-              scripts.push(rest.slice(openEnd + 1, close));
+              const openingTag = rest.slice(start, openEnd + 1);
+              const typeMatch = openingTag.match(/\btype\s*=\s*["']([^"']+)["']/i);
+              const type = typeMatch ? typeMatch[1].trim().toLowerCase() : '';
+              const body = rest.slice(openEnd + 1, close);
+              // JSON-LD, import maps, and other data blocks are not executable JavaScript.
+              if (!type || executableTypes.has(type)) scripts.push(body);
               rest = rest.slice(close + 9);
             }
-            if (required.has(file) && !scripts.length) throw new Error('No inline script found in ' + file);
+            if (required.has(file) && !scripts.length) throw new Error('No executable inline script found in ' + file);
             scripts.forEach(script => new Function(script));
-            console.log(file + ': ' + scripts.length + ' inline script(s) valid');
+            console.log(file + ': ' + scripts.length + ' executable inline script(s) valid');
           }
           NODE
