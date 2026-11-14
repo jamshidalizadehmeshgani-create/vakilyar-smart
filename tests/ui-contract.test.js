@@ -127,7 +127,7 @@ test("disabled lawyer intake exposes no question form or submission controls", (
 
 test("disabled lawyer panel exposes no reply controls or API calls", () => {
   const panel = read("public/lawyer-panel.html");
-  assert.doesNotMatch(panel, /<textarea|ثبت پاسخ|api\/lawyer\//i);
+  assert.doesNotMatch(panel, /<textarea|fetch\(|api\/lawyer\//i);
   assert.match(panel, /پنل وکیل در نسخه فعلی غیرفعال است/);
 });
 
