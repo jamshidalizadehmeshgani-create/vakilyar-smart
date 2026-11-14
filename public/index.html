@@ -80,22 +80,8 @@ const answerEl=document.getElementById("answer");
 const sendBtn=document.getElementById("send");
 const consentEl=document.getElementById("consent");
 
-async function loadUsage(){
-  try{
-    const response=await fetch("/api/usage",{cache:"no-store"});
-    const data=await response.json();
-    if(!response.ok){
-      const missing=Array.isArray(data.missing_configuration)?data.missing_configuration:[];
-      const detail=missing.length?" متغیرهای لازم: "+missing.join("، "):"";
-      throw new Error((data.error||"وضعیت سهمیه در دسترس نیست.")+detail);
-    }
-    statusEl.textContent=data.unlimited?"وضعیت حساب: اعتبار نامحدود آزمایشی":data.plan==="pro"?"وضعیت حساب: وکیل‌یار پرو":"اعتبار باقی‌مانده: "+data.credits_remaining+" واحد";
-  }catch(e){
-    statusEl.textContent=e.message||"وضعیت سهمیه هنوز قابل دریافت نیست؛ ممکن است تنظیمات پایگاه داده کامل نشده باشد.";
-  }
-}
-loadUsage();
-
+// Do not create anonymous accounts just because a visitor opened the homepage.
+// The chat response itself includes the updated balance after a real question.
 sendBtn.addEventListener("click",async()=>{
   const message=document.getElementById("question").value.trim();
   if(!message){answerEl.textContent="لطفاً ابتدا پرسش خود را بنویسید.";return;}
@@ -108,7 +94,7 @@ sendBtn.addEventListener("click",async()=>{
     answerEl.textContent=data.reply;
     if(typeof data.credits_remaining==="number") statusEl.textContent="اعتبار باقی‌مانده: "+data.credits_remaining+" واحد";
   }catch(e){answerEl.textContent=e.message||"خطای ارتباطی رخ داد.";}
-  finally{sendBtn.disabled=false;loadUsage();}
+  finally{sendBtn.disabled=false;}
 });
 </script>
 </body>
