@@ -37,5 +37,24 @@ module.exports = async function apiRouter(req, res) {
     return res.status(404).json({ error: "API route not found" });
   }
 
+  // Lawyer-facing workflows stay disabled in the education-only MVP.
+  // Enable them only after legal, operational, and security readiness review.
+  const lawyerRoutes = new Set([
+    "admin/lawyers",
+    "lawyer/login",
+    "lawyer/logout",
+    "lawyer/me",
+    "lawyer/questions",
+    "lawyer/reply",
+    "lawyer/resend-verification",
+    "lawyer/verify-email",
+    "lawyers/active",
+    "questions/create",
+    "questions/mine"
+  ]);
+  if (lawyerRoutes.has(route) && process.env.LAWYER_FEATURES_ENABLED !== "true") {
+    return res.status(404).json({ error: "این قابلیت در نسخه فعلی فعال نیست." });
+  }
+
   return handlers.get(route)(req, res);
 };
