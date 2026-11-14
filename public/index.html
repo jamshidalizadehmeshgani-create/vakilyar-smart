@@ -19,7 +19,7 @@
   </style>
 </head>
 <body>
-<header><h1>وکیل‌یار هوشمند</h1><p>دستیار خدمات حقوقی، قراردادها و ارتباط با وکیل</p></header>
+<header><h1>وکیل‌یار هوشمند</h1><p>دستیار هوشمند اطلاعات عمومی و آموزشی حقوقی</p></header>
 <style>
  .intro{max-width:850px;margin:24px auto 0;padding:0 16px}
  .intro-card{background:#fff;border:1px solid #e5e0d6;border-radius:16px;padding:22px;box-shadow:0 8px 30px #14233f12}
@@ -35,19 +35,18 @@
 <section class="intro">
  <div class="intro-card">
   <h2>درباره وکیل‌یار</h2>
-  <p>وکیل‌یار بستری هوشمند برای دریافت راهنمایی اولیه حقوقی، شناخت حقوق و تعهدات و دسترسی آسان‌تر به خدمات حقوقی است. کاربران می‌توانند پرسش‌های خود را در موضوعات مختلف مطرح کنند و در صورت نیاز، از مسیر سامانه برای ارتباط با وکیل فعال اقدام کنند.</p>
+  <p>وکیل‌یار بستری هوشمند برای دریافت راهنمایی اولیه حقوقی، شناخت حقوق و تعهدات و دسترسی روشن‌تر به اطلاعات عمومی حقوقی است. در این نسخه، قابلیت ارتباط با وکیل هنوز فعال نشده و پس از احراز همکاری وکیل دارای پروانه راه‌اندازی خواهد شد.</p>
   <div class="services">
    <div class="service"><strong>امور املاک</strong><br>قراردادهای خریدوفروش، رهن و اجاره، سرقفلی و اختلافات ملکی</div>
    <div class="service"><strong>قراردادها</strong><br>راهنمایی درباره تنظیم، بررسی و اصلاح قراردادهای مدنی و تجاری</div>
    <div class="service"><strong>مشاوره حقوقی</strong><br>راهنمایی اولیه در امور مدنی، خانواده، ارث و تعهدات</div>
    <div class="service"><strong>مطالبات و اسناد</strong><br>چک، سفته، بدهی‌ها، تعهدات مالی و پیگیری حقوقی</div>
    <div class="service"><strong>کار و استخدام</strong><br>روابط کارگر و کارفرما، قرارداد کار و حقوق شغلی</div>
-   <div class="service"><strong>ارتباط با وکیل</strong><br>ارسال پرسش برای وکیل فعال و مشاهده پاسخ در سامانه</div>
+   <div class="service"><strong>ارتباط با وکیل</strong><br>این قابلیت پس از اعلام آمادگی و احراز هویت حرفه‌ای وکیل فعال خواهد شد.</div>
   </div>
   <p class="small">پاسخ هوشمند، راهنمایی عمومی و اولیه است و جایگزین بررسی اسناد، مشاوره تخصصی و قبول وکالت توسط وکیل دارای پروانه نیست. برای تصمیم‌گیری مهم، مدارک و متن رسمی قوانین باید توسط متخصص بررسی شود.</p>
   <div class="entry-actions">
-   <a class="entry-link gold" href="/ask-lawyer.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 12H3"/><path d="m9 6-6 6 6 6"/><path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/></svg>ورود کاربران و ثبت پرسش</a>
-   <a class="entry-link" href="/lawyer-login.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>ورود اختصاصی وکلا</a>
+   <p class="notice">قابلیت ارتباط با وکیل در این نسخه غیرفعال است و پس از اعلام آمادگی و احراز هویت حرفه‌ای وکیل دارای پروانه فعال خواهد شد.</p>
   </div>
  </div>
 </section>
@@ -58,12 +57,12 @@
     <textarea id="question" maxlength="6000" placeholder="موضوع را بدون درج اطلاعات محرمانه یا شماره‌های شناسایی توضیح دهید..."></textarea>
     <label style="display:flex;align-items:flex-start;gap:9px;font-weight:normal;font-size:13px;margin-top:14px"><input id="consent" type="checkbox" style="margin-top:8px"> موافقم متن پرسش من برای تولید پاسخ به سرویس هوش مصنوعی ارسال شود. از درج نام، شماره ملی، نشانی، رمز و اطلاعات محرمانه خودداری می‌کنم.</label>
     <button id="send">ارسال پرسش</button>
-    <p><a href="/ask-lawyer.html">ارسال پرسش به وکیل و مشاهده پاسخ‌ها</a></p>
+    
     <div id="status" role="status">نسخه آزمایشی؛ وضعیت پاسخ‌گویی با ارسال پرسش مشخص می‌شود.</div>
     <div id="answer" aria-live="polite">پاسخ وکیل‌یار در این قسمت نمایش داده می‌شود.</div>
   </section>
 </main>
-<footer>نسخه آزمایشی وکیل‌یار هوشمند<br><a href="/lawyer-login.html">ورود وکلا</a> · <a href="/ask-lawyer.html">ارسال پرسش به وکیل</a><br><a href="/privacy.html">حریم خصوصی</a> · <a href="/terms.html">شرایط استفاده</a></footer>
+<footer>نسخه آزمایشی وکیل‌یار هوشمند<br><a href="/privacy.html">حریم خصوصی</a> · <a href="/terms.html">شرایط استفاده</a></footer>
 <script>
 const statusEl=document.getElementById("status");
 const answerEl=document.getElementById("answer");
