@@ -31,7 +31,7 @@ const goodHeaders = { host: "app.example.test", origin: "https://app.example.tes
 test("password reset request gives the same public response for an unknown email", async () => {
   let issued = 0, mailed = 0;
   const handler = loadHandler("handlers/users/request-password-reset.js", {
-    "../../lib/quota": { consumeIpRateLimit: async () => ({ count: 1, limit: 3 }) },
+    "../../lib/quota": { consumeIpRateLimit: async () => ({ count: 1, limit: 3 }), consumeAccountRateLimit: async () => ({ count: 1, limit: 3 }) },
     "../../lib/user-auth": {
       validEmail: () => true, getUserByEmail: async () => null,
       issuePasswordReset: async () => { issued++; return "a".repeat(64); },
@@ -52,7 +52,7 @@ test("password reset request gives the same public response for an unknown email
 test("password reset request removes an issued token when email delivery is unavailable", async () => {
   const calls = [];
   const handler = loadHandler("handlers/users/request-password-reset.js", {
-    "../../lib/quota": { consumeIpRateLimit: async () => ({ count: 1, limit: 3 }) },
+    "../../lib/quota": { consumeIpRateLimit: async () => ({ count: 1, limit: 3 }), consumeAccountRateLimit: async () => ({ count: 1, limit: 3 }) },
     "../../lib/user-auth": {
       validEmail: () => true,
       getUserByEmail: async () => ({ uid: "b".repeat(48), email: "user@example.test", first_name: "کاربر", email_verified: true }),
@@ -74,7 +74,7 @@ test("password reset request removes an issued token when email delivery is unav
 test("password reset request rejects cross-origin requests before rate limiting", async () => {
   let rateCalls = 0;
   const handler = loadHandler("handlers/users/request-password-reset.js", {
-    "../../lib/quota": { consumeIpRateLimit: async () => { rateCalls++; return { count: 1, limit: 3 }; } },
+    "../../lib/quota": { consumeIpRateLimit: async () => { rateCalls++; return { count: 1, limit: 3 }; }, consumeAccountRateLimit: async () => ({ count: 1, limit: 3 }) },
     "../../lib/user-auth": { sameOrigin: () => false },
     "../../lib/email": {}
   });
@@ -118,4 +118,37 @@ test("successful password reset clears browser cookies and reports session revoc
   assert.equal(calls[0][0], "a".repeat(64));
   assert.ok(Array.isArray(res.headers["Set-Cookie"]));
   assert.match(res.body.message, /نشست‌های قبلی/);
+});
+
+test("password reset request enforces an account-level limit without revealing account existence", async () => {
+  let issued = 0, mailed = 0, accountChecks = 0;
+  const genericMessage = "اگر حساب فعالی با این ایمیل وجود داشته باشد، در صورت فعال‌بودن سرویس ایمیل، پیوند بازیابی ارسال خواهد شد.";
+  const handler = loadHandler("handlers/users/request-password-reset.js", {
+    "../../lib/quota": {
+      consumeIpRateLimit: async () => ({ count: 1, limit: 3 }),
+      consumeAccountRateLimit: async (uid, options) => {
+        accountChecks++;
+        assert.equal(uid, "b".repeat(48));
+        assert.equal(options.scope, "user-password-reset-account");
+        return { count: 4, limit: 3 };
+      }
+    },
+    "../../lib/user-auth": {
+      validEmail: () => true,
+      getUserByEmail: async () => ({ uid: "b".repeat(48), email: "user@example.test", email_verified: true }),
+      issuePasswordReset: async () => { issued++; return "a".repeat(64); },
+      discardPasswordResetToken: async () => {},
+      sameOrigin: () => true
+    },
+    "../../lib/email": {
+      sendUserPasswordResetEmail: async () => { mailed++; return { sent: true }; }
+    }
+  });
+  const res = response();
+  await handler({ method: "POST", headers: goodHeaders, body: { email: "user@example.test" } }, res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.message, genericMessage);
+  assert.equal(accountChecks, 1);
+  assert.equal(issued, 0);
+  assert.equal(mailed, 0);
 });
