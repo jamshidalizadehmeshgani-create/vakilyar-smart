@@ -46,36 +46,39 @@ test("browser pages call API routes registered by the consolidated serverless ro
   }
 });
 
-test("lawyer question submission requires explicit consent and safe text rendering", () => {
+test("public AI legal question flow requires consent and lawyer intake stays inactive", () => {
   const ask = read("public/ask-lawyer.html");
   const home = read("public/index.html");
-  assert.match(ask, /if\s*\(!\$\("consent"\)\.checked\)/);
+  assert.match(ask, /این قابلیت در نسخه فعلی وکیل‌یار هنوز فعال نیست/);
+  assert.doesNotMatch(ask, /<form|fetch\(/i);
   assert.match(home, /if\s*\(!consentEl\.checked\)/);
-  assert.match(ask, /p\.textContent\s*=\s*q\.question/);
   assert.match(home, /answerEl\.textContent\s*=\s*data\.reply/);
 });
 
-test("question history and lawyer inbox announce updates accessibly", () => {
-  assert.match(read("public/ask-lawyer.html"), /id="mine"[^>]*aria-live="polite"/);
-  assert.match(read("public/lawyer-panel.html"), /id="questions"[^>]*aria-live="polite"/);
+test("lawyer intake and panel pages clearly state that lawyer services are inactive", () => {
+  const ask = read("public/ask-lawyer.html");
+  const login = read("public/lawyer-login.html");
+  const panel = read("public/lawyer-panel.html");
+  assert.match(ask, /هیچ پرسشی به وکیل ارسال نمی‌شود/);
+  assert.match(login, /ورود وکیل در نسخه فعلی وکیل‌یار غیرفعال است/);
+  assert.match(panel, /پنل وکیل در نسخه فعلی غیرفعال است/);
+  for (const page of [ask, login, panel]) {
+    assert.doesNotMatch(page, /<form|fetch\(/i);
+    assert.match(page, /name="robots" content="noindex"/);
+  }
 });
 
 
-test("question submission UI retains a stable retry ID across reloads", () => {
+test("disabled lawyer intake cannot retain or submit pending questions", () => {
   const ask=read("public/ask-lawyer.html");
-  assert.match(ask,/sessionStorage\.getItem\("vy_pending_question"\)/);
-  assert.match(ask,/sessionStorage\.setItem\("vy_pending_question"/);
-  assert.match(ask,/request_id:pendingQuestion\.id/);
-  assert.match(ask,/برای جلوگیری از ثبت پرسش تکراری/);
+  assert.doesNotMatch(ask,/vy_pending_question|api\/questions\/create|fetch\(/);
+  assert.match(ask,/امکان ثبت یا انتخاب وکیل در این بخش وجود ندارد/);
 });
 
-test("lawyer reply UI retains the same operation ID after an uncertain network result", () => {
+test("disabled lawyer panel cannot load inboxes or submit replies", () => {
   const panel=read("public/lawyer-panel.html");
-  assert.match(panel,/vy_pending_reply_/);
-  assert.match(panel,/sessionStorage\.setItem\(pendingKey/);
-  assert.match(panel,/sessionStorage\.getItem\(pendingKey/);
-  assert.match(panel,/request_id:pendingReply\.id/);
-  assert.match(panel,/برای جلوگیری از ثبت پاسخ تکراری/);
+  assert.doesNotMatch(panel,/api\/lawyer\/(?:me|questions|reply)|fetch\(/);
+  assert.match(panel,/هیچ پرسشی در این نسخه به وکیل ارجاع داده نمی‌شود/);
 });
 
 test("all public pages declare Persian RTL document metadata", () => {
@@ -108,34 +111,24 @@ test("admin panels keep manager credentials in password fields and send them onl
 });
 
 
-test("lawyer login form mirrors server input limits and prevents duplicate submits", () => {
+test("disabled lawyer login has no form or authentication request", () => {
   const login = read("public/lawyer-login.html");
-  assert.match(login, /id="email" type="email"[^>]*maxlength="190"/);
-  assert.match(login, /id="password" type="password"[^>]*maxlength="200"/);
-  assert.match(login, /autocomplete="username"/);
-  assert.match(login, /autocomplete="current-password"/);
-  assert.match(login, /button\.disabled=true/);
-  assert.match(login, /finally\{button\.disabled=false;\}/);
-  assert.match(login, /aria-live="polite"/);
+  assert.match(login, /ورود وکیل در نسخه فعلی وکیل‌یار غیرفعال است/);
+  assert.doesNotMatch(login, /<form|fetch\(|api\/lawyer\/login/i);
 });
 
 
-test("lawyer question form announces submission feedback accessibly", () => {
+test("disabled lawyer intake exposes no question form or submission controls", () => {
   const ask = read("public/ask-lawyer.html");
-  assert.match(ask, /id="msg"[^>]*role="status"[^>]*aria-live="polite"[^>]*aria-atomic="true"/);
-  assert.match(ask, /<textarea id="question" minlength="5" maxlength="5000" required>/);
-  assert.match(ask, /<select id="lawyer" required>/);
-  assert.match(ask, /<input type="checkbox" id="consent" required>/);
+  assert.match(ask, /این قابلیت در نسخه فعلی وکیل‌یار هنوز فعال نیست/);
+  assert.doesNotMatch(ask, /<form|<textarea|<select|api\/questions\//i);
 });
 
 
-test("lawyer reply feedback uses an accessible live status instead of alert dialogs", () => {
+test("disabled lawyer panel exposes no reply controls or API calls", () => {
   const panel = read("public/lawyer-panel.html");
-  assert.match(panel, /const feedback=el\("p","muted",""\)/);
-  assert.match(panel, /feedback\.setAttribute\("role","status"\)/);
-  assert.match(panel, /feedback\.setAttribute\("aria-live","polite"\)/);
-  assert.match(panel, /card\.append\(area,send,feedback\)/);
-  assert.doesNotMatch(panel, /alert\(dd\.message/);
+  assert.doesNotMatch(panel, /<textarea|ثبت پاسخ|api\/lawyer\//i);
+  assert.match(panel, /پنل وکیل در نسخه فعلی غیرفعال است/);
 });
 
 
