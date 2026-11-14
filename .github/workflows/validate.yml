@@ -49,7 +49,7 @@ jobs:
             const close = rest.indexOf('</script>', openEnd);
             if (openEnd < 0 || close < 0) throw new Error('Malformed script tag in ' + file);
             const openingTag = rest.slice(start, openEnd + 1);
-            const typeMatch = openingTag.match(/\\btype\\s*=\\s*["']([^"']+)["']/i);
+            const typeMatch = openingTag.match(/\btype\s*=\s*["']([^"']+)["']/i);
             const type = typeMatch ? typeMatch[1].trim().toLowerCase() : '';
             const body = rest.slice(openEnd + 1, close);
             // JSON-LD, import maps, and other data blocks are not executable JavaScript.
