@@ -1,0 +1,149 @@
+{
+  "purpose": "Human-review queue only. This file is not loaded by legal retrieval and is not a verified legal corpus.",
+  "lastReviewed": "2026-11-21",
+  "records": [
+    {
+      "id": "law-iran-1401-09-06-official-registration-immovable-property",
+      "recordType": "law",
+      "title": "قانون الزام به ثبت رسمی معاملات اموال غیرمنقول",
+      "approvalAuthority": "مجلس شورای اسلامی؛ تشخیص مصلحت نظام نسبت به مواد مورد اختلاف",
+      "approvalDateJalali": "1401/09/06",
+      "promulgationNumber": "44118",
+      "promulgationAuthority": "سرپرست ریاست جمهوری",
+      "promulgationDateJalali": "1403/03/13",
+      "gazetteIssue": "23068",
+      "gazettePublicationDateJalali": "1403/03/17",
+      "officialEffectiveDateJalali": "1403/04/02",
+      "officialSourceUrl": "https://qavanin.ir/Law/TreeText/?IDS=8323921457009018779",
+      "officialMetadataUrl": "https://qavanin.ir/Law/Attribute/?IDS=8323921457009018779",
+      "officialConsolidatedTextObserved": true,
+      "amendmentHistoryComplete": false,
+      "humanReviewStatus": "pending",
+      "notes": [
+        "Official attribute page identifies promulgation number, Gazette issue, approval, promulgation, publication, and effective dates.",
+        "Official text page displays 'با اصلاحات و الحاقات بعدی' and includes amendments/additions in the visible consolidated text.",
+        "The official consolidation status page did not expose a populated amendment-status table in this retrieval; do not infer that no amendments exist.",
+        "Article 1, note 4 must be evaluated separately for immovable properties receiving cadastral title after the law became effective.",
+        "Do not ingest until the full amendment timeline and official Gazette images have been reviewed."
+      ]
+    },
+    {
+      "id": "unified-precedent-852-1403-06-20",
+      "recordType": "unified_precedent",
+      "title": "رأی وحدت رویه شماره ۸۵۲ هیأت عمومی دیوان عالی کشور",
+      "caseNumber": "1403/8",
+      "precedentNumber": "852",
+      "approvalDateJalali": "1403/06/20",
+      "sendingLetterNumber": "9000/7656/110",
+      "sendingLetterDateJalali": "1403/07/04",
+      "gazetteSpecialIssue": "1890",
+      "gazetteIssue": "23159",
+      "gazettePublicationDateJalali": "1403/07/10",
+      "officialLinkedSourceUrl": "https://qavanin.ir/Law/TreeText/?IDS=10513086744345305283",
+      "officialGazetteCrossReference": "https://qavanin.ir/Law/TreeText/?IDS=8323921457009018779",
+      "secondaryFullTextAndMetadataUrl": "https://vakilan.net/Vots/Show/104573",
+      "secondaryIndependentCrossCheckUrl": "https://www.ekhtebar.ir/رای-وحدت-رویه-شماره-۸۵۲-۱۴۰۳-۶-۲۰-هئیت/",
+      "subject": "وثیقه یا رهن قراردادن مالی که پیش‌تر با سند عادی به دیگری منتقل شده است",
+      "holdingSummary": "در فرض انتقال مال با سند عادی و سپس وثیقه‌گذاری آن توسط انتقال‌دهنده، با علم به تعلق مال به دیگری و بدون مجوز قانونی، رفتار مشمول ماده ۲ قانون مجازات اشخاصی است که مال غیر را به عوض مال خود معرفی می‌نمایند مصوب ۱۳۰۸ دانسته شده و مجازات شروع به کلاهبرداری مقرر می‌شود.",
+      "citedBindingProvision": "ماده ۴۷۱ قانون آیین دادرسی کیفری مصوب ۱۳۹۲ با اصلاحات و الحاقات بعدی",
+      "publicationMetadataStatus": "secondary_transcription_cross_checked_official_link_found_image_not_retrieved",
+      "officialPageAccessStatus": "official_qavanin_link_confirmed_but_direct_page_redirected_in_this_retrieval",
+      "humanReviewStatus": "pending",
+      "corpusEligible": false,
+      "missingBeforeIngestion": [
+        "Retrieve and inspect the official image/PDF from https://www.rrk.ir/Laws/ShowLaw.aspx?Code=29690 (request timed out in current retrieval).",
+        "Compare the complete ruling and all metadata against the official Gazette image.",
+        "Verify current precedential status and any later superseding or interpretive decisions.",
+        "Have a qualified legal reviewer determine the correct effectiveFrom date for retrieval schema.",
+        "Review the precise interaction with the effective version of the immovable-property registration law for the relevant transaction dates."
+      ],
+      "notes": [
+        "The official Qavanin law page links to the precedent record, establishing an official relationship/link, but the direct record returned only a transfer page in this retrieval.",
+        "Gazette issue metadata and complete text are presently transcribed from a non-governmental reproduction and independently cross-checked against another legal publisher; this is not final primary-source verification.",
+        "Do not copy this record into legal/corpus.json or mark it human_verified yet.",
+        "The Vakilanet page labels its source link 'مشاهده' and points to the exact RRK URL above. The RRK host timed out when opened directly in this retrieval; no official image or PDF was downloaded or inspected.",
+        "A further targeted search of RRK for code 29690, Gazette issue 23159, publication date 1403/07/10, and the sending-letter number returned no additional indexed official record. This does not change the verification status.",
+        "The old RRK endpoint is not the only route: a report dated 1403/08/29 identifies a newer Official Gazette portal at https://rrk.ir/ords/r/rrs/rrs-front/home. Direct access to that portal also timed out in this environment. An unofficial rrk-mcp tool was discovered but not installed or adopted; its own published limits state that Gazette PDFs require login/payment and are not supplied. This is discovery only and does not establish authenticity.",
+        "A technical review of the public rrk-mcp repository identified the new RRK APEX search page path https://rrk.ir/ords/r/rrs/rrs-front/ghavanin-moghararat and AJAX path https://rrk.ir/ords/wwv_flow.ajax. These are third-party code-derived technical leads, not official API documentation; direct page retrieval from this environment still timed out, and no record or Gazette image was retrieved.",
+        "The qavanin-mcp public repository was inspected only to understand possible Qavanin retrieval paths and amendment-history capabilities. The official Qavanin precedent page still returned only a transfer page in this environment; no new primary legal text was retrieved.",
+        "Both current third-party packages rrk-mcp and qavanin-mcp declare PolyForm Noncommercial 1.0.0 and require a separate commercial license for commercial use. Because Vakil-Yar is intended as a commercial product, neither package nor its code/dependencies is adopted or installed; no code was copied into this repository.",
+        "On 1405/08/30, the official RRK new-portal home and search-page URLs were tested again: content fetch returned proxy_error and direct web/browser retrieval timed out. An interactive browser run could not start because the browser tool wallet had a negative balance; no funds were added and no paid retry was attempted. This is a limitation of the research tool, not proof the official site is unavailable to the public."
+      ],
+      "officialGazetteDirectUrl": "https://www.rrk.ir/Laws/ShowLaw.aspx?Code=29690",
+      "officialGazetteDirectUrlDiscovery": "The 'مشاهده' link on the Vakilanet reproduction points to this exact rrk.ir URL.",
+      "officialGazetteRetrievalStatus": "not_retrieved_timeout",
+      "officialGazetteImageInspected": false,
+      "retrievalAttempts": [
+        {
+          "reviewedOn": "2026-11-21",
+          "target": "official Gazette issue 23159 / precedent 852 / RRK code 29690",
+          "queries": [
+            "site:rrk.ir 29690 23159",
+            "site:rrk.ir رأی وحدت رویه ۸۵۲ روزنامه رسمی",
+            "site:rrk.ir شماره ۲۳۱۵۹ ۱۰ مهر ۱۴۰۳",
+            "site:rrk.ir شماره ۹۰۰۰/۷۶۵۶/۱۱۰"
+          ],
+          "result": "No additional indexed official Gazette result returned by these targeted searches.",
+          "interpretation": "Search-engine absence is not evidence that the record does not exist; direct RRK retrieval remains blocked by timeout.",
+          "status": "discovery_only_no_primary_file"
+        },
+        {
+          "reviewedOn": "2026-11-21",
+          "target": "new Official Gazette portal and archived precedent 852 issue 23159",
+          "officialNewPortal": "https://rrk.ir/ords/r/rrs/rrs-front/home",
+          "discoverySource": "https://www.ekhtebar.ir/نشانی-جدید-سایت-روزنامه-رسمی/",
+          "discoveryFinding": "A report dated 1403/08/29 states that the Official Gazette moved to a new portal after disruption of the old rrk.ir site.",
+          "accessResult": "Direct open of the new portal timed out in this research environment.",
+          "targetedSearches": [
+            "site:rrk.ir/ords/r/rrs 23159",
+            "site:rrk.ir/ords/r/rrs 29690",
+            "site:rrk.ir 9000/7656/110",
+            "site:rrk.ir 1403/07/10 رأی وحدت رویه 852"
+          ],
+          "targetedSearchResult": "No independently indexed official record returned.",
+          "thirdPartyToolDiscovery": {
+            "name": "rrk-mcp",
+            "url": "https://pypi.org/project/rrk-mcp/",
+            "classification": "unofficial discovery tool only",
+            "statedLimit": "Its publisher states that Gazette PDFs require login/payment and are not provided by the tool.",
+            "adopted": false,
+            "installed": false,
+            "corpusAuthority": false
+          },
+          "status": "official_new_portal_discovered_but_not_retrieved"
+        },
+        {
+          "reviewedOn": "2026-11-21",
+          "target": "technical discovery of RRK APEX and Qavanin public retrieval paths",
+          "rrkApexSearchPage": "https://rrk.ir/ords/r/rrs/rrs-front/ghavanin-moghararat",
+          "rrkApexAjaxEndpoint": "https://rrk.ir/ords/wwv_flow.ajax",
+          "qavaninOfficialPageAttempt": "https://qavanin.ir/Law/TreeText/?IDS=10513086744345305283",
+          "qavaninOfficialPageResult": "Only a transfer page was returned; no legal text was retrieved.",
+          "rrkSearchPageResult": "Direct open timed out in this research environment.",
+          "discoveryBasis": "Public source-code inspection of third-party rrk-mcp and qavanin-mcp repositories; technical leads only.",
+          "licensingFinding": "Both current repositories declare PolyForm Noncommercial 1.0.0 and require separate permission for commercial use.",
+          "adopted": false,
+          "installed": false,
+          "codeCopied": false,
+          "primarySourceRetrieved": false,
+          "status": "technical_routes_discovered_but_no_primary_record_or_image_retrieved"
+        },
+        {
+          "reviewedOn": "2026-11-21",
+          "target": "official RRK new portal search for Gazette issue 23159 / precedent 852",
+          "testedUrls": [
+            "https://rrk.ir/ords/r/rrs/rrs-front/home",
+            "https://rrk.ir/ords/r/rrs/rrs-front/ghavanin-moghararat"
+          ],
+          "directContentFetch": "proxy_error",
+          "directWebOpen": "timeout",
+          "interactiveBrowser": "not_started_wallet_negative_balance",
+          "paymentOrTopUp": "not_performed",
+          "result": "No official session, search result, record text, or Gazette image retrieved.",
+          "interpretation": "Research-tool access limitation only; does not establish public-site unavailability or nonexistence of the record.",
+          "status": "no_primary_document_retrieved"
+        }
+      ]
+    }
+  ]
+}

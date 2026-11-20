@@ -14,7 +14,7 @@
     .notice{background:#fff8e8;border-right:4px solid var(--gold);padding:12px 15px;border-radius:8px;font-size:13px;margin-bottom:18px}
     label{display:block;font-weight:bold;margin:8px 0}textarea{width:100%;min-height:125px;padding:14px;border:1px solid #ccd2dc;border-radius:10px;font:inherit;resize:vertical}
     button{background:var(--navy);color:white;border:0;border-radius:9px;padding:12px 24px;font:inherit;cursor:pointer;margin-top:12px}button:disabled{opacity:.6;cursor:wait}
-    #status{font-size:13px;color:#596579;margin:10px 0}#answer{white-space:pre-wrap;background:#f7f8fa;border:1px solid #e5e8ee;border-radius:10px;padding:16px;min-height:70px;margin-top:14px}
+    #status{font-size:13px;color:#596579;margin:10px 0}#answer{white-space:pre-wrap;background:#f7f8fa;border:1px solid #e5e8ee;border-radius:10px;padding:16px;min-height:70px;margin-top:14px}.sources{margin-top:14px;padding:14px;border:1px solid #e5e0d6;border-radius:10px;background:#fff}.sources h2{font-size:15px;margin:0 0 8px;color:#14233f}.source-item{padding:9px 0;border-top:1px solid #eee}.source-item a{color:#20375d;font-weight:bold}.source-meta{font-size:12px;color:#596579}
     footer{text-align:center;color:#687386;font-size:12px;padding:24px}
   </style>
   <meta name="theme-color" content="#14233f">
@@ -66,19 +66,48 @@
     <div class="notice">وکیل‌یار برای ارائه اطلاعات عمومی و آموزشی است و جایگزین وکیل یا مشاوره حقوقی تخصصی نیست. پیش از تصمیم‌گیری مهم، متن رسمی قوانین و نظر وکیل دارای پروانه را بررسی کنید.</div>
     <label for="question">پرسش حقوقی خود را بنویسید</label>
     <textarea id="question" maxlength="6000" placeholder="موضوع را بدون درج اطلاعات محرمانه یا شماره‌های شناسایی توضیح دهید..."></textarea>
+    <label for="as-of-date">تاریخ وقوع موضوع یا تاریخ مبنای بررسی (اختیاری)</label>
+    <input id="as-of-date" type="text" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="۱۴۰۵/۰۸/۳۰ یا 2026-11-21" aria-describedby="as-of-help">
+    <p id="as-of-help" class="notice">تاریخ را به شمسی (مثلاً ۱۴۰۵/۰۸/۳۰) یا میلادی (مثلاً 2026-11-21) وارد کنید. اگر خالی بماند، تاریخ امروز مبنا قرار می‌گیرد.</p>
     <label style="display:flex;align-items:flex-start;gap:9px;font-weight:normal;font-size:13px;margin-top:14px"><input id="consent" type="checkbox" style="margin-top:8px"> موافقم متن پرسش من برای تولید پاسخ به سرویس هوش مصنوعی ارسال شود. از درج نام، شماره ملی، نشانی، رمز و اطلاعات محرمانه خودداری می‌کنم.</label>
     <button id="send">ارسال پرسش</button>
     
     <div id="status" role="status">نسخه آزمایشی؛ وضعیت پاسخ‌گویی با ارسال پرسش مشخص می‌شود.</div>
     <div id="answer" aria-live="polite">پاسخ وکیل‌یار در این قسمت نمایش داده می‌شود.</div>
+    <div id="sources" class="sources" hidden aria-live="polite"></div>
   </section>
 </main>
 <footer>نسخه آزمایشی وکیل‌یار هوشمند<br><a href="/user-login.html">ورود کاربران</a> · <a href="/owner.html">ورود اختصاصی مالک و مدیر</a><br><a href="/privacy.html">حریم خصوصی</a> · <a href="/terms.html">شرایط استفاده</a><br><span>ایمیل مدیریت: <a data-management-email href="mailto:jamish2575@gmail.com">jamish2575@gmail.com</a></span></footer>
 <script>
 const statusEl=document.getElementById("status");
 const answerEl=document.getElementById("answer");
+const sourcesEl=document.getElementById("sources");
 const sendBtn=document.getElementById("send");
 const consentEl=document.getElementById("consent");
+const officialHosts=new Set(["qavanin.ir","www.qavanin.ir","dotic.ir","www.dotic.ir","rrk.ir","www.rrk.ir"]);
+
+function renderSources(sources){
+  sourcesEl.replaceChildren();
+  if(!Array.isArray(sources)||sources.length===0){sourcesEl.hidden=true;return;}
+  const heading=document.createElement("h2");
+  heading.textContent="منابع رسمی بازیابی‌شده";
+  sourcesEl.appendChild(heading);
+  for(const source of sources){
+    let url;
+    try{url=new URL(source.sourceUrl);}catch{continue;}
+    if(url.protocol!=="https:"||!officialHosts.has(url.hostname.toLowerCase()))continue;
+    const item=document.createElement("div");
+    item.className="source-item";
+    const link=document.createElement("a");
+    link.href=url.href;link.target="_blank";link.rel="noopener noreferrer";
+    link.textContent=(source.title||"سند حقوقی")+(source.articleNumber?" — "+source.articleNumber:"");
+    const meta=document.createElement("div");
+    meta.className="source-meta";
+    meta.textContent=[source.officialPublisher,source.sourceType,source.effectiveFrom?"اعتبار از "+source.effectiveFrom:"",source.effectiveTo?"اعتبار تا "+source.effectiveTo:"",source.asOfDate?"تاریخ مبنا: "+source.asOfDate:"",source.verifiedAt?"بازبینی انسانی: "+source.verifiedAt:""].filter(Boolean).join(" · ");
+    item.append(link,meta);sourcesEl.appendChild(item);
+  }
+  sourcesEl.hidden=sourcesEl.childElementCount===0;
+}
 
 // Do not create anonymous accounts just because a visitor opened the homepage.
 // The chat response itself includes the updated balance after a real question.
@@ -87,12 +116,17 @@ sendBtn.addEventListener("click",async()=>{
   if(!message){answerEl.textContent="لطفاً ابتدا پرسش خود را بنویسید.";return;}
   if(!consentEl.checked){answerEl.textContent="برای ارسال پرسش، لطفاً رضایت خود را تأیید کنید.";return;}
   sendBtn.disabled=true;answerEl.textContent="در حال دریافت پاسخ...";
+  sourcesEl.replaceChildren();sourcesEl.hidden=true;
   try{
-    const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message,consent:true,legal_scope:"iran"})});
+    const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message,consent:true,legal_scope:"iran",as_of_date:document.getElementById("as-of-date").value||undefined})});
     const data=await response.json();
     if(!response.ok) throw new Error(data.error||"خطا در دریافت پاسخ");
     answerEl.textContent=data.reply;
-    if(typeof data.credits_remaining==="number") statusEl.textContent="اعتبار باقی‌مانده: "+data.credits_remaining+" واحد";
+    renderSources(data.sources);
+    const evidenceNotice=data.legal_evidence_status==="verified_sources"
+      ?"منابع حقوقی رسمی از بانک تأییدشده بازیابی شد."
+      :"برای این پرسش منبع رسمیِ تأییدشده‌ای از بانک داخلی بازیابی نشد؛ پاسخ را مستند به متن رسمی تلقی نکنید و پیش از اقدام، منبع رسمی را بررسی کنید.";
+    statusEl.textContent=evidenceNotice+(typeof data.credits_remaining==="number"?" اعتبار باقی‌مانده: "+data.credits_remaining+" واحد.":"");
   }catch(e){answerEl.textContent=e.message||"خطای ارتباطی رخ داد.";}
   finally{sendBtn.disabled=false;}
 });
