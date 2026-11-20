@@ -62,7 +62,8 @@
         "Gazette issue metadata and complete text are presently transcribed from a non-governmental reproduction and independently cross-checked against another legal publisher; this is not final primary-source verification.",
         "Do not copy this record into legal/corpus.json or mark it human_verified yet.",
         "The Vakilanet page labels its source link 'مشاهده' and points to the exact RRK URL above. The RRK host timed out when opened directly in this retrieval; no official image or PDF was downloaded or inspected.",
-        "A further targeted search of RRK for code 29690, Gazette issue 23159, publication date 1403/07/10, and the sending-letter number returned no additional indexed official record. This does not change the verification status."
+        "A further targeted search of RRK for code 29690, Gazette issue 23159, publication date 1403/07/10, and the sending-letter number returned no additional indexed official record. This does not change the verification status.",
+        "The old RRK endpoint is not the only route: a report dated 1403/08/29 identifies a newer Official Gazette portal at https://rrk.ir/ords/r/rrs/rrs-front/home. Direct access to that portal also timed out in this environment. An unofficial rrk-mcp tool was discovered but not installed or adopted; its own published limits state that Gazette PDFs require login/payment and are not supplied. This is discovery only and does not establish authenticity."
       ],
       "officialGazetteDirectUrl": "https://www.rrk.ir/Laws/ShowLaw.aspx?Code=29690",
       "officialGazetteDirectUrlDiscovery": "The 'مشاهده' link on the Vakilanet reproduction points to this exact rrk.ir URL.",
@@ -81,6 +82,31 @@
           "result": "No additional indexed official Gazette result returned by these targeted searches.",
           "interpretation": "Search-engine absence is not evidence that the record does not exist; direct RRK retrieval remains blocked by timeout.",
           "status": "discovery_only_no_primary_file"
+        },
+        {
+          "reviewedOn": "2026-11-21",
+          "target": "new Official Gazette portal and archived precedent 852 issue 23159",
+          "officialNewPortal": "https://rrk.ir/ords/r/rrs/rrs-front/home",
+          "discoverySource": "https://www.ekhtebar.ir/نشانی-جدید-سایت-روزنامه-رسمی/",
+          "discoveryFinding": "A report dated 1403/08/29 states that the Official Gazette moved to a new portal after disruption of the old rrk.ir site.",
+          "accessResult": "Direct open of the new portal timed out in this research environment.",
+          "targetedSearches": [
+            "site:rrk.ir/ords/r/rrs 23159",
+            "site:rrk.ir/ords/r/rrs 29690",
+            "site:rrk.ir 9000/7656/110",
+            "site:rrk.ir 1403/07/10 رأی وحدت رویه 852"
+          ],
+          "targetedSearchResult": "No independently indexed official record returned.",
+          "thirdPartyToolDiscovery": {
+            "name": "rrk-mcp",
+            "url": "https://pypi.org/project/rrk-mcp/",
+            "classification": "unofficial discovery tool only",
+            "statedLimit": "Its publisher states that Gazette PDFs require login/payment and are not provided by the tool.",
+            "adopted": false,
+            "installed": false,
+            "corpusAuthority": false
+          },
+          "status": "official_new_portal_discovered_but_not_retrieved"
         }
       ]
     }
