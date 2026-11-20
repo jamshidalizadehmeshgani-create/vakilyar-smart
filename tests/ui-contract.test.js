@@ -84,11 +84,13 @@ test("disabled lawyer panel cannot load inboxes or submit replies", () => {
 
 test("legal source cards expose official document identity and separate legal dates", () => {
   const home = read("public/index.html");
-  assert.match(home, /source\\.officialDocumentId\?"شناسه سند رسمی: "/);
-  assert.match(home, /source\\.approvalDate\?"تصویب: "/);
-  assert.match(home, /source\\.publicationDate\?"انتشار: "/);
-  assert.match(home, /source\\.officialGazetteIssue\?"روزنامه رسمی شماره: "/);
-  assert.match(home, /source\\.amendmentReviewDate\?"بازبینی اصلاحات: "/);
+  for (const field of [
+    'source.officialDocumentId?"شناسه سند رسمی: "',
+    'source.approvalDate?"تصویب: "',
+    'source.publicationDate?"انتشار: "',
+    'source.officialGazetteIssue?"روزنامه رسمی شماره: "',
+    'source.amendmentReviewDate?"بازبینی اصلاحات: "'
+  ]) assert.ok(home.includes(field), "Missing legal source metadata field: " + field);
 });
 
 test("all public pages declare Persian RTL document metadata", () => {
