@@ -1,5 +1,5 @@
 "use strict";
-const { loginAdmin, logoutAdmin } = require("../../lib/admin-auth");
+const { loginAdmin, logoutAdmin, authorizeAdmin } = require("../../lib/admin-auth");
 
 module.exports = async (req, res) => {
   res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -17,6 +17,10 @@ module.exports = async (req, res) => {
     if (action === "logout") {
       if (!await logoutAdmin(req, res)) return;
       return res.status(200).json({ ok: true, message: "از فضای مالک خارج شدید." });
+    }
+    if (action === "check") {
+      if (!await authorizeAdmin(req, res)) return;
+      return res.status(200).json({ ok: true, authenticated: true });
     }
     return res.status(400).json({ error: "عملیات نشست معتبر نیست." });
   } catch {

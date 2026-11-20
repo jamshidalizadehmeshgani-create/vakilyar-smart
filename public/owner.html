@@ -76,6 +76,10 @@ async function load(){
  $("status").textContent="در حال دریافت حافظه خصوصی...";
  const data=await api("list");render(data.records||[]);$("status").textContent="تعداد یادداشت‌های ذخیره‌شده: "+data.count;
 }
+async function restoreOwnerSession(){
+ try{const response=await fetch("/api/admin/session",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"check"})});if(response.ok){await load();show(true);}}
+ catch{}
+}
 $("connect").addEventListener("click",async()=>{
  const key=$("owner-key").value.trim();if(!key){$("login-status").textContent="کلید مدیریت را وارد کن.";return;}
  $("connect").disabled=true;$("login-status").textContent="در حال بررسی دسترسی مالک...";
@@ -92,4 +96,5 @@ $("save").addEventListener("click",async()=>{
 });
 $("refresh").addEventListener("click",async()=>{try{await load();}catch(e){$("status").textContent=e.message;show(false);}});
 $("disconnect").addEventListener("click",async()=>{try{await fetch("/api/admin/session",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"logout"})});}catch{}$("memories").replaceChildren();$("status").textContent="از فضای مالک خارج شدید.";show(false);});
+restoreOwnerSession();
 </script></body></html>
