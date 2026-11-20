@@ -118,6 +118,7 @@ test("owner login accepts configured username and scrypt password hash", async (
   assert.match(loginRes.headers["Set-Cookie"], /^vy_owner_session=[a-f0-9]{64};/);
   assert.equal([...store.keys()].filter(key => key.startsWith("vy:admin:session:")).length, 1);
   assert.equal(calls.some(command => command[0] === "SET" && command.includes("43200")), true);
+  assert.equal(JSON.stringify(calls).includes("a-long-owner-password"), false);
   assert.equal([...store.keys()].some(key => key.includes("a".repeat(64))), false);
 });
 
