@@ -21,6 +21,7 @@ const handlers = new Map([
   ["users/login", require("../handlers/users/login")],
   ["users/logout", require("../handlers/users/logout")],
   ["users/me", require("../handlers/users/me")],
+  ["users/memory", require("../handlers/users/memory")],
   ["users/register", require("../handlers/users/register")],
   ["users/resend-verification", require("../handlers/users/resend-verification")],
   ["users/request-password-reset", require("../handlers/users/request-password-reset")],
