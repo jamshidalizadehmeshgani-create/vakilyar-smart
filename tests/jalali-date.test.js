@@ -5,7 +5,8 @@ const assert = require("node:assert/strict");
 const {
   normalizeDigits,
   convertJalaliToGregorian,
-  normalizeAsOfDate
+  normalizeAsOfDate,
+  getIranTodayIsoDate
 } = require("../lib/jalali-date");
 
 test("normalizes Persian and Arabic numerals", () => {
@@ -30,4 +31,14 @@ test("preserves valid Gregorian ISO dates and rejects malformed inputs", () => {
   for (const value of ["2026-02-31", "1405/13/01", "1405/08/31", "1405/00/10", "not-a-date", ""]) {
     assert.equal(normalizeAsOfDate(value), null, value);
   }
+});
+
+test("formats the current date in Iran rather than UTC near midnight", () => {
+  assert.equal(getIranTodayIsoDate(new Date("2026-11-20T20:29:59.000Z")), "2026-11-20");
+  assert.equal(getIranTodayIsoDate(new Date("2026-11-20T20:30:00.000Z")), "2026-11-21");
+  assert.equal(getIranTodayIsoDate(new Date("2026-06-01T20:30:00.000Z")), "2026-06-02");
+});
+
+test("rejects invalid Date values for Iran-local date formatting", () => {
+  assert.throws(() => getIranTodayIsoDate(new Date("invalid")), /valid Date/);
 });
