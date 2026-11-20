@@ -6,8 +6,8 @@ const vm = require("node:vm");
 
 function loadHandler({ authorized = true } = {}) {
   const source = fs.readFileSync(path.join(__dirname, "../handlers/admin/memory.js"), "utf8");
-  const memory = [];
-  const calls = [];
+  const lists = new Map();
+  const memory = lists.get("vy:admin:owner-memory") || [];
   const module = { exports: null };
   const sandbox = {
     module, exports: module.exports,
@@ -20,14 +20,16 @@ function loadHandler({ authorized = true } = {}) {
       if (id === "../../lib/quota") return { redis: async command => {
         calls.push(command);
         const [op, key, ...args] = command;
-        if (op === "LPUSH") { memory.unshift(args[0]); return memory.length; }
-        if (op === "LTRIM") { const start = Number(args[0]), end = Number(args[1]); memory.splice(end + 1); if (start) memory.splice(0, start); return "OK"; }
-        if (op === "LRANGE") return memory.slice(Number(args[0]), Number(args[1]) + 1);
+        const list = lists.get(key) || [];
+        lists.set(key, list);
+        if (op === "LPUSH") { list.unshift(args[0]); return list.length; }
+        if (op === "LTRIM") { const start = Number(args[0]), end = Number(args[1]); list.splice(end + 1); if (start) list.splice(0, start); return "OK"; }
+        if (op === "LRANGE") return list.slice(Number(args[0]), Number(args[1]) + 1);
         if (op === "EVAL") {
-          const id = args[1];
-          const index = memory.findIndex(raw => { try { return JSON.parse(raw).id === id; } catch { return false; } });
+          const targetKey = args[1], id = args[2], target = lists.get(targetKey) || [];
+          const index = target.findIndex(raw => { try { return JSON.parse(raw).id === id; } catch { return false; } });
           if (index < 0) return 0;
-          memory.splice(index, 1); return 1;
+          target.splice(index, 1); return 1;
         }
         return "OK";
       }};
@@ -35,7 +37,7 @@ function loadHandler({ authorized = true } = {}) {
     }
   };
   vm.runInNewContext(source, sandbox, { filename: "handlers/admin/memory.js" });
-  return { handler: module.exports, memory, calls };
+  return { handler: module.exports, memory: lists.get("vy:admin:owner-memory") || [], calls };
 }
 function response() {
   return { statusCode: 200, body: null, headers: {},
