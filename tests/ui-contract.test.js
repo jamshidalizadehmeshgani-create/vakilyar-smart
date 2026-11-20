@@ -219,7 +219,7 @@ test("owner password hash utility is valid JavaScript and uses hidden local inpu
   const script = read("scripts/generate-owner-password-hash.js");
   assert.doesNotThrow(() => new vm.Script(script, { filename: "scripts/generate-owner-password-hash.js" }));
   assert.match(script, /process\.stdin\.setRawMode\(true\)/);
-  assert.match(script, /crypto\.scrypt\(password,salt,64/);
+  assert.match(script, /crypto\.scrypt\(password,\s*salt,\s*64/);
   assert.doesNotMatch(script, /\bfetch\s*\(|https?:\/\//i);
   assert.doesNotMatch(script, /writeFile|appendFile|localStorage|sessionStorage/);
 });
