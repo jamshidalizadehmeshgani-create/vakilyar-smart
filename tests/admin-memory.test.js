@@ -18,7 +18,6 @@ function loadHandler({ authorized = true } = {}) {
         return authorized;
       }};
       if (id === "../../lib/quota") return { redis: async command => {
-        calls.push(command);
         const [op, key, ...args] = command;
         const list = lists.get(key) || [];
         lists.set(key, list);
@@ -37,7 +36,7 @@ function loadHandler({ authorized = true } = {}) {
     }
   };
   vm.runInNewContext(source, sandbox, { filename: "handlers/admin/memory.js" });
-  return { handler: module.exports, memory: lists.get("vy:admin:owner-memory") || [], calls };
+  return { handler: module.exports, memory: lists.get("vy:admin:owner-memory") || [] };
 }
 function response() {
   return { statusCode: 200, body: null, headers: {},
