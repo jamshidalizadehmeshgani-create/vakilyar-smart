@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "purpose": "قالب پرونده دریافت سند رسمی؛ این فایل داده ورودی موتور پاسخ‌گویی نیست.",
+  "recordStatus": "quarantined_pending_verification",
+  "document": {
+    "title": null,
+    "sourceType": "law",
+    "officialPublisher": null,
+    "officialDocumentId": null,
+    "approvalOrIssueDate": null,
+    "officialPublicationDate": null,
+    "officialGazetteIssue": null,
+    "officialSourcePageUrl": null,
+    "officialDownloadUrl": null,
+    "retrievedAtUtc": null,
+    "retrievedBy": null,
+    "originalFilename": null,
+    "mimeType": null,
+    "byteLength": null,
+    "sha256": null,
+    "licenseOrReuseBasis": null,
+    "licenseEvidenceUrl": null
+  },
+  "integrityChecks": {
+    "downloadedFromOfficialHost": false,
+    "redirectChainRecorded": false,
+    "fileOpensWithoutRepair": false,
+    "pageCountRecorded": false,
+    "documentIdentityMatchesOfficialMetadata": false,
+    "sha256RecomputedBySecondReviewer": false,
+    "completeDocumentConfirmed": false
+  },
+  "legalReview": {
+    "reviewedBy": [],
+    "reviewedAt": null,
+    "articleRangeReviewed": null,
+    "articleNumberingChecked": false,
+    "textComparedWithOfficialPublication": false,
+    "amendmentsCheckedThrough": null,
+    "explicitRepealsChecked": false,
+    "effectiveDatesChecked": false,
+    "transitionalRulesChecked": false,
+    "implicitRepealIssuesFlagged": [],
+    "unresolvedDiscrepancies": [],
+    "reviewOutcome": "not_reviewed"
+  },
+  "amendmentDocuments": [],
+  "articleChecks": [],
+  "promotion": {
+    "approvedForCorpus": false,
+    "approvedBy": [],
+    "approvedAt": null,
+    "corpusRecordIds": [],
+    "reasonIfRejected": null
+  },
+  "notes": "تا زمان تکمیل کنترل اصالت، تمامیت، مجوز استفاده، تاریخچه اصلاحات و بازبینی حقوقی مستقل، این پرونده قرنطینه می‌ماند. هیچ مقدار حدسی یا داده برگرفته صرفاً از آینه ثانویه نباید به‌عنوان واقعیت رسمی ثبت شود."
+}
