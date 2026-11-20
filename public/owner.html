@@ -23,8 +23,8 @@ button.gold{background:#a98642}button.danger{background:#8a3434}button.secondary
 <main>
 <section id="login-panel" class="panel">
 <h2>ورود مالک</h2>
-<p class="notice">کلید فقط برای ایجاد نشست اولیه ارسال می‌شود؛ پس از ورود، نشست کوتاه‌مدت در کوکی HttpOnly و امن نگهداری می‌شود و جاوااسکریپت به آن دسترسی ندارد.</p>
-<label for="owner-key">کلید محرمانه مدیریت</label><input id="owner-key" type="password" autocomplete="current-password" maxlength="512">
+<p class="notice">نام کاربری و رمز عبور فقط برای ایجاد نشست اولیه به سرور ارسال می‌شوند؛ رمز به‌صورت هش‌شده در تنظیمات امن سرور نگهداری می‌شود. پس از ورود، نشست کوتاه‌مدت در کوکی HttpOnly نگهداری می‌شود.</p>
+<label for="owner-username">نام کاربری مالک</label><input id="owner-username" type="text" autocomplete="username" maxlength="190"><label for="owner-password">رمز عبور مالک</label><input id="owner-password" type="password" autocomplete="current-password" maxlength="1024">
 <button id="connect">ورود امن به فضای مالک</button><p id="login-status" class="hint" role="status" aria-live="polite"></p>
 </section>
 <section id="workspace" class="hidden">
@@ -81,9 +81,9 @@ async function restoreOwnerSession(){
  catch{}
 }
 $("connect").addEventListener("click",async()=>{
- const key=$("owner-key").value.trim();if(!key){$("login-status").textContent="کلید مدیریت را وارد کن.";return;}
+ const username=$("owner-username").value.trim(),password=$("owner-password").value;if(!username||!password){$("login-status").textContent="نام کاربری و رمز عبور را وارد کن.";return;}
  $("connect").disabled=true;$("login-status").textContent="در حال بررسی دسترسی مالک...";
- try{const response=await fetch("/api/admin/session",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"login",key})});const result=await response.json().catch(()=>({}));if(!response.ok)throw new Error(result.error||"ورود انجام نشد.");$("owner-key").value="";await load();show(true);$("login-status").textContent="";}catch(e){$("owner-key").value="";$("login-status").textContent=e.message;}
+ try{const response=await fetch("/api/admin/session",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"login",username,password})});const result=await response.json().catch(()=>({}));if(!response.ok)throw new Error(result.error||"ورود انجام نشد.");$("owner-password").value="";await load();show(true);$("login-status").textContent="";}catch(e){$("owner-password").value="";$("login-status").textContent=e.message;}
  finally{$("connect").disabled=false;}
 });
 $("save").addEventListener("click",async()=>{
