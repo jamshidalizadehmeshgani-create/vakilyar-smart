@@ -46,12 +46,12 @@
       "subject": "وثیقه یا رهن قراردادن مالی که پیش‌تر با سند عادی به دیگری منتقل شده است",
       "holdingSummary": "در فرض انتقال مال با سند عادی و سپس وثیقه‌گذاری آن توسط انتقال‌دهنده، با علم به تعلق مال به دیگری و بدون مجوز قانونی، رفتار مشمول ماده ۲ قانون مجازات اشخاصی است که مال غیر را به عوض مال خود معرفی می‌نمایند مصوب ۱۳۰۸ دانسته شده و مجازات شروع به کلاهبرداری مقرر می‌شود.",
       "citedBindingProvision": "ماده ۴۷۱ قانون آیین دادرسی کیفری مصوب ۱۳۹۲ با اصلاحات و الحاقات بعدی",
-      "publicationMetadataStatus": "secondary_transcription_not_yet_compared_to_official_gazette_image",
+      "publicationMetadataStatus": "secondary_transcription_cross_checked_official_link_found_image_not_retrieved",
       "officialPageAccessStatus": "official_qavanin_link_confirmed_but_direct_page_redirected_in_this_retrieval",
       "humanReviewStatus": "pending",
       "corpusEligible": false,
       "missingBeforeIngestion": [
-        "Retrieve and inspect the official image/PDF of Gazette issue 23159, special issue 1890, dated 1403/07/10.",
+        "Retrieve and inspect the official image/PDF from https://www.rrk.ir/Laws/ShowLaw.aspx?Code=29690 (request timed out in current retrieval).",
         "Compare the complete ruling and all metadata against the official Gazette image.",
         "Verify current precedential status and any later superseding or interpretive decisions.",
         "Have a qualified legal reviewer determine the correct effectiveFrom date for retrieval schema.",
@@ -60,8 +60,13 @@
       "notes": [
         "The official Qavanin law page links to the precedent record, establishing an official relationship/link, but the direct record returned only a transfer page in this retrieval.",
         "Gazette issue metadata and complete text are presently transcribed from a non-governmental reproduction and independently cross-checked against another legal publisher; this is not final primary-source verification.",
-        "Do not copy this record into legal/corpus.json or mark it human_verified yet."
-      ]
+        "Do not copy this record into legal/corpus.json or mark it human_verified yet.",
+        "The Vakilanet page labels its source link 'مشاهده' and points to the exact RRK URL above. The RRK host timed out when opened directly in this retrieval; no official image or PDF was downloaded or inspected."
+      ],
+      "officialGazetteDirectUrl": "https://www.rrk.ir/Laws/ShowLaw.aspx?Code=29690",
+      "officialGazetteDirectUrlDiscovery": "The 'مشاهده' link on the Vakilanet reproduction points to this exact rrk.ir URL.",
+      "officialGazetteRetrievalStatus": "not_retrieved_timeout",
+      "officialGazetteImageInspected": false
     }
   ]
 }
