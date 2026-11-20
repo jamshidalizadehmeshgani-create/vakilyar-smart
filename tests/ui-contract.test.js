@@ -208,6 +208,7 @@ test("owner credentials and dynamically created lawyer passwords have accessible
   assert.match(owner, /attachPasswordToggle\(\$\("owner-password"\)/);
   assert.match(owner, /attachPasswordToggle\(\$\("owner-bootstrap-key"\)/);
   assert.match(owner, /toggle\.setAttribute\("aria-pressed"/);
+  assert.match(owner, /if\(!response\.ok\)throw new Error\("خروج امن از سرور تأیید نشد/);
   assert.match(lawyers, /const passWrap=attachPasswordToggle\(pass,"رمز وکیل"\)/);
   assert.match(lawyers, /box\.append\(title,detail,btn,passWrap,setPass\)/);
   assert.doesNotMatch(credits, /adminKey|toggleAdminKey/);
