@@ -67,6 +67,39 @@ test("rejects impossible calendar dates and duplicate document identifiers", () 
   assert.equal(result.sources[0].title, validRecord.title);
 });
 
+test("retrieves only documents effective on the requested historical date", () => {
+  const repealedRecord = {
+    ...validRecord,
+    id: "historical-law",
+    effectiveFrom: "2010-01-01",
+    effectiveTo: "2023-12-31"
+  };
+  assert.equal(validateRecord(repealedRecord, now), false);
+  assert.equal(validateRecord(repealedRecord, now, "2022-06-01"), true);
+  const historical = retrieveLegalSources("تعهد قراردادی مسئولیت مدنی", {
+    corpus: [repealedRecord],
+    now,
+    asOfDate: "2022-06-01"
+  });
+  assert.equal(historical.status, "verified_sources");
+  assert.equal(historical.sources[0].asOfDate, "2022-06-01");
+  assert.equal(retrieveLegalSources("تعهد قراردادی مسئولیت مدنی", {
+    corpus: [repealedRecord],
+    now,
+    asOfDate: "2024-01-01"
+  }).status, "no_verified_sources");
+});
+
+test("rejects impossible or malformed historical reference dates", () => {
+  for (const asOfDate of ["2026-02-31", "2026/02/01", "not-a-date"]) {
+    assert.equal(retrieveLegalSources("تعهد قراردادی مسئولیت مدنی", {
+      corpus: [validRecord],
+      now,
+      asOfDate
+    }).status, "invalid_as_of_date");
+  }
+});
+
 test("does not retrieve documents using a single coincidental word", () => {
   const result = retrieveLegalSources("تعهد بسیار", {
     corpus: [validRecord],
