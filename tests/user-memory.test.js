@@ -24,11 +24,11 @@ function loadHandler() {
           if(op==="LTRIM"){const start=Number(args[0]),end=Number(args[1]);list.splice(end+1);if(start)list.splice(0,start);return "OK";}
           if(op==="LRANGE")return list.slice(Number(args[0]),Number(args[1])+1);
           if(op==="EVAL"){
-            const id=args[1],replacement=args[2];
-            const index=list.findIndex(raw=>{try{return JSON.parse(raw).id===id;}catch{return false;}});
+            const targetKey=args[1],id=args[2],replacement=args[3],target=lists.get(targetKey)||[];
+            const index=target.findIndex(raw=>{try{return JSON.parse(raw).id===id;}catch{return false;}});
             if(index<0)return 0;
-            if(replacement){const next=JSON.parse(replacement);next.created_at=JSON.parse(list[index]).created_at;list[index]=JSON.stringify(next);}
-            else list.splice(index,1);
+            if(replacement){const next=JSON.parse(replacement);next.created_at=JSON.parse(target[index]).created_at;target[index]=JSON.stringify(next);}
+            else target.splice(index,1);
             return 1;
           }
           return "OK";
