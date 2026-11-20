@@ -17,9 +17,8 @@ button.gold{background:#b18b42;color:#fff}button.danger{background:#8a3434}
 <body><main>
 <h1>پنل هدیه اعتبار وکیل‌یار</h1>
 <p>مدیر می‌تواند اعتبار حجمی، دسترسی نامحدود یا اشتراک آزمایشی Pro را برای یک کاربر مدیریت کند. فعال‌سازی Pro در این نسخه دستی است و به معنی پرداخت یا تمدید خودکار نیست.</p>
-<p class="note">این صفحه به‌تنهایی مجوز مدیریت نیست. کلید مدیر فقط در درخواست امن به سرور ارسال می‌شود؛ آن را در اختیار دیگران نگذارید و در مرورگر ذخیره نکنید.</p>
-<p><a href="/admin-lawyers.html">مدیریت حساب و دسترسی وکلا</a></p>\n<label for="adminKey">کلید مدیر (ADMIN_API_KEY)</label><div class="password-wrap"><input id="adminKey" type="password" autocomplete="off"><button class="password-toggle" type="button" id="toggleAdminKey" aria-label="نمایش کلید مدیر" aria-controls="adminKey" aria-pressed="false">👁</button></div>
-<label for="userId">شناسه کاربر (از مسیر /api/usage)</label><input id="userId" placeholder="شناسه ۴۸ رقمی هگز">
+<p class="note">دسترسی این صفحه فقط با نشست امن مالک امکان‌پذیر است. برای ورود یا تمدید نشست به <a href="/owner.html">فضای خصوصی مالک</a> بروید.</p>
+<p><a href="/admin-lawyers.html">مدیریت حساب و دسترسی وکلا</a></p>\n<label for="userId">شناسه کاربر (از مسیر /api/usage)</label><input id="userId" placeholder="شناسه ۴۸ رقمی هگز">
 <label for="amount">مقدار اعتبار هدیه</label><input id="amount" type="number" min="1" max="10000000" value="500">
 <div>
 <button id="lookup">نمایش وضعیت کاربر</button>
@@ -33,8 +32,6 @@ button.gold{background:#b18b42;color:#fff}button.danger{background:#8a3434}
 </main>
 <script>
 const result=document.getElementById("result");
-const adminKey=document.getElementById("adminKey"),toggleAdminKey=document.getElementById("toggleAdminKey");
-toggleAdminKey.addEventListener("click",()=>{const reveal=adminKey.type==="password";adminKey.type=reveal?"text":"password";toggleAdminKey.textContent=reveal?"🙈":"👁";toggleAdminKey.setAttribute("aria-pressed",String(reveal));toggleAdminKey.setAttribute("aria-label",reveal?"پنهان‌کردن کلید مدیر":"نمایش کلید مدیر");adminKey.focus({preventScroll:true});});
 let pendingCreditGrant=null;
 try{
  const saved=sessionStorage.getItem("vy_pending_credit_grant");
@@ -51,9 +48,8 @@ function persistPendingCreditGrant(){
  }catch(e){}
 }
 async function send(data){
- const key=document.getElementById("adminKey").value.trim();
  const user_id=document.getElementById("userId").value.trim();
- if(!key||!user_id){result.textContent="کلید مدیر و شناسه کاربر را وارد کنید.";return;}
+ if(!user_id){result.textContent="شناسه کاربر را وارد کنید.";return;}
  const isCreditGrant=Number.isSafeInteger(data.credits)&&data.credits>0;
  if(isCreditGrant){
   if(pendingCreditGrant && (pendingCreditGrant.user_id!==user_id || pendingCreditGrant.credits!==data.credits)){
@@ -71,7 +67,8 @@ async function send(data){
  buttons.forEach(button=>button.disabled=true);
  result.textContent="در حال ارسال درخواست...";
  try{
-  const r=await fetch("/api/admin/grant-credits",{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},body:JSON.stringify({...data,user_id})});
+  const r=await fetch("/api/admin/grant-credits",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({...data,user_id})});
+  if(r.status===401){location.href="/owner.html";return;}
   const d=await r.json();
   result.textContent=d.action==="lookup" ? `موجودی اعتبار: ${d.credits_balance}\nاعتبار نامحدود هدیه: ${d.unlimited ? "فعال" : "غیرفعال"}\nاشتراک Pro: ${d.pro ? "فعال" : "غیرفعال"}\nشناسه: ${d.user_id}` : (d.message||d.error||"پاسخ نامشخص");
   if(!r.ok) result.textContent+=" (کد "+r.status+")";
