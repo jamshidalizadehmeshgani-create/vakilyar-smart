@@ -17,6 +17,15 @@ const SYSTEM_PROMPT = `تو «وکیل‌یار هوشمند» هستی؛ دست
 - در صورت تناسب، پاسخ را با بخش‌های «خلاصه پاسخ»، «مبنای حقوقی و حدود اطمینان»، «اقدام‌های پیشنهادی» و «اطلاعات تکمیلی لازم» تنظیم کن.
 - اگر منبع رسمی یا پایگاه قوانین به تو متصل نیست، ادعا نکن که قانون را جست‌وجو یا آخرین اصلاحات را بررسی کرده‌ای.`;
 
+function isValidAsOfDate(value) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year &&
+    parsed.getUTCMonth() === month - 1 &&
+    parsed.getUTCDate() === day;
+}
+
 function isValidCountryName(value) {
   return typeof value === "string" && value.trim().length <= 60 && /^[\p{L}\p{M}][\p{L}\p{M} .’'-]{0,59}$/u.test(value.trim());
 }
@@ -56,6 +65,10 @@ module.exports = async (req, res) => {
     return res.status(400).json({ code: "INVALID_COUNTRY", error: "نام کشور باید کوتاه و فقط شامل حروف باشد." });
   }
   const countryLabel = typeof requestedCountryInput === "string" ? requestedCountryInput.trim() : "";
+  const asOfDateInput = req.body?.as_of_date;
+  if (asOfDateInput !== undefined && !isValidAsOfDate(asOfDateInput)) {
+    return res.status(400).json({ code: "INVALID_AS_OF_DATE", error: "تاریخ مبنای بررسی باید یک تاریخ معتبر به قالب میلادی YYYY-MM-DD باشد." });
+  }
 
   // Support the earlier lowercase Vercel variable name as a backward-compatible fallback.
   const apiKey = process.env.AI_API_KEY || process.env.ai_api_key;
@@ -127,7 +140,7 @@ module.exports = async (req, res) => {
     try {
       legalRetrieval = foreignRequest
         ? { status: "no_verified_sources", sources: [], evidence: [] }
-        : retrieveLegalSources(message);
+        : retrieveLegalSources(message, asOfDateInput ? { asOfDate: asOfDateInput } : {});
     } catch {
       legalRetrieval = { status: "retrieval_unavailable", sources: [], evidence: [] };
     }
@@ -177,6 +190,7 @@ module.exports = async (req, res) => {
       credits_used: charged,
       credits_remaining: (account.isPro || account.isUnlimited) ? null : remainingCredits,
       legal_evidence_status: legalRetrieval.status,
+      legal_as_of_date: asOfDateInput || new Date().toISOString().slice(0, 10),
       sources: legalRetrieval.sources
     });
   } catch (error) {
