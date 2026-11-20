@@ -17,6 +17,13 @@ const validRecord = {
   text: "تعهد قراردادی و مسئولیت مدنی ناشی از اجرای قرارداد باید با متن معتبر قانون بررسی شود.",
   sourceType: "law",
   officialPublisher: "سامانه ملی قوانین و مقررات",
+  officialDocumentId: "official-document-test-001",
+  approvalDate: "2019-12-01",
+  publicationDate: "2019-12-15",
+  officialGazetteIssue: "شماره آزمایشی",
+  amendmentHistory: [],
+  amendmentReviewStatus: "reviewed",
+  amendmentReviewDate: "2026-10-01",
   sourceUrl: "https://qavanin.ir/Law/PrintText/example",
   status: "in_force",
   verificationStatus: "human_verified",
@@ -38,6 +45,39 @@ test("retrieves only current human-verified records from allowlisted official do
   assert.equal(result.sources.length, 1);
   assert.equal(result.sources[0].sourceUrl, validRecord.sourceUrl);
   assert.equal(result.evidence[0].text, validRecord.text);
+});
+
+test("requires publication identity and an explicit human amendment-history review", () => {
+  const invalidRecords = [
+    { ...validRecord, officialDocumentId: "" },
+    { ...validRecord, approvalDate: "2019-02-30" },
+    { ...validRecord, publicationDate: "not-a-date" },
+    { ...validRecord, amendmentReviewStatus: "unknown" },
+    { ...validRecord, amendmentHistory: "not-an-array" },
+    { ...validRecord, amendmentHistory: [{
+      documentId: "bad-amendment",
+      title: "اصلاحیه آزمایشی",
+      changeType: "amended",
+      approvalDate: "2020-01-01",
+      publicationDate: "2020-01-02",
+      effectiveFrom: "2020-01-03",
+      sourceUrl: "https://example.com/not-official"
+    }] }
+  ];
+  for (const record of invalidRecords) assert.equal(validateRecord(record, now), false);
+});
+
+test("returns official publication and amendment review metadata with each citation", () => {
+  const result = retrieveLegalSources("تعهد قراردادی مسئولیت مدنی", {
+    corpus: [validRecord],
+    now
+  });
+  assert.equal(result.status, "verified_sources");
+  assert.equal(result.sources[0].officialDocumentId, validRecord.officialDocumentId);
+  assert.equal(result.sources[0].approvalDate, validRecord.approvalDate);
+  assert.equal(result.sources[0].publicationDate, validRecord.publicationDate);
+  assert.deepEqual(result.sources[0].amendmentHistory, []);
+  assert.equal(result.evidence[0].sourceUrl, validRecord.sourceUrl);
 });
 
 test("rejects unofficial, insecure, unverified, repealed, expired, and stale records", () => {
