@@ -126,5 +126,6 @@ test("evidence prompt includes the retrieved text and warns against invented cit
   const prompt = buildEvidencePrompt(result);
   assert.match(prompt, /متن سند:/);
   assert.match(prompt, /تعهد قراردادی/);
+  assert.match(prompt, /تاریخ مبنای بررسی: 2026-11-21/);
   assert.match(prompt, /هیچ ماده یا منبع دیگری نساز/);
 });
