@@ -101,6 +101,6 @@ $("save").addEventListener("click",async()=>{
  finally{$("save").disabled=false;}
 });
 $("refresh").addEventListener("click",async()=>{try{await load();}catch(e){$("status").textContent=e.message;show(false);}});
-$("disconnect").addEventListener("click",async()=>{try{await fetch("/api/admin/session",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"logout"})});}catch{}$("memories").replaceChildren();$("status").textContent="از فضای مالک خارج شدید.";show(false);});
+$("disconnect").addEventListener("click",async()=>{const button=$("disconnect");button.disabled=true;try{const response=await fetch("/api/admin/session",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"logout"})});if(!response.ok)throw new Error("خروج امن از سرور تأیید نشد؛ اتصال را بررسی و دوباره تلاش کنید.");$("memories").replaceChildren();$("status").textContent="از فضای مالک خارج شدید.";show(false);}catch(e){$("status").textContent=e.message;}finally{button.disabled=false;}});
 restoreOwnerSession();
 </script></body></html>
