@@ -103,7 +103,7 @@ function renderSources(sources){
     link.textContent=(source.title||"سند حقوقی")+(source.articleNumber?" — "+source.articleNumber:"");
     const meta=document.createElement("div");
     meta.className="source-meta";
-    meta.textContent=[source.officialPublisher,source.sourceType,source.effectiveFrom?"اعتبار از "+source.effectiveFrom:"",source.effectiveTo?"اعتبار تا "+source.effectiveTo:"",source.verifiedAt?"بازبینی انسانی: "+source.verifiedAt:""].filter(Boolean).join(" · ");
+    meta.textContent=[source.officialPublisher,source.sourceType,source.effectiveFrom?"اعتبار از "+source.effectiveFrom:"",source.effectiveTo?"اعتبار تا "+source.effectiveTo:"",source.asOfDate?"تاریخ مبنا: "+source.asOfDate:"",source.verifiedAt?"بازبینی انسانی: "+source.verifiedAt:""].filter(Boolean).join(" · ");
     item.append(link,meta);sourcesEl.appendChild(item);
   }
   sourcesEl.hidden=sourcesEl.childElementCount===0;
