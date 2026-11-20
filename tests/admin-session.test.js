@@ -118,3 +118,17 @@ test("owner login accepts configured username and scrypt password hash", async (
   assert.match(loginRes.headers["Set-Cookie"], /^vy_owner_session=[a-f0-9]{64};/);
   assert.equal([...store.keys()].filter(key => key.startsWith("vy:admin:session:")).length, 1);
 });
+
+test("bootstrap API key is disabled once owner username/password are configured", async () => {
+  const salt = "b2".repeat(16);
+  const hash = crypto.scryptSync("another-long-owner-password", Buffer.from(salt, "hex"), 64).toString("hex");
+  const { auth } = loadAuth({
+    ADMIN_USERNAME: "owner-account",
+    ADMIN_PASSWORD_HASH: "scrypt$" + salt + "$" + hash
+  });
+  const legacy = req();
+  legacy.body = { key:"preview-test-key" };
+  const denied = response();
+  assert.equal(await auth.loginAdmin(legacy, denied), false);
+  assert.equal(denied.statusCode, 401);
+});
