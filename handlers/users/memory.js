@@ -70,6 +70,10 @@ module.exports = async (req, res) => {
       if (changed !== 1) return res.status(404).json({ error: "یادداشت در حافظه همین حساب پیدا نشد." });
       return res.status(200).json({ ok: true, message: "یادداشت به‌روزرسانی شد." });
     }
+    if (action === "clear") {
+      await redis(["DEL", key]);
+      return res.status(200).json({ ok: true, message: "همه یادداشت‌های حافظه شخصی همین حساب حذف شدند." });
+    }
     if (action === "delete") {
       const id = typeof req.body?.id === "string" ? req.body.id : "";
       if (!/^[a-f0-9]{32}$/.test(id)) return res.status(400).json({ error: "شناسه یادداشت معتبر نیست." });
