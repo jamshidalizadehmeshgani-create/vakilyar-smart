@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const { retrieveLegalSources, buildEvidencePrompt } = require("../lib/legal-retrieval");
 const { getAccount, classifyRequest, reserveCredits, refundReservation, commitReservation, consumeIpRateLimit } = require("../lib/quota");
 
 const SYSTEM_PROMPT = `تو «وکیل‌یار هوشمند» هستی؛ دستیار ارائه‌دهنده اطلاعات عمومی و آموزشی حقوقی.
@@ -122,6 +123,15 @@ module.exports = async (req, res) => {
       if (remainingCredits < 0) return res.status(402).json({ code: "CREDITS_EXHAUSTED", error: "اعتبار رایگان شما به پایان رسیده است. برای ادامه، وکیل‌یار پرو را فعال کنید." });
     }
     const scopeLabel = foreignRequest ? (countryLabel || "حوزه حقوقی انتخاب‌شده") : "قوانین جمهوری اسلامی ایران";
+    let legalRetrieval;
+    try {
+      legalRetrieval = foreignRequest
+        ? { status: "no_verified_sources", sources: [], evidence: [] }
+        : retrieveLegalSources(message);
+    } catch {
+      legalRetrieval = { status: "retrieval_unavailable", sources: [], evidence: [] };
+    }
+    const evidencePrompt = buildEvidencePrompt(legalRetrieval);
     const upstream = await fetch(endpoint, {
       method: "POST",
       signal: AbortSignal.timeout(25000),
@@ -135,6 +145,7 @@ module.exports = async (req, res) => {
         max_tokens: 4096,
         messages: [
           { role: "system", content: SYSTEM_PROMPT + "\nحوزه حقوقی این درخواست: " + scopeLabel },
+          { role: "system", content: evidencePrompt },
           { role: "user", content: message }
         ]
       })
@@ -158,7 +169,16 @@ module.exports = async (req, res) => {
       if (committed !== 1) throw new Error("Credit reservation could not be committed");
       reservationId = null;
     }
-    return res.status(200).json({ configured: true, reply, plan: account.isPro ? "pro" : "free", unlimited: account.isUnlimited, credits_used: charged, credits_remaining: (account.isPro || account.isUnlimited) ? null : remainingCredits });
+    return res.status(200).json({
+      configured: true,
+      reply,
+      plan: account.isPro ? "pro" : "free",
+      unlimited: account.isUnlimited,
+      credits_used: charged,
+      credits_remaining: (account.isPro || account.isUnlimited) ? null : remainingCredits,
+      legal_evidence_status: legalRetrieval.status,
+      sources: legalRetrieval.sources
+    });
   } catch (error) {
     if (account && reservationId) { try { await refundReservation(account.key, reservationId); reservationId = null; } catch (refundError) { console.error("Credit refund failed"); } }
     const diagnosticCode = typeof error?.code === "string" && /^[A-Z0-9_]{2,40}$/i.test(error.code) ? error.code.toUpperCase() : "UNCLASSIFIED";
