@@ -5,6 +5,7 @@
 const handlers = new Map([
   ["admin/grant-credits", require("../handlers/admin/grant-credits")],
   ["admin/lawyers", require("../handlers/admin/lawyers")],
+  ["admin/memory", require("../handlers/admin/memory")],
   ["chat", require("../handlers/chat")],
   ["lawyer/login", require("../handlers/lawyer/login")],
   ["lawyer/logout", require("../handlers/lawyer/logout")],
