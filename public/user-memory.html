@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#14233f">
+<title>حافظه شخصی | وکیل‌یار</title>
+<style>
+:root{--n:#14233f;--g:#c9a45c;--bg:#f5f3ee;--line:#e5e0d6;--muted:#667085}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#202938;font:15px/1.9 Tahoma,Arial,sans-serif}
+header{background:var(--n);color:white;padding:20px max(16px,calc((100% - 900px)/2));border-bottom:4px solid var(--g)}
+main{max-width:900px;margin:24px auto;padding:0 14px}.panel{background:white;border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+h1{font-size:21px;margin:0}h2{font-size:18px;color:var(--n);margin:0 0 10px}
+label{display:block;font-weight:bold;margin:10px 0 4px;font-size:13px}
+input,textarea,select{width:100%;padding:10px;border:1px solid #cbd2dc;border-radius:8px;font:inherit;background:white}
+textarea{min-height:115px;resize:vertical}button,.link{display:inline-block;border:0;border-radius:8px;padding:9px 14px;margin:8px 4px 0 0;background:var(--n);color:white;font:inherit;text-decoration:none;cursor:pointer}
+button.secondary{background:#e9edf3;color:var(--n)}button.danger{background:#8a3434}button:disabled{opacity:.55}
+#status{min-height:24px;color:var(--muted);font-size:13px}.item{border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px 0}
+.item h3{margin:0;color:var(--n);font-size:15px}.item p{white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0}
+small,.hint{color:var(--muted);font-size:12px}.toolbar{display:flex;gap:8px;flex-wrap:wrap}
+@media(max-width:600px){.panel{padding:14px}}
+</style></head>
+<body>
+<header><h1>وکیل‌یار | حافظه و فضای شخصی کاربر</h1><small style="color:#e8dfce">یادداشت‌ها و سوابق خصوصی این حساب</small></header>
+<main>
+<section class="panel">
+<h2>حافظه شخصی من</h2>
+<p class="hint">یادداشت‌ها در سرور و زیر شناسه حساب واردشده ذخیره می‌شوند. هر حساب فقط به یادداشت‌های خودش دسترسی دارد؛ شناسه حساب از نشست معتبر سرور تعیین می‌شود.</p>
+<p id="status" role="status" aria-live="polite">در حال بررسی ورود...</p>
+<a class="link" href="/user-login.html">بازگشت به حساب کاربری</a>
+<a class="link" href="/ask-lawyer.html">پرسش‌های من</a>
+</section>
+<section class="panel">
+<h2 id="form-title">ثبت یادداشت جدید</h2>
+<form id="memory-form">
+<label for="category">دسته‌بندی</label><select id="category"><option>یادداشت شخصی</option><option>موضوع حقوقی</option><option>پیگیری و اقدام بعدی</option><option>مدارک و مستندات</option><option>اطلاعات مهم</option></select>
+<label for="title">عنوان</label><input id="title" maxlength="120" required>
+<label for="content">متن یادداشت</label><textarea id="content" maxlength="4000" required></textarea>
+<button id="save" type="submit">ذخیره یادداشت</button><button id="cancel" class="secondary" type="button" hidden>لغو ویرایش</button>
+</form>
+</section>
+<section class="panel"><h2>یادداشت‌های ذخیره‌شده</h2><div id="records"><p class="hint">در حال بارگذاری...</p></div></section>
+</main>
+<script>
+const $=id=>document.getElementById(id);let editingId="";
+async function api(action,data={}){const r=await fetch("/api/users/memory",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,...data})});const d=await r.json().catch(()=>({}));if(!r.ok){if(r.status===401)location.href="/user-login.html";throw new Error(d.error||"درخواست ناموفق بود.");}return d;}
+function resetForm(){editingId="";$("memory-form").reset();$("form-title").textContent="ثبت یادداشت جدید";$("save").textContent="ذخیره یادداشت";$("cancel").hidden=true;}
+function render(items){const area=$("records");area.replaceChildren();if(!items.length){const p=document.createElement("p");p.className="hint";p.textContent="هنوز یادداشتی ثبت نکرده‌اید.";area.append(p);return;}for(const item of items){const card=document.createElement("article");card.className="item";const h=document.createElement("h3");h.textContent=item.title;const meta=document.createElement("small");meta.textContent=item.category+" · "+(item.updated_at||item.created_at||"");const body=document.createElement("p");body.textContent=item.content;const edit=document.createElement("button");edit.className="secondary";edit.textContent="ویرایش";edit.onclick=()=>{editingId=item.id;$("title").value=item.title;$("content").value=item.content;$("category").value=item.category;$("form-title").textContent="ویرایش یادداشت";$("save").textContent="ثبت تغییرات";$("cancel").hidden=false;window.scrollTo({top:0,behavior:"smooth"});};const remove=document.createElement("button");remove.className="danger";remove.textContent="حذف";remove.onclick=async()=>{if(!confirm("این یادداشت از حافظه همین حساب حذف شود؟"))return;try{await api("delete",{id:item.id});await load();$("status").textContent="یادداشت حذف شد.";}catch(e){$("status").textContent=e.message;}};card.append(h,meta,body,edit,remove);area.append(card);}}
+async function load(){const d=await api("list");render(d.records||[]);}
+$("memory-form").addEventListener("submit",async e=>{e.preventDefault();$("save").disabled=true;try{const data={title:$("title").value,content:$("content").value,category:$("category").value};await api(editingId?"update":"add",editingId?{...data,id:editingId}:data);resetForm();await load();$("status").textContent="یادداشت در حافظه خصوصی حساب شما ذخیره شد.";}catch(e){$("status").textContent=e.message;}finally{$("save").disabled=false;}});
+$("cancel").onclick=resetForm;
+(async()=>{try{await load();$("status").textContent="ورود شما تأیید شد؛ حافظه شخصی آماده است.";}catch(e){$("status").textContent=e.message;}})();
+</script>
+</body></html>

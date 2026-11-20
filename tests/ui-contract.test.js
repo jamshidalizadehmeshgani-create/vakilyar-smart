@@ -9,7 +9,7 @@ const read = file => fs.readFileSync(path.join(root, file), "utf8");
 test("all public entry pages and their internal navigation targets exist", () => {
   const pages = [
     "index.html", "ask-lawyer.html", "lawyer-login.html", "lawyer-panel.html",
-    "admin-lawyers.html", "admin-credits.html", "privacy.html", "terms.html", "user-register.html", "user-login.html", "user-forgot-password.html", "user-reset-password.html"
+    "admin-lawyers.html", "admin-credits.html", "owner.html", "privacy.html", "terms.html", "user-register.html", "user-login.html", "user-forgot-password.html", "user-reset-password.html", "user-memory.html"
   ];
   const known = new Set(pages);
   for (const page of pages) assert.ok(fs.existsSync(path.join(root, "public", page)), page + " is missing");
@@ -24,7 +24,7 @@ test("all public entry pages and their internal navigation targets exist", () =>
 });
 
 test("browser pages call API routes registered by the consolidated serverless router", () => {
-  const pages = ["index.html", "ask-lawyer.html", "lawyer-login.html", "lawyer-panel.html", "admin-lawyers.html", "admin-credits.html", "user-register.html", "user-login.html", "user-forgot-password.html", "user-reset-password.html"];
+  const pages = ["index.html", "ask-lawyer.html", "lawyer-login.html", "lawyer-panel.html", "admin-lawyers.html", "admin-credits.html", "user-register.html", "user-login.html", "user-forgot-password.html", "user-reset-password.html", "user-memory.html"];
   const endpoints = new Set();
   for (const page of pages) {
     const html = read("public/" + page);
@@ -84,7 +84,7 @@ test("disabled lawyer panel cannot load inboxes or submit replies", () => {
 test("all public pages declare Persian RTL document metadata", () => {
   const pages = [
     "index.html", "ask-lawyer.html", "lawyer-login.html", "lawyer-panel.html",
-    "admin-lawyers.html", "admin-credits.html", "privacy.html", "terms.html", "user-register.html", "user-login.html", "user-forgot-password.html", "user-reset-password.html"
+    "admin-lawyers.html", "admin-credits.html", "privacy.html", "terms.html", "user-register.html", "user-login.html", "user-forgot-password.html", "user-reset-password.html", "user-memory.html"
   ];
   for (const page of pages) {
     const html = read("public/" + page);
