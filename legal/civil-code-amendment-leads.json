@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "purpose": "نقشه سرنخ‌های اسناد اصلاحی برای برنامه‌ریزی پژوهش؛ این فایل فهرست رسمی و جامع اصلاحات نیست و برای استناد یا تعیین وضعیت جاری مواد طراحی نشده است.",
+  "lastReviewed": "2026-11-21",
+  "status": "discovery_only_not_verified_against_official_gazette",
+  "items": [
+    {
+      "id": "civil-code-art2-amendment-1348",
+      "event": "اصلاح ماده ۲ قانون مدنی",
+      "date": "1348-08-29",
+      "affectedArticles": [
+        "2"
+      ],
+      "eventType": "amendment",
+      "discoveryEvidence": [
+        {
+          "url": "https://iranhrdc.org/fa/قانون-مدنی/?amp=1",
+          "role": "secondary_historical_transcription",
+          "note": "نسخه ثانویه متن قانون مدنی، تاریخ اصلاح ماده ۲ و شماره روزنامه رسمی ۷۲۴۲ مورخ ۱۳۴۸/۰۹/۲۵ را ذکر می‌کند."
+        }
+      ],
+      "officialGazetteIssue": null,
+      "officialDocumentId": null,
+      "officialSourceUrl": null,
+      "verificationStatus": "official_issue_and_document_not_yet_retrieved",
+      "reviewNotes": [
+        "نباید تاریخ تصویب/اصلاح را با تاریخ انتشار یا تاریخ لازم‌الاجرا شدن یکی گرفت."
+      ]
+    },
+    {
+      "id": "civil-code-amendment-law-1370",
+      "event": "قانون اصلاح موادی از قانون مدنی",
+      "date": "1370-08-14",
+      "affectedArticles": [
+        "1",
+        "26",
+        "81",
+        "162",
+        "163",
+        "655",
+        "706",
+        "747",
+        "881",
+        "881مکرر",
+        "980",
+        "981",
+        "991",
+        "1036",
+        "1039",
+        "1041",
+        "1042",
+        "1043",
+        "1044",
+        "1223",
+        "1227",
+        "1228",
+        "1236",
+        "1243",
+        "1251",
+        "1254",
+        "1313مکرر",
+        "1328",
+        "1328مکرر",
+        "1335"
+      ],
+      "eventType": "multi_article_amendment_and_explicit_repeals",
+      "discoveryEvidence": [
+        {
+          "url": "https://www.ekhtebar.ir/قانون-اصلاح-موادی-از-قانون-مدنی/",
+          "role": "secondary_transcription_of_amendment_law",
+          "note": "متن ثانویه قانون اصلاح موادی از قانون مدنی را با تاریخ ۱۴/۰۸/۱۳۷۰ و متن برخی مواد/حذف‌ها منتشر کرده است."
+        },
+        {
+          "url": "https://amagestate.com/legal/amendment-article-1-civil-code-law-promulgation/",
+          "role": "secondary_transcription_of_selected_articles",
+          "note": "متن ثانویه مواد ۱ و ۲۶ را به‌عنوان بخش‌هایی از قانون اصلاح موادی از قانون مدنی مصوب ۱۳۷۰/۰۸/۱۴ نقل می‌کند."
+        }
+      ],
+      "officialGazetteIssue": null,
+      "officialDocumentId": null,
+      "officialSourceUrl": null,
+      "verificationStatus": "official_full_text_and_gazette_metadata_not_yet_retrieved",
+      "reviewNotes": [
+        "فهرست مواد فوق سرنخ پژوهشی استخراج‌شده از نسخه‌های ثانویه است و جامعیت/دقت آن هنوز تأیید رسمی نشده است.",
+        "تاریخ اصلاح ماده ۱۰۴۳ در بعضی بازنشرها متفاوت درج شده؛ متن ابلاغی و روزنامه رسمی باید ملاک باشد.",
+        "مواد حذف‌شده باید در بانک تاریخی جدا از متن جاری نگهداری شوند."
+      ]
+    },
+    {
+      "id": "civil-code-article-1041-amendment-1381",
+      "event": "اصلاح ماده ۱۰۴۱ قانون مدنی توسط مجمع تشخیص مصلحت نظام",
+      "date": "1381-04-01",
+      "affectedArticles": [
+        "1041"
+      ],
+      "eventType": "amendment",
+      "discoveryEvidence": [
+        {
+          "url": "https://www.ekhtebar.ir/قانون-مدنی/",
+          "role": "secondary_transcription",
+          "note": "نسخه ثانویه، متن ماده ۱۰۴۱ را با تاریخ اصلاح ۱۳۸۱/۰۴/۰۱ منتسب به مجمع تشخیص مصلحت نظام نقل می‌کند."
+        }
+      ],
+      "officialGazetteIssue": null,
+      "officialDocumentId": null,
+      "officialSourceUrl": null,
+      "verificationStatus": "official_decision_and_publication_not_yet_retrieved",
+      "reviewNotes": [
+        "مصوبه مجمع و سند انتشار/ابلاغ آن باید مستقلاً احراز شود."
+      ]
+    },
+    {
+      "id": "civil-code-articles-946-948-repeal-947-1387",
+      "event": "قانون اصلاح مواد ۹۴۶ و ۹۴۸ و حذف ماده ۹۴۷ قانون مدنی",
+      "date": "1387-11-06",
+      "affectedArticles": [
+        "946",
+        "947",
+        "948"
+      ],
+      "eventType": "amendment_and_explicit_repeal",
+      "discoveryEvidence": [
+        {
+          "url": "https://paytakhtmelk.ir/دانستنیهای-حقوقی/149-2017-03-18-15-57-30.html",
+          "role": "secondary_transcription_with_gazette_metadata",
+          "note": "بازنشر ثانویه شماره ۲۳۳۲۵۹ مورخ ۱۹/۱۲/۱۳۸۷ و نامه ابلاغ ۷۰۷۲۶/۷ مورخ ۱۱/۱۲/۱۳۸۷ را نمایش می‌دهد."
+        },
+        {
+          "url": "https://asbahi-lawyer.ir/law/16709-2/",
+          "role": "secondary_transcription",
+          "note": "متن ماده واحده اصلاح مواد ۹۴۶ و ۹۴۸ و حذف ماده ۹۴۷ را بازنشر می‌کند."
+        }
+      ],
+      "officialGazetteIssue": null,
+      "officialDocumentId": null,
+      "officialSourceUrl": null,
+      "verificationStatus": "secondary_text_consistent_but_official_gazette_not_retrieved",
+      "reviewNotes": [
+        "شماره‌های نامه و ابلاغ و متن ماده واحده هنوز با نسخه رسمی روزنامه رسمی تطبیق نشده‌اند."
+      ]
+    },
+    {
+      "id": "civil-code-article-946-transitional-paragraph-1389",
+      "event": "الحاق تبصره به ماده ۹۴۶ قانون مدنی",
+      "date": "1389-05-26",
+      "affectedArticles": [
+        "946"
+      ],
+      "eventType": "addition",
+      "discoveryEvidence": [
+        {
+          "url": "https://ibahoosham.ir/divanlaw/law/law-6925314?all=1",
+          "role": "secondary_transcription",
+          "note": "نسخه ثانویه تبصره ماده ۹۴۶ را با تاریخ الحاق ۱۳۸۹/۰۵/۲۶ نشان می‌دهد."
+        }
+      ],
+      "officialGazetteIssue": null,
+      "officialDocumentId": null,
+      "officialSourceUrl": null,
+      "verificationStatus": "official_law_and_publication_not_yet_retrieved",
+      "reviewNotes": [
+        "متن رسمی، شماره و تاریخ انتشار و دامنه اثر زمانی تبصره باید از منبع رسمی احراز شود."
+      ]
+    }
+  ],
+  "rules": [
+    "این نقشه صرفاً برای یافتن اسناد اولیه است؛ تاریخ‌ها و مواد متأثر باید با متن رسمی و روزنامه رسمی تطبیق داده شوند.",
+    "نبود یک رویداد در این فهرست به معنی نبود اصلاح یا نسخ نیست.",
+    "هیچ‌یک از این داده‌ها نباید به legal/corpus.json یا پاسخ کاربر نهایی منتقل شود.",
+    "برای هر رویداد باید سند تصویب/ابلاغ، شماره و تاریخ روزنامه رسمی، متن کامل، تاریخ اثر و در صورت لزوم مقررات انتقالی احراز شود."
+  ]
+}
