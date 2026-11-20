@@ -23,6 +23,7 @@ function loadHandler() {
           if(op==="LPUSH"){list.unshift(args[0]);return list.length;}
           if(op==="LTRIM"){const start=Number(args[0]),end=Number(args[1]);list.splice(end+1);if(start)list.splice(0,start);return "OK";}
           if(op==="LRANGE")return list.slice(Number(args[0]),Number(args[1])+1);
+          if(op==="DEL"){lists.delete(key);return 1;}
           if(op==="EVAL"){
             const targetKey=args[1],id=args[2],replacement=args[3],target=lists.get(targetKey)||[];
             const index=target.findIndex(raw=>{try{return JSON.parse(raw).id===id;}catch{return false;}});
@@ -56,6 +57,11 @@ test("user memory is private to the authenticated server-side account and suppor
  const after=response();await handler({method:"POST",uid:uidA,body:{action:"list"}},after);assert.equal(after.body.records[0].title,"عنوان ویرایش‌شده");
  const deleted=response();await handler({method:"POST",uid:uidA,body:{action:"delete",id:added.body.record.id}},deleted);assert.equal(deleted.statusCode,200);
  const final=response();await handler({method:"POST",uid:uidA,body:{action:"list"}},final);assert.equal(final.body.count,0);
+ const anotherA=response();await handler({method:"POST",uid:uidA,body:{action:"add",title:"یادداشت دوم",content:"برای پاک‌سازی گروهی"}},anotherA);assert.equal(anotherA.statusCode,201);
+ const anotherB=response();await handler({method:"POST",uid:uidB,body:{action:"add",title:"حافظه حساب ب",content:"باید بماند"}},anotherB);assert.equal(anotherB.statusCode,201);
+ const cleared=response();await handler({method:"POST",uid:uidA,body:{action:"clear"}},cleared);assert.equal(cleared.statusCode,200);
+ const afterClearA=response();await handler({method:"POST",uid:uidA,body:{action:"list"}},afterClearA);assert.equal(afterClearA.body.count,0);
+ const afterClearB=response();await handler({method:"POST",uid:uidB,body:{action:"list"}},afterClearB);assert.equal(afterClearB.body.count,1);assert.equal(afterClearB.body.records[0].title,"حافظه حساب ب");
 });
 test("user memory rejects anonymous, cross-origin, invalid and oversized requests",async()=>{
  const {handler}=loadHandler();const anonymous=response();await handler({method:"POST",uid:"",body:{action:"list"}},anonymous);assert.equal(anonymous.statusCode,401);
@@ -94,6 +100,8 @@ test("private memory derives identity from the real HttpOnly session and ignores
       const count = (rateCounts.get(key) || 0) + 1;
       rateCounts.set(key, count);
       result = count;
+    } else if (op === "DEL") {
+      result = lists.delete(key) ? 1 : 0;
     } else if (op === "LPUSH") {
       const list = lists.get(key) || [];
       list.unshift(args[0]);
@@ -170,6 +178,20 @@ test("private memory derives identity from the real HttpOnly session and ignores
     await handler(makeReq(tokenA, { action: "list", uid: uidB }), listA);
     assert.equal(listA.body.count, 1);
     assert.equal(listA.body.records[0].title, "یادداشت حساب الف");
+
+    const addedB = response();
+    await handler(makeReq(tokenB, { action: "add", title: "یادداشت حساب ب", content: "خصوصی ب" }), addedB);
+    assert.equal(addedB.statusCode, 201);
+    const clearedA = response();
+    await handler(makeReq(tokenA, { action: "clear", uid: uidB }), clearedA);
+    assert.equal(clearedA.statusCode, 200);
+    const verifyA = response();
+    await handler(makeReq(tokenA, { action: "list" }), verifyA);
+    assert.equal(verifyA.body.count, 0);
+    const verifyB = response();
+    await handler(makeReq(tokenB, { action: "list" }), verifyB);
+    assert.equal(verifyB.body.count, 1);
+    assert.equal(verifyB.body.records[0].title, "یادداشت حساب ب");
   } finally {
     global.fetch = originalFetch;
     if (previous.url === undefined) delete process.env.UPSTASH_REDIS_REST_URL; else process.env.UPSTASH_REDIS_REST_URL = previous.url;

@@ -38,7 +38,7 @@ small,.hint{color:var(--muted);font-size:12px}.toolbar{display:flex;gap:8px;flex
 <button id="save" type="submit">ذخیره یادداشت</button><button id="cancel" class="secondary" type="button" hidden>لغو ویرایش</button>
 </form>
 </section>
-<section class="panel"><h2>یادداشت‌های ذخیره‌شده</h2><div id="records"><p class="hint">در حال بارگذاری...</p></div></section>
+<section class="panel"><div class="toolbar" style="justify-content:space-between;align-items:center"><h2>یادداشت‌های ذخیره‌شده</h2><button id="clear-all" class="danger" type="button">حذف همه یادداشت‌های من</button></div><p class="hint">این گزینه فقط یادداشت‌های حافظه شخصی همین حساب را حذف می‌کند؛ پرسش‌های ارسالی به وکیل و اطلاعات حساب را حذف نمی‌کند.</p><div id="records"><p class="hint">در حال بارگذاری...</p></div></section>
 </main>
 <script>
 const $=id=>document.getElementById(id);let editingId="";
@@ -46,6 +46,13 @@ async function api(action,data={}){const r=await fetch("/api/users/memory",{meth
 function resetForm(){editingId="";$("memory-form").reset();$("form-title").textContent="ثبت یادداشت جدید";$("save").textContent="ذخیره یادداشت";$("cancel").hidden=true;}
 function render(items){const area=$("records");area.replaceChildren();if(!items.length){const p=document.createElement("p");p.className="hint";p.textContent="هنوز یادداشتی ثبت نکرده‌اید.";area.append(p);return;}for(const item of items){const card=document.createElement("article");card.className="item";const h=document.createElement("h3");h.textContent=item.title;const meta=document.createElement("small");meta.textContent=item.category+" · "+(item.updated_at||item.created_at||"");const body=document.createElement("p");body.textContent=item.content;const edit=document.createElement("button");edit.className="secondary";edit.textContent="ویرایش";edit.onclick=()=>{editingId=item.id;$("title").value=item.title;$("content").value=item.content;$("category").value=item.category;$("form-title").textContent="ویرایش یادداشت";$("save").textContent="ثبت تغییرات";$("cancel").hidden=false;window.scrollTo({top:0,behavior:"smooth"});};const remove=document.createElement("button");remove.className="danger";remove.textContent="حذف";remove.onclick=async()=>{if(!confirm("این یادداشت از حافظه همین حساب حذف شود؟"))return;try{await api("delete",{id:item.id});await load();$("status").textContent="یادداشت حذف شد.";}catch(e){$("status").textContent=e.message;}};card.append(h,meta,body,edit,remove);area.append(card);}}
 async function load(){const d=await api("list");render(d.records||[]);}
+$("clear-all").addEventListener("click",async()=>{
+  if(!confirm("همه یادداشت‌های حافظه شخصی این حساب برای همیشه حذف شوند؟ این کار پرسش‌های ارسالی به وکیل یا اطلاعات حساب را حذف نمی‌کند."))return;
+  $("clear-all").disabled=true;
+  try{await api("clear");resetForm();await load();$("status").textContent="همه یادداشت‌های حافظه شخصی این حساب حذف شدند.";}
+  catch(e){$("status").textContent=e.message;}
+  finally{$("clear-all").disabled=false;}
+});
 $("memory-form").addEventListener("submit",async e=>{e.preventDefault();$("save").disabled=true;try{const data={title:$("title").value,content:$("content").value,category:$("category").value};await api(editingId?"update":"add",editingId?{...data,id:editingId}:data);resetForm();await load();$("status").textContent="یادداشت در حافظه خصوصی حساب شما ذخیره شد.";}catch(e){$("status").textContent=e.message;}finally{$("save").disabled=false;}});
 $("cancel").onclick=resetForm;
 (async()=>{try{await load();$("status").textContent="ورود شما تأیید شد؛ حافظه شخصی آماده است.";}catch(e){$("status").textContent=e.message;}})();
