@@ -132,3 +132,12 @@ test("bootstrap API key is disabled once owner username/password are configured"
   assert.equal(await auth.loginAdmin(legacy, denied), false);
   assert.equal(denied.statusCode, 401);
 });
+
+test("partial owner credential configuration fails closed and rejects bootstrap key", async () => {
+  const { auth } = loadAuth({ ADMIN_USERNAME: "owner-account" });
+  const login = req();
+  login.body = { key:"preview-test-key" };
+  const denied = response();
+  assert.equal(await auth.loginAdmin(login, denied), false);
+  assert.equal(denied.statusCode, 503);
+});
