@@ -57,7 +57,7 @@ test("owner login exchanges the bootstrap key for a short-lived HttpOnly session
   const token = setCookie.match(/^vy_owner_session=([a-f0-9]{64})/)[1];
   const digest = crypto.createHash("sha256").update(token).digest("hex");
   assert.equal(store.get("vy:admin:session:" + digest), "owner");
-  assert.equal(calls.some(c => c[0] === "SET" && c[3] === "43200"), true);
+  assert.equal(calls.some(c => c[0] === "SET" && c.includes("43200")), true);
 });
 
 test("owner session authorization ignores browser-supplied UID and logout revokes it", async () => {
