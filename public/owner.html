@@ -12,7 +12,7 @@ header h1{margin:0;font-size:23px}header p{margin:4px 0 0;color:#e8dfce;font-siz
 main{max-width:960px;margin:26px auto;padding:0 15px}.panel{background:#fff;border:1px solid var(--line);border-radius:15px;padding:20px;margin-bottom:16px;box-shadow:0 7px 24px #14233f0b}
 h2{margin:0 0 10px;color:var(--navy);font-size:18px}label{display:block;font-weight:bold;margin:12px 0 5px;font-size:13px}
 input,textarea,select{width:100%;padding:11px;border:1px solid #cbd2dc;border-radius:9px;font:inherit;color:var(--ink);background:#fff}
-textarea{min-height:110px;resize:vertical}button,.link{display:inline-block;border:0;border-radius:9px;padding:10px 16px;margin:9px 5px 0 0;background:var(--navy);color:#fff;font:inherit;text-decoration:none;cursor:pointer}
+textarea{min-height:110px;resize:vertical}.password-wrap{display:flex;align-items:center;gap:7px}.password-wrap input{flex:1;min-width:0}.password-toggle{flex:0 0 48px;padding:10px 8px;background:#e9edf3;color:var(--navy);border:1px solid #cbd2dc}button,.link{display:inline-block;border:0;border-radius:9px;padding:10px 16px;margin:9px 5px 0 0;background:var(--navy);color:#fff;font:inherit;text-decoration:none;cursor:pointer}
 button.gold{background:#a98642}button.danger{background:#8a3434}button.secondary{background:#e9edf3;color:var(--navy)}button:disabled{opacity:.55;cursor:wait}
 .hint{color:var(--muted);font-size:12px}.notice{background:#fff8e8;border-right:4px solid var(--gold);padding:11px 13px;border-radius:8px;font-size:12px}
 #status{min-height:24px;color:var(--muted);font-size:13px}.memory{border:1px solid var(--line);border-radius:11px;padding:13px;margin:10px 0}.memory h3{margin:0;color:var(--navy);font-size:15px}.memory p{white-space:pre-wrap;overflow-wrap:anywhere;margin:7px 0}.memory small{color:var(--muted)}.toolbar{display:flex;gap:8px;flex-wrap:wrap}.hidden{display:none!important}
@@ -51,7 +51,13 @@ button.gold{background:#a98642}button.danger{background:#8a3434}button.secondary
 </main>
 <script>
 const $=id=>document.getElementById(id);
-
+function attachPasswordToggle(input,label){
+ const wrap=document.createElement("div");wrap.className="password-wrap";input.parentNode.insertBefore(wrap,input);wrap.append(input);
+ const toggle=document.createElement("button");toggle.type="button";toggle.className="password-toggle";toggle.textContent="👁";toggle.setAttribute("aria-controls",input.id);toggle.setAttribute("aria-label","نمایش "+label);toggle.setAttribute("aria-pressed","false");
+ toggle.addEventListener("click",()=>{const reveal=input.type==="password";input.type=reveal?"text":"password";toggle.textContent=reveal?"🙈":"👁";toggle.setAttribute("aria-pressed",String(reveal));toggle.setAttribute("aria-label",(reveal?"پنهان‌کردن ":"نمایش ")+label);input.focus({preventScroll:true});});wrap.append(toggle);
+}
+attachPasswordToggle($("owner-password"),"رمز عبور مالک");
+attachPasswordToggle($("owner-bootstrap-key"),"کلید مدیریتی موقت");
 function show(active){$("login-panel").classList.toggle("hidden",active);$("workspace").classList.toggle("hidden",!active);}
 async function api(action,data={}){
  const response=await fetch("/api/admin/memory",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,...data})});
