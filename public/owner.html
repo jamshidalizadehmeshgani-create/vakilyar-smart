@@ -12,7 +12,7 @@ header h1{margin:0;font-size:23px}header p{margin:4px 0 0;color:#e8dfce;font-siz
 main{max-width:960px;margin:26px auto;padding:0 15px}.panel{background:#fff;border:1px solid var(--line);border-radius:15px;padding:20px;margin-bottom:16px;box-shadow:0 7px 24px #14233f0b}
 h2{margin:0 0 10px;color:var(--navy);font-size:18px}label{display:block;font-weight:bold;margin:12px 0 5px;font-size:13px}
 input,textarea,select{width:100%;padding:11px;border:1px solid #cbd2dc;border-radius:9px;font:inherit;color:var(--ink);background:#fff}
-textarea{min-height:110px;resize:vertical}button,.link{display:inline-block;border:0;border-radius:9px;padding:10px 16px;margin:9px 5px 0 0;background:var(--navy);color:#fff;font:inherit;text-decoration:none;cursor:pointer}
+textarea{min-height:110px;resize:vertical}.password-wrap{display:flex;align-items:center;gap:7px}.password-wrap input{flex:1;min-width:0}.password-toggle{flex:0 0 48px;padding:10px 8px;background:#e9edf3;color:var(--navy);border:1px solid #cbd2dc}button,.link{display:inline-block;border:0;border-radius:9px;padding:10px 16px;margin:9px 5px 0 0;background:var(--navy);color:#fff;font:inherit;text-decoration:none;cursor:pointer}
 button.gold{background:#a98642}button.danger{background:#8a3434}button.secondary{background:#e9edf3;color:var(--navy)}button:disabled{opacity:.55;cursor:wait}
 .hint{color:var(--muted);font-size:12px}.notice{background:#fff8e8;border-right:4px solid var(--gold);padding:11px 13px;border-radius:8px;font-size:12px}
 #status{min-height:24px;color:var(--muted);font-size:13px}.memory{border:1px solid var(--line);border-radius:11px;padding:13px;margin:10px 0}.memory h3{margin:0;color:var(--navy);font-size:15px}.memory p{white-space:pre-wrap;overflow-wrap:anywhere;margin:7px 0}.memory small{color:var(--muted)}.toolbar{display:flex;gap:8px;flex-wrap:wrap}.hidden{display:none!important}
@@ -23,8 +23,8 @@ button.gold{background:#a98642}button.danger{background:#8a3434}button.secondary
 <main>
 <section id="login-panel" class="panel">
 <h2>ورود مالک</h2>
-<p class="notice">کلید فقط برای ایجاد نشست اولیه ارسال می‌شود؛ پس از ورود، نشست کوتاه‌مدت در کوکی HttpOnly و امن نگهداری می‌شود و جاوااسکریپت به آن دسترسی ندارد.</p>
-<label for="owner-key">کلید محرمانه مدیریت</label><input id="owner-key" type="password" autocomplete="current-password" maxlength="512">
+<p class="notice">نام کاربری و رمز عبور فقط برای ایجاد نشست اولیه به سرور ارسال می‌شوند؛ رمز به‌صورت هش‌شده در تنظیمات امن سرور نگهداری می‌شود. پس از ورود، نشست کوتاه‌مدت در کوکی HttpOnly نگهداری می‌شود.</p>
+<label for="owner-username">نام کاربری مالک</label><input id="owner-username" type="text" autocomplete="username" maxlength="190"><label for="owner-password">رمز عبور مالک</label><input id="owner-password" type="password" autocomplete="current-password" maxlength="1024"><details><summary>ورود موقت با کلید مدیریتی (فقط هنگام راه‌اندازی)</summary><label for="owner-bootstrap-key">کلید مدیریتی موقت</label><input id="owner-bootstrap-key" type="password" autocomplete="off" maxlength="512"><p class="hint">پس از تنظیم نام کاربری و رمز مستقل در تنظیمات امن سرور، این روش دیگر پذیرفته نمی‌شود.</p></details>
 <button id="connect">ورود امن به فضای مالک</button><p id="login-status" class="hint" role="status" aria-live="polite"></p>
 </section>
 <section id="workspace" class="hidden">
@@ -51,7 +51,13 @@ button.gold{background:#a98642}button.danger{background:#8a3434}button.secondary
 </main>
 <script>
 const $=id=>document.getElementById(id);
-
+function attachPasswordToggle(input,label){
+ const wrap=document.createElement("div");wrap.className="password-wrap";input.parentNode.insertBefore(wrap,input);wrap.append(input);
+ const toggle=document.createElement("button");toggle.type="button";toggle.className="password-toggle";toggle.textContent="👁";toggle.setAttribute("aria-controls",input.id);toggle.setAttribute("aria-label","نمایش "+label);toggle.setAttribute("aria-pressed","false");
+ toggle.addEventListener("click",()=>{const reveal=input.type==="password";input.type=reveal?"text":"password";toggle.textContent=reveal?"🙈":"👁";toggle.setAttribute("aria-pressed",String(reveal));toggle.setAttribute("aria-label",(reveal?"پنهان‌کردن ":"نمایش ")+label);input.focus({preventScroll:true});});wrap.append(toggle);
+}
+attachPasswordToggle($("owner-password"),"رمز عبور مالک");
+attachPasswordToggle($("owner-bootstrap-key"),"کلید مدیریتی موقت");
 function show(active){$("login-panel").classList.toggle("hidden",active);$("workspace").classList.toggle("hidden",!active);}
 async function api(action,data={}){
  const response=await fetch("/api/admin/memory",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,...data})});
@@ -81,9 +87,9 @@ async function restoreOwnerSession(){
  catch{}
 }
 $("connect").addEventListener("click",async()=>{
- const key=$("owner-key").value.trim();if(!key){$("login-status").textContent="کلید مدیریت را وارد کن.";return;}
+ const username=$("owner-username").value.trim(),password=$("owner-password").value,key=$("owner-bootstrap-key").value;if((!username||!password)&&!key){$("login-status").textContent="نام کاربری و رمز عبور یا کلید موقت راه‌اندازی را وارد کن.";return;}
  $("connect").disabled=true;$("login-status").textContent="در حال بررسی دسترسی مالک...";
- try{const response=await fetch("/api/admin/session",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"login",key})});const result=await response.json().catch(()=>({}));if(!response.ok)throw new Error(result.error||"ورود انجام نشد.");$("owner-key").value="";await load();show(true);$("login-status").textContent="";}catch(e){$("owner-key").value="";$("login-status").textContent=e.message;}
+ try{const response=await fetch("/api/admin/session",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify(key?{action:"login",key}:{action:"login",username,password})});const result=await response.json().catch(()=>({}));if(!response.ok)throw new Error(result.error||"ورود انجام نشد.");$("owner-password").value="";$("owner-bootstrap-key").value="";await load();show(true);$("login-status").textContent="";}catch(e){$("owner-password").value="";$("owner-bootstrap-key").value="";$("login-status").textContent=e.message;}
  finally{$("connect").disabled=false;}
 });
 $("save").addEventListener("click",async()=>{
@@ -95,6 +101,6 @@ $("save").addEventListener("click",async()=>{
  finally{$("save").disabled=false;}
 });
 $("refresh").addEventListener("click",async()=>{try{await load();}catch(e){$("status").textContent=e.message;show(false);}});
-$("disconnect").addEventListener("click",async()=>{try{await fetch("/api/admin/session",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"logout"})});}catch{}$("memories").replaceChildren();$("status").textContent="از فضای مالک خارج شدید.";show(false);});
+$("disconnect").addEventListener("click",async()=>{const button=$("disconnect");button.disabled=true;try{const response=await fetch("/api/admin/session",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"logout"})});if(!response.ok)throw new Error("خروج امن از سرور تأیید نشد؛ اتصال را بررسی و دوباره تلاش کنید.");$("memories").replaceChildren();$("status").textContent="از فضای مالک خارج شدید.";show(false);}catch(e){$("status").textContent=e.message;}finally{button.disabled=false;}});
 restoreOwnerSession();
 </script></body></html>

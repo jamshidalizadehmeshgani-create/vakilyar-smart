@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
@@ -94,17 +95,19 @@ test("all public pages declare Persian RTL document metadata", () => {
   }
 });
 
-test("admin panels keep manager credentials in password fields and send them only as bearer headers", () => {
+test("admin panels use same-origin owner sessions and never send manager keys as bearer headers", () => {
   const lawyers = read("public/admin-lawyers.html");
   const credits = read("public/admin-credits.html");
-  assert.match(lawyers, /id="key" type="password"/);
-  assert.match(credits, /id="adminKey" type="password"/);
-  assert.match(lawyers, /"Authorization":"Bearer "\+key/);
-  assert.match(credits, /"Authorization":"Bearer "\+key/);
+  const owner = read("public/owner.html");
+  assert.match(owner, /id="owner-username" type="text" autocomplete="username"/);
+  assert.match(owner, /id="owner-password" type="password" autocomplete="current-password"/);
+  assert.match(owner, /body:JSON\.stringify\(key\?\{action:"login",key\}:\{action:"login",username,password\}\)/);
   for (const [page, html] of [["admin-lawyers.html", lawyers], ["admin-credits.html", credits]]) {
+    assert.doesNotMatch(html, /Authorization["']?\s*:/);
+    assert.match(html, /credentials:"same-origin"/);
+    assert.match(html, /location\.href="\/owner\.html"/);
     assert.doesNotMatch(html, /localStorage/);
-    assert.doesNotMatch(html, /sessionStorage\.(?:setItem|getItem)\(["'](?:adminKey|ADMIN_API_KEY|key)["']/i);
-    assert.match(html, /autocomplete=["']off["']/);
+    assert.doesNotMatch(html, /ADMIN_API_KEY|Bearer\s/);
   }
   assert.match(credits, /sessionStorage\.setItem\(["']vy_pending_credit_grant["']/);
   assert.match(credits, /sessionStorage\.getItem\(["']vy_pending_credit_grant["']/);
@@ -196,16 +199,28 @@ test("public user login and password reset pages expose accessible show/hide con
 });
 
 
-test("administrator secret fields and dynamically created lawyer passwords have accessible visibility controls", () => {
+test("owner credentials and dynamically created lawyer passwords have accessible visibility controls", () => {
+  const owner = read("public/owner.html");
   const lawyers = read("public/admin-lawyers.html");
   const credits = read("public/admin-credits.html");
-  assert.match(lawyers, /data-password-toggle="key"/);
-  assert.match(lawyers, /attachPasswordToggle\(\$\("key"\)/);
+  assert.match(owner, /id="owner-password" type="password"/);
+  assert.match(owner, /id="owner-bootstrap-key" type="password"/);
+  assert.match(owner, /attachPasswordToggle\(\$\("owner-password"\)/);
+  assert.match(owner, /attachPasswordToggle\(\$\("owner-bootstrap-key"\)/);
+  assert.match(owner, /toggle\.setAttribute\("aria-pressed"/);
+  assert.match(owner, /if\(!response\.ok\)throw new Error\("خروج امن از سرور تأیید نشد/);
   assert.match(lawyers, /const passWrap=attachPasswordToggle\(pass,"رمز وکیل"\)/);
   assert.match(lawyers, /box\.append\(title,detail,btn,passWrap,setPass\)/);
-  assert.match(lawyers, /toggle\.setAttribute\("aria-pressed"/);
-  assert.match(credits, /id="toggleAdminKey"[^>]*aria-controls="adminKey"/);
-  assert.match(credits, /toggleAdminKey\.addEventListener\("click"/);
+  assert.doesNotMatch(credits, /adminKey|toggleAdminKey/);
   assert.doesNotMatch(lawyers, /localStorage/);
   assert.doesNotMatch(credits, /localStorage/);
+});
+
+test("owner password hash utility is valid JavaScript and uses hidden local input only", () => {
+  const script = read("scripts/generate-owner-password-hash.js");
+  assert.doesNotThrow(() => new vm.Script(script, { filename: "scripts/generate-owner-password-hash.js" }));
+  assert.match(script, /process\.stdin\.setRawMode\(true\)/);
+  assert.match(script, /crypto\.scrypt\(password,\s*salt,\s*64/);
+  assert.doesNotMatch(script, /\bfetch\s*\(|https?:\/\//i);
+  assert.doesNotMatch(script, /writeFile|appendFile|localStorage|sessionStorage/);
 });
