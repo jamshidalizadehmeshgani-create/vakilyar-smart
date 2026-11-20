@@ -82,6 +82,13 @@ test("disabled lawyer panel cannot load inboxes or submit replies", () => {
   assert.match(panel,/هیچ پرسشی در این نسخه به وکیل ارجاع داده نمی‌شود/);
 });
 
+test("email verification token pages prohibit referrer leakage", () => {
+  const verify = read("handlers/users/verify.js");
+  assert.match(verify, /setHeader\("Referrer-Policy", "no-referrer"\)/);
+  assert.match(verify, /name="referrer" content="no-referrer"/);
+  assert.match(verify, /Cache-Control", "no-store"/);
+});
+
 test("legal source cards expose official document identity and separate legal dates", () => {
   const home = read("public/index.html");
   for (const field of [
