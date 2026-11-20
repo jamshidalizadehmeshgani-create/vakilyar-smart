@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#14233f">
+<title>فضای خصوصی مالک | وکیل‌یار</title>
+<style>
+:root{--navy:#14233f;--gold:#c9a45c;--paper:#f5f3ee;--ink:#202938;--muted:#667085;--line:#e5e0d6}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.9 Tahoma,Arial,sans-serif}
+header{background:var(--navy);color:#fff;padding:22px max(18px,calc((100% - 960px)/2));border-bottom:4px solid var(--gold)}
+header h1{margin:0;font-size:23px}header p{margin:4px 0 0;color:#e8dfce;font-size:12px}
+main{max-width:960px;margin:26px auto;padding:0 15px}.panel{background:#fff;border:1px solid var(--line);border-radius:15px;padding:20px;margin-bottom:16px;box-shadow:0 7px 24px #14233f0b}
+h2{margin:0 0 10px;color:var(--navy);font-size:18px}label{display:block;font-weight:bold;margin:12px 0 5px;font-size:13px}
+input,textarea,select{width:100%;padding:11px;border:1px solid #cbd2dc;border-radius:9px;font:inherit;color:var(--ink);background:#fff}
+textarea{min-height:110px;resize:vertical}button,.link{display:inline-block;border:0;border-radius:9px;padding:10px 16px;margin:9px 5px 0 0;background:var(--navy);color:#fff;font:inherit;text-decoration:none;cursor:pointer}
+button.gold{background:#a98642}button.danger{background:#8a3434}button.secondary{background:#e9edf3;color:var(--navy)}button:disabled{opacity:.55;cursor:wait}
+.hint{color:var(--muted);font-size:12px}.notice{background:#fff8e8;border-right:4px solid var(--gold);padding:11px 13px;border-radius:8px;font-size:12px}
+#status{min-height:24px;color:var(--muted);font-size:13px}.memory{border:1px solid var(--line);border-radius:11px;padding:13px;margin:10px 0}.memory h3{margin:0;color:var(--navy);font-size:15px}.memory p{white-space:pre-wrap;overflow-wrap:anywhere;margin:7px 0}.memory small{color:var(--muted)}.toolbar{display:flex;gap:8px;flex-wrap:wrap}.hidden{display:none!important}
+@media(max-width:600px){.panel{padding:15px}header h1{font-size:20px}}
+</style></head>
+<body>
+<header><h1>وکیل‌یار | فضای خصوصی مالک و مدیر</h1><p>محیط مدیریتی مستقل و حافظه اختصاصی مالک</p></header>
+<main>
+<section id="login-panel" class="panel">
+<h2>ورود مالک</h2>
+<p class="notice">این صفحه فقط برای مالک/مدیر است. کلید مدیریت در مرورگر ذخیره نمی‌شود و فقط تا زمان بازبودن همین صفحه در حافظه موقت نگهداری خواهد شد. کلید را در اختیار دیگران نگذارید.</p>
+<label for="owner-key">کلید محرمانه مدیریت</label><input id="owner-key" type="password" autocomplete="current-password" maxlength="512">
+<button id="connect">ورود امن به فضای مالک</button><p id="login-status" class="hint" role="status" aria-live="polite"></p>
+</section>
+<section id="workspace" class="hidden">
+<div class="panel">
+<h2>داشبورد مالک</h2><p class="hint">این فضا از حساب کاربران وکلا جداست. یادداشت‌های این قسمت در پایگاه داده سرور ذخیره می‌شوند و با بستن مرورگر از بین نمی‌روند.</p>
+<div class="toolbar">
+<a class="link" href="/admin-credits.html">مدیریت اعتبار کاربران</a>
+<a class="link" href="/admin-lawyers.html">مدیریت وکلا</a>
+<a class="link" href="/user-login.html">صفحه ورود کاربران</a>
+<button class="secondary" id="refresh">بازخوانی حافظه</button>
+<button class="danger" id="disconnect">خروج از پنل</button>
+</div><p id="status" role="status" aria-live="polite"></p>
+</div>
+<div class="panel">
+<h2>حافظه خصوصی مالک</h2>
+<p class="hint">تصمیم‌ها، وضعیت پروژه‌ها، پیگیری‌ها و نکته‌های مهم خودت را اینجا ثبت کن. این یادداشت‌ها به حافظه کاربران منتقل نمی‌شوند.</p>
+<label for="category">دسته‌بندی</label><select id="category"><option>تصمیم مدیریتی</option><option>وضعیت پروژه</option><option>اقدام بعدی</option><option>دانش و مرجع</option><option>یادداشت شخصی مالک</option></select>
+<label for="title">عنوان یادداشت</label><input id="title" maxlength="120" placeholder="مثلاً اولویت بعدی توسعه وکیل‌یار">
+<label for="content">متن یادداشت</label><textarea id="content" maxlength="4000" placeholder="مطلبی که باید برای ادامه کار حفظ شود..."></textarea>
+<button class="gold" id="save">ذخیره در حافظه مالک</button>
+<div id="memories" aria-live="polite"><p class="hint">برای دریافت یادداشت‌ها وارد شوید.</p></div>
+</div>
+</section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+let ownerKey="";
+function show(active){$("login-panel").classList.toggle("hidden",active);$("workspace").classList.toggle("hidden",!active);}
+async function api(action,data={}){
+ const response=await fetch("/api/admin/memory",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json","Authorization":"Bearer "+ownerKey},body:JSON.stringify({action,...data})});
+ const result=await response.json().catch(()=>({}));
+ if(!response.ok)throw new Error(result.error||"درخواست ناموفق بود.");
+ return result;
+}
+function render(records){
+ const area=$("memories");area.replaceChildren();
+ if(!records.length){const p=document.createElement("p");p.className="hint";p.textContent="هنوز یادداشتی در حافظه مالک ثبت نشده است.";area.append(p);return;}
+ for(const item of records){
+  const card=document.createElement("article");card.className="memory";
+  const heading=document.createElement("h3");heading.textContent=item.title;
+  const meta=document.createElement("small");meta.textContent=item.category+" · "+(item.created_at||"");
+  const body=document.createElement("p");body.textContent=item.content;
+  const remove=document.createElement("button");remove.className="danger";remove.textContent="حذف یادداشت";
+  remove.addEventListener("click",async()=>{if(!confirm("این یادداشت از حافظه خصوصی مالک حذف شود؟"))return;try{await api("delete",{id:item.id});await load();}catch(e){$("status").textContent=e.message;}});
+  card.append(heading,meta,body,remove);area.append(card);
+ }
+}
+async function load(){
+ $("status").textContent="در حال دریافت حافظه خصوصی...";
+ const data=await api("list");render(data.records||[]);$("status").textContent="تعداد یادداشت‌های ذخیره‌شده: "+data.count;
+}
+$("connect").addEventListener("click",async()=>{
+ const key=$("owner-key").value.trim();if(!key){$("login-status").textContent="کلید مدیریت را وارد کن.";return;}
+ $("connect").disabled=true;$("login-status").textContent="در حال بررسی دسترسی مالک...";
+ ownerKey=key;
+ try{await load();show(true);$("owner-key").value="";$("login-status").textContent="";}catch(e){ownerKey="";$("login-status").textContent=e.message;}
+ finally{$("connect").disabled=false;}
+});
+$("save").addEventListener("click",async()=>{
+ const title=$("title").value.trim(),content=$("content").value.trim();
+ if(!title||!content){$("status").textContent="عنوان و متن یادداشت را وارد کن.";return;}
+ $("save").disabled=true;
+ try{await api("add",{title,content,category:$("category").value});$("title").value="";$("content").value="";await load();}
+ catch(e){$("status").textContent=e.message;}
+ finally{$("save").disabled=false;}
+});
+$("refresh").addEventListener("click",async()=>{try{await load();}catch(e){$("status").textContent=e.message;ownerKey="";show(false);}});
+$("disconnect").addEventListener("click",()=>{ownerKey="";$("memories").replaceChildren();$("status").textContent="از فضای مالک خارج شدید.";show(false);});
+</script></body></html>
