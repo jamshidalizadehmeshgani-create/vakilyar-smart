@@ -51,7 +51,7 @@ test("rejects duplicate record identifiers even if each record is otherwise vali
 test("reports invalid source metadata with the record index and identifier", () => {
   const result = validateCorpus([{ ...record, sourceUrl: "https://example.com/law" }], { now });
   assert.equal(result.valid, false);
-  assert.match(result.errors[0], /رکورد شماره 1/);
+  assert.match(result.errors[0], /رکورد شماره ۱/);
   assert.match(result.errors[0], /sample-law-article-1/);
 });
 
