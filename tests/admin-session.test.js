@@ -101,7 +101,7 @@ test("legacy bearer admin key is rejected; only a server-validated owner cookie 
 test("owner login accepts configured username and scrypt password hash", async () => {
   const salt = "a1".repeat(16);
   const hash = crypto.scryptSync("a-long-owner-password", Buffer.from(salt, "hex"), 64).toString("hex");
-  const { auth, store } = loadAuth({
+  const { auth, store, calls } = loadAuth({
     ADMIN_USERNAME: "owner-account",
     ADMIN_PASSWORD_HASH: "scrypt$" + salt + "$" + hash
   });
