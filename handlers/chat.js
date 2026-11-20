@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const { retrieveLegalSources, buildEvidencePrompt } = require("../lib/legal-retrieval");
+const { normalizeAsOfDate } = require("../lib/jalali-date");
 const { getAccount, classifyRequest, reserveCredits, refundReservation, commitReservation, consumeIpRateLimit } = require("../lib/quota");
 
 const SYSTEM_PROMPT = `تو «وکیل‌یار هوشمند» هستی؛ دستیار ارائه‌دهنده اطلاعات عمومی و آموزشی حقوقی.
@@ -16,15 +17,6 @@ const SYSTEM_PROMPT = `تو «وکیل‌یار هوشمند» هستی؛ دست
 - در مسائل کیفری فوری، بازداشت، خشونت، خطر جانی، انقضای قریب‌الوقوع مهلت یا احتمال از دست رفتن حق، فوراً مراجعه به وکیل یا مرجع امدادی/قضایی مربوط را توصیه کن.
 - در صورت تناسب، پاسخ را با بخش‌های «خلاصه پاسخ»، «مبنای حقوقی و حدود اطمینان»، «اقدام‌های پیشنهادی» و «اطلاعات تکمیلی لازم» تنظیم کن.
 - اگر منبع رسمی یا پایگاه قوانین به تو متصل نیست، ادعا نکن که قانون را جست‌وجو یا آخرین اصلاحات را بررسی کرده‌ای.`;
-
-function isValidAsOfDate(value) {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const [year, month, day] = value.split("-").map(Number);
-  const parsed = new Date(Date.UTC(year, month - 1, day));
-  return parsed.getUTCFullYear() === year &&
-    parsed.getUTCMonth() === month - 1 &&
-    parsed.getUTCDate() === day;
-}
 
 function isValidCountryName(value) {
   return typeof value === "string" && value.trim().length <= 60 && /^[\p{L}\p{M}][\p{L}\p{M} .’'-]{0,59}$/u.test(value.trim());
@@ -66,8 +58,9 @@ module.exports = async (req, res) => {
   }
   const countryLabel = typeof requestedCountryInput === "string" ? requestedCountryInput.trim() : "";
   const asOfDateInput = req.body?.as_of_date;
-  if (asOfDateInput !== undefined && !isValidAsOfDate(asOfDateInput)) {
-    return res.status(400).json({ code: "INVALID_AS_OF_DATE", error: "تاریخ مبنای بررسی باید یک تاریخ معتبر به قالب میلادی YYYY-MM-DD باشد." });
+  const normalizedAsOfDate = asOfDateInput === undefined ? undefined : normalizeAsOfDate(asOfDateInput);
+  if (asOfDateInput !== undefined && !normalizedAsOfDate) {
+    return res.status(400).json({ code: "INVALID_AS_OF_DATE", error: "تاریخ مبنای بررسی باید تاریخ معتبر شمسی (۱۴۰۵/۰۸/۳۰) یا میلادی (2026-11-21) باشد." });
   }
 
   // Support the earlier lowercase Vercel variable name as a backward-compatible fallback.
@@ -140,7 +133,7 @@ module.exports = async (req, res) => {
     try {
       legalRetrieval = foreignRequest
         ? { status: "no_verified_sources", sources: [], evidence: [] }
-        : retrieveLegalSources(message, asOfDateInput ? { asOfDate: asOfDateInput } : {});
+        : retrieveLegalSources(message, normalizedAsOfDate ? { asOfDate: normalizedAsOfDate } : {});
     } catch {
       legalRetrieval = { status: "retrieval_unavailable", sources: [], evidence: [] };
     }
@@ -190,7 +183,7 @@ module.exports = async (req, res) => {
       credits_used: charged,
       credits_remaining: (account.isPro || account.isUnlimited) ? null : remainingCredits,
       legal_evidence_status: legalRetrieval.status,
-      legal_as_of_date: asOfDateInput || new Date().toISOString().slice(0, 10),
+      legal_as_of_date: normalizedAsOfDate || new Date().toISOString().slice(0, 10),
       sources: legalRetrieval.sources
     });
   } catch (error) {
