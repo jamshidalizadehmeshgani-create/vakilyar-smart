@@ -24,7 +24,7 @@ button.gold{background:#a98642}button.danger{background:#8a3434}button.secondary
 <section id="login-panel" class="panel">
 <h2>ورود مالک</h2>
 <p class="notice">نام کاربری و رمز عبور فقط برای ایجاد نشست اولیه به سرور ارسال می‌شوند؛ رمز به‌صورت هش‌شده در تنظیمات امن سرور نگهداری می‌شود. پس از ورود، نشست کوتاه‌مدت در کوکی HttpOnly نگهداری می‌شود.</p>
-<label for="owner-username">نام کاربری مالک</label><input id="owner-username" type="text" autocomplete="username" maxlength="190"><label for="owner-password">رمز عبور مالک</label><input id="owner-password" type="password" autocomplete="current-password" maxlength="1024">
+<label for="owner-username">نام کاربری مالک</label><input id="owner-username" type="text" autocomplete="username" maxlength="190"><label for="owner-password">رمز عبور مالک</label><input id="owner-password" type="password" autocomplete="current-password" maxlength="1024"><details><summary>ورود موقت با کلید مدیریتی (فقط هنگام راه‌اندازی)</summary><label for="owner-bootstrap-key">کلید مدیریتی موقت</label><input id="owner-bootstrap-key" type="password" autocomplete="off" maxlength="512"><p class="hint">پس از تنظیم نام کاربری و رمز مستقل در تنظیمات امن سرور، این روش دیگر پذیرفته نمی‌شود.</p></details>
 <button id="connect">ورود امن به فضای مالک</button><p id="login-status" class="hint" role="status" aria-live="polite"></p>
 </section>
 <section id="workspace" class="hidden">
@@ -81,9 +81,9 @@ async function restoreOwnerSession(){
  catch{}
 }
 $("connect").addEventListener("click",async()=>{
- const username=$("owner-username").value.trim(),password=$("owner-password").value;if(!username||!password){$("login-status").textContent="نام کاربری و رمز عبور را وارد کن.";return;}
+ const username=$("owner-username").value.trim(),password=$("owner-password").value,key=$("owner-bootstrap-key").value;if((!username||!password)&&!key){$("login-status").textContent="نام کاربری و رمز عبور یا کلید موقت راه‌اندازی را وارد کن.";return;}
  $("connect").disabled=true;$("login-status").textContent="در حال بررسی دسترسی مالک...";
- try{const response=await fetch("/api/admin/session",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"login",username,password})});const result=await response.json().catch(()=>({}));if(!response.ok)throw new Error(result.error||"ورود انجام نشد.");$("owner-password").value="";await load();show(true);$("login-status").textContent="";}catch(e){$("owner-password").value="";$("login-status").textContent=e.message;}
+ try{const response=await fetch("/api/admin/session",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify(key?{action:"login",key}:{action:"login",username,password})});const result=await response.json().catch(()=>({}));if(!response.ok)throw new Error(result.error||"ورود انجام نشد.");$("owner-password").value="";$("owner-bootstrap-key").value="";await load();show(true);$("login-status").textContent="";}catch(e){$("owner-password").value="";$("owner-bootstrap-key").value="";$("login-status").textContent=e.message;}
  finally{$("connect").disabled=false;}
 });
 $("save").addEventListener("click",async()=>{
