@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
@@ -212,4 +213,13 @@ test("owner credentials and dynamically created lawyer passwords have accessible
   assert.doesNotMatch(credits, /adminKey|toggleAdminKey/);
   assert.doesNotMatch(lawyers, /localStorage/);
   assert.doesNotMatch(credits, /localStorage/);
+});
+
+test("owner password hash utility is valid JavaScript and uses hidden local input only", () => {
+  const script = read("scripts/generate-owner-password-hash.js");
+  assert.doesNotThrow(() => new vm.Script(script, { filename: "scripts/generate-owner-password-hash.js" }));
+  assert.match(script, /process\.stdin\.setRawMode\(true\)/);
+  assert.match(script, /crypto\.scrypt\(password,salt,64/);
+  assert.doesNotMatch(script, /\bfetch\s*\(|https?:\/\//i);
+  assert.doesNotMatch(script, /writeFile|appendFile|localStorage|sessionStorage/);
 });
