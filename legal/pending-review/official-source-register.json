@@ -61,12 +61,28 @@
         "The official Qavanin law page links to the precedent record, establishing an official relationship/link, but the direct record returned only a transfer page in this retrieval.",
         "Gazette issue metadata and complete text are presently transcribed from a non-governmental reproduction and independently cross-checked against another legal publisher; this is not final primary-source verification.",
         "Do not copy this record into legal/corpus.json or mark it human_verified yet.",
-        "The Vakilanet page labels its source link 'مشاهده' and points to the exact RRK URL above. The RRK host timed out when opened directly in this retrieval; no official image or PDF was downloaded or inspected."
+        "The Vakilanet page labels its source link 'مشاهده' and points to the exact RRK URL above. The RRK host timed out when opened directly in this retrieval; no official image or PDF was downloaded or inspected.",
+        "A further targeted search of RRK for code 29690, Gazette issue 23159, publication date 1403/07/10, and the sending-letter number returned no additional indexed official record. This does not change the verification status."
       ],
       "officialGazetteDirectUrl": "https://www.rrk.ir/Laws/ShowLaw.aspx?Code=29690",
       "officialGazetteDirectUrlDiscovery": "The 'مشاهده' link on the Vakilanet reproduction points to this exact rrk.ir URL.",
       "officialGazetteRetrievalStatus": "not_retrieved_timeout",
-      "officialGazetteImageInspected": false
+      "officialGazetteImageInspected": false,
+      "retrievalAttempts": [
+        {
+          "reviewedOn": "2026-11-21",
+          "target": "official Gazette issue 23159 / precedent 852 / RRK code 29690",
+          "queries": [
+            "site:rrk.ir 29690 23159",
+            "site:rrk.ir رأی وحدت رویه ۸۵۲ روزنامه رسمی",
+            "site:rrk.ir شماره ۲۳۱۵۹ ۱۰ مهر ۱۴۰۳",
+            "site:rrk.ir شماره ۹۰۰۰/۷۶۵۶/۱۱۰"
+          ],
+          "result": "No additional indexed official Gazette result returned by these targeted searches.",
+          "interpretation": "Search-engine absence is not evidence that the record does not exist; direct RRK retrieval remains blocked by timeout.",
+          "status": "discovery_only_no_primary_file"
+        }
+      ]
     }
   ]
 }
