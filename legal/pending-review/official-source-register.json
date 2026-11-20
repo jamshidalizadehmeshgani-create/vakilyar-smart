@@ -1,0 +1,67 @@
+{
+  "purpose": "Human-review queue only. This file is not loaded by legal retrieval and is not a verified legal corpus.",
+  "lastReviewed": "2026-11-21",
+  "records": [
+    {
+      "id": "law-iran-1401-09-06-official-registration-immovable-property",
+      "recordType": "law",
+      "title": "قانون الزام به ثبت رسمی معاملات اموال غیرمنقول",
+      "approvalAuthority": "مجلس شورای اسلامی؛ تشخیص مصلحت نظام نسبت به مواد مورد اختلاف",
+      "approvalDateJalali": "1401/09/06",
+      "promulgationNumber": "44118",
+      "promulgationAuthority": "سرپرست ریاست جمهوری",
+      "promulgationDateJalali": "1403/03/13",
+      "gazetteIssue": "23068",
+      "gazettePublicationDateJalali": "1403/03/17",
+      "officialEffectiveDateJalali": "1403/04/02",
+      "officialSourceUrl": "https://qavanin.ir/Law/TreeText/?IDS=8323921457009018779",
+      "officialMetadataUrl": "https://qavanin.ir/Law/Attribute/?IDS=8323921457009018779",
+      "officialConsolidatedTextObserved": true,
+      "amendmentHistoryComplete": false,
+      "humanReviewStatus": "pending",
+      "notes": [
+        "Official attribute page identifies promulgation number, Gazette issue, approval, promulgation, publication, and effective dates.",
+        "Official text page displays 'با اصلاحات و الحاقات بعدی' and includes amendments/additions in the visible consolidated text.",
+        "The official consolidation status page did not expose a populated amendment-status table in this retrieval; do not infer that no amendments exist.",
+        "Article 1, note 4 must be evaluated separately for immovable properties receiving cadastral title after the law became effective.",
+        "Do not ingest until the full amendment timeline and official Gazette images have been reviewed."
+      ]
+    },
+    {
+      "id": "unified-precedent-852-1403-06-20",
+      "recordType": "unified_precedent",
+      "title": "رأی وحدت رویه شماره ۸۵۲ هیأت عمومی دیوان عالی کشور",
+      "caseNumber": "1403/8",
+      "precedentNumber": "852",
+      "approvalDateJalali": "1403/06/20",
+      "sendingLetterNumber": "9000/7656/110",
+      "sendingLetterDateJalali": "1403/07/04",
+      "gazetteSpecialIssue": "1890",
+      "gazetteIssue": "23159",
+      "gazettePublicationDateJalali": "1403/07/10",
+      "officialLinkedSourceUrl": "https://qavanin.ir/Law/TreeText/?IDS=10513086744345305283",
+      "officialGazetteCrossReference": "https://qavanin.ir/Law/TreeText/?IDS=8323921457009018779",
+      "secondaryFullTextAndMetadataUrl": "https://vakilan.net/Vots/Show/104573",
+      "secondaryIndependentCrossCheckUrl": "https://www.ekhtebar.ir/رای-وحدت-رویه-شماره-۸۵۲-۱۴۰۳-۶-۲۰-هئیت/",
+      "subject": "وثیقه یا رهن قراردادن مالی که پیش‌تر با سند عادی به دیگری منتقل شده است",
+      "holdingSummary": "در فرض انتقال مال با سند عادی و سپس وثیقه‌گذاری آن توسط انتقال‌دهنده، با علم به تعلق مال به دیگری و بدون مجوز قانونی، رفتار مشمول ماده ۲ قانون مجازات اشخاصی است که مال غیر را به عوض مال خود معرفی می‌نمایند مصوب ۱۳۰۸ دانسته شده و مجازات شروع به کلاهبرداری مقرر می‌شود.",
+      "citedBindingProvision": "ماده ۴۷۱ قانون آیین دادرسی کیفری مصوب ۱۳۹۲ با اصلاحات و الحاقات بعدی",
+      "publicationMetadataStatus": "secondary_transcription_not_yet_compared_to_official_gazette_image",
+      "officialPageAccessStatus": "official_qavanin_link_confirmed_but_direct_page_redirected_in_this_retrieval",
+      "humanReviewStatus": "pending",
+      "corpusEligible": false,
+      "missingBeforeIngestion": [
+        "Retrieve and inspect the official image/PDF of Gazette issue 23159, special issue 1890, dated 1403/07/10.",
+        "Compare the complete ruling and all metadata against the official Gazette image.",
+        "Verify current precedential status and any later superseding or interpretive decisions.",
+        "Have a qualified legal reviewer determine the correct effectiveFrom date for retrieval schema.",
+        "Review the precise interaction with the effective version of the immovable-property registration law for the relevant transaction dates."
+      ],
+      "notes": [
+        "The official Qavanin law page links to the precedent record, establishing an official relationship/link, but the direct record returned only a transfer page in this retrieval.",
+        "Gazette issue metadata and complete text are presently transcribed from a non-governmental reproduction and independently cross-checked against another legal publisher; this is not final primary-source verification.",
+        "Do not copy this record into legal/corpus.json or mark it human_verified yet."
+      ]
+    }
+  ]
+}
