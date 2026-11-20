@@ -9,6 +9,9 @@ process.env.ADMIN_API_KEY = "test-admin-key";
 process.env.APP_SECRET = "test-app-secret-for-security-suite";
 
 const values = new Map();
+const ownerSessionToken = "e".repeat(64);
+const ownerSessionDigest = crypto.createHash("sha256").update(ownerSessionToken).digest("hex");
+values.set("vy:admin:session:" + ownerSessionDigest, "owner");
 const lists = new Map();
 const expirations = new Map();
 let throwAfterReserve = false;
@@ -547,7 +550,7 @@ test("admin can disable a lawyer and the existing session and new questions are 
   const adminRes = responseMock();
   await adminLawyers({
     method: "POST",
-    headers: { authorization: "Bearer test-admin-key", host: "app.example.test", origin: "https://app.example.test", "x-real-ip": "192.0.2.101" },
+    headers: { cookie: "vy_owner_session=" + ownerSessionToken, host: "app.example.test", origin: "https://app.example.test", "x-real-ip": "192.0.2.101" },
     body: { action: "set_access", lawyer_id: lawyerId, enabled: false }
   }, adminRes);
 
@@ -555,7 +558,7 @@ test("admin can disable a lawyer and the existing session and new questions are 
   assert.equal(adminRes.body.lawyer.access, "disabled");
 
   const auditRes = responseMock();
-  await adminLawyers({ method: "POST", headers: { authorization: "Bearer test-admin-key", host: "app.example.test", origin: "https://app.example.test", "x-real-ip": "192.0.2.101" }, body: { action: "audit" } }, auditRes);
+  await adminLawyers({ method: "POST", headers: { cookie: "vy_owner_session=" + ownerSessionToken, host: "app.example.test", origin: "https://app.example.test", "x-real-ip": "192.0.2.101" }, body: { action: "audit" } }, auditRes);
   assert.equal(auditRes.statusCode, 200);
   assert.ok(auditRes.body.events.some(event => event.action === "lawyer_access_disabled" && event.lawyer_id === lawyerId));
 
@@ -585,7 +588,7 @@ test("admin password reset atomically preserves concurrent lawyer profile fields
   const res = responseMock();
   await adminLawyers({
     method: "POST",
-    headers: { authorization: "Bearer test-admin-key", host: "app.example.test", origin: "https://app.example.test", "x-real-ip": "192.0.2.101" },
+    headers: { cookie: "vy_owner_session=" + ownerSessionToken, host: "app.example.test", origin: "https://app.example.test", "x-real-ip": "192.0.2.101" },
     body: { action: "set_password", lawyer_id: lawyerId, password: "a-strong-test-password" }
   }, res);
   assert.equal(res.statusCode, 200);
@@ -604,7 +607,7 @@ test("admin password reset revokes every previously issued lawyer session", asyn
   values.set(oldSessionKey, lawyerId);
   lists.set(sessionIndex, [oldSessionKey]);
   const res = responseMock();
-  await adminLawyers({ method: "POST", headers: { authorization: "Bearer test-admin-key", host: "app.example.test", origin: "https://app.example.test", "x-real-ip": "192.0.2.101" }, body: { action: "set_password", lawyer_id: lawyerId, password: "a-new-strong-password" } }, res);
+  await adminLawyers({ method: "POST", headers: { cookie: "vy_owner_session=" + ownerSessionToken, host: "app.example.test", origin: "https://app.example.test", "x-real-ip": "192.0.2.101" }, body: { action: "set_password", lawyer_id: lawyerId, password: "a-new-strong-password" } }, res);
   assert.equal(res.statusCode, 200);
   assert.equal(values.has(oldSessionKey), false);
   assert.equal(lists.has(sessionIndex), false);
@@ -615,7 +618,7 @@ test("admin password reset revokes every previously issued lawyer session", asyn
   values.set("vy:lawyer:" + legacyLawyerId, JSON.stringify({ id: legacyLawyerId, name: "وکیل قدیمی", access: "active" }));
   values.set(legacySessionKey, legacyLawyerId);
   const resetLegacy = responseMock();
-  await adminLawyers({ method: "POST", headers: { authorization: "Bearer test-admin-key", host: "app.example.test", origin: "https://app.example.test", "x-real-ip": "192.0.2.101" }, body: { action: "set_password", lawyer_id: legacyLawyerId, password: "another-strong-password" } }, resetLegacy);
+  await adminLawyers({ method: "POST", headers: { cookie: "vy_owner_session=" + ownerSessionToken, host: "app.example.test", origin: "https://app.example.test", "x-real-ip": "192.0.2.101" }, body: { action: "set_password", lawyer_id: legacyLawyerId, password: "another-strong-password" } }, resetLegacy);
   assert.equal(resetLegacy.statusCode, 200);
   const { getLawyerSession } = require("../lib/lawyer-auth");
   const legacySession = await getLawyerSession({ headers: { cookie: "vy_lawyer_session=" + legacyToken } }, responseMock());
@@ -638,7 +641,7 @@ test("configuration diagnostics expose readiness flags without secret values", a
   const res = responseMock();
   await adminLawyers({
     method: "POST",
-    headers: { authorization: "Bearer test-admin-key", host: "app.example.test", origin: "https://app.example.test", "x-real-ip": "192.0.2.101" },
+    headers: { cookie: "vy_owner_session=" + ownerSessionToken, host: "app.example.test", origin: "https://app.example.test", "x-real-ip": "192.0.2.101" },
     body: { action: "config" }
   }, res);
   assert.equal(res.statusCode, 200);
@@ -649,7 +652,7 @@ test("configuration diagnostics expose readiness flags without secret values", a
 
 test("unlimited gift and Pro access remain independent", async () => {
   const userId = "f".repeat(48);
-  const headers = { authorization: "Bearer test-admin-key", host: "app.example.test", origin: "https://app.example.test", "x-real-ip": "192.0.2.102" };
+  const headers = { cookie: "vy_owner_session=" + ownerSessionToken, host: "app.example.test", origin: "https://app.example.test", "x-real-ip": "192.0.2.102" };
   const unlimitedRes = responseMock();
   await grantCredits({ method: "POST", headers, body: { user_id: userId, unlimited: true } }, unlimitedRes);
   assert.equal(unlimitedRes.statusCode, 200);
@@ -1017,7 +1020,7 @@ test("question deletion atomically verifies ownership and removes both indexes",
 test("admin authorization fails closed when trusted edge IP is missing", async () => {
   const res = responseMock();
   const ok = await authorizeAdmin({
-    headers: { host: "app.example.test", origin: "https://app.example.test", authorization: "Bearer test-admin-key" }
+    headers: { host: "app.example.test", origin: "https://app.example.test", cookie: "vy_owner_session=" + ownerSessionToken }
   }, res);
   assert.equal(ok, false);
   assert.equal(res.statusCode, 503);
@@ -1027,7 +1030,7 @@ test("admin authorization fails closed when trusted edge IP is missing", async (
 test("admin authorization rejects cross-origin requests before checking credentials", async () => {
   const res = responseMock();
   const ok = await authorizeAdmin({
-    headers: { host: "app.example.test", origin: "https://attacker.example", authorization: "Bearer test-admin-key", "x-real-ip": "192.0.2.120" }
+    headers: { host: "app.example.test", origin: "https://attacker.example", cookie: "vy_owner_session=" + ownerSessionToken, "x-real-ip": "192.0.2.120" }
   }, res);
   assert.equal(ok, false);
   assert.equal(res.statusCode, 403);
@@ -1045,7 +1048,7 @@ test("global response security headers include a restrictive baseline CSP", () =
 test("admin authorization rejects cross-site fetch metadata even with a matching Origin", async () => {
   const res = responseMock();
   const ok = await authorizeAdmin({
-    headers: { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "cross-site", authorization: "Bearer test-admin-key", "x-real-ip": "192.0.2.122" }
+    headers: { host: "app.example.test", origin: "https://app.example.test", "sec-fetch-site": "cross-site", cookie: "vy_owner_session=" + ownerSessionToken, "x-real-ip": "192.0.2.122" }
   }, res);
   assert.equal(ok, false);
   assert.equal(res.statusCode, 403);
@@ -1277,7 +1280,7 @@ test("user-to-lawyer question lifecycle works across create, inbox, reply, histo
 
 
 test("admin lawyer lifecycle creates unique disabled accounts, hides password hashes, and safely sets access", async () => {
-  const headers={authorization:"Bearer test-admin-key",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.109"};
+  const headers={cookie:"vy_owner_session="+ownerSessionToken,host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.109"};
   const email="new-lawyer@example.test";
   const createRes=responseMock();
   await adminLawyers({method:"POST",headers,body:{action:"create",name:"وکیل آزمون",email,license_number:"12345"}},createRes);
@@ -1318,7 +1321,7 @@ test("admin lawyer lifecycle creates unique disabled accounts, hides password ha
 
 test("admin lawyer management validates method, key, and input before mutation", async () => {
   const wrongMethod=responseMock();
-  await adminLawyers({method:"GET",headers:{authorization:"Bearer test-admin-key",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.103"},body:{action:"list"}},wrongMethod);
+  await adminLawyers({method:"GET",headers:{cookie:"vy_owner_session="+ownerSessionToken,host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.103"},body:{action:"list"}},wrongMethod);
   assert.equal(wrongMethod.statusCode,405);
   assert.equal(wrongMethod.headers.Allow,"POST");
 
@@ -1328,7 +1331,7 @@ test("admin lawyer management validates method, key, and input before mutation",
 
   const beforeCount=lists.get("vy:lawyers:index")?.length||0;
   const badInput=responseMock();
-  await adminLawyers({method:"POST",headers:{authorization:"Bearer test-admin-key",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.105"},body:{action:"create",name:"x",email:"not-an-email"}},badInput);
+  await adminLawyers({method:"POST",headers:{cookie:"vy_owner_session="+ownerSessionToken,host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.105"},body:{action:"create",name:"x",email:"not-an-email"}},badInput);
   assert.equal(badInput.statusCode,400);
   assert.equal(lists.get("vy:lawyers:index")?.length||0,beforeCount);
 });
@@ -1343,7 +1346,7 @@ test("admin credit panel preserves an uncertain grant ID across page reloads", (
 });
 
 test("admin credit lookup and grants report accurate balances without mixing Pro and unlimited", async () => {
-  const userId="9".repeat(48), headers={authorization:"Bearer test-admin-key",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.110"};
+  const userId="9".repeat(48), headers={cookie:"vy_owner_session="+ownerSessionToken,host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.110"};
   const initial=process.env.FREE_CREDITS_INITIAL;
   process.env.FREE_CREDITS_INITIAL="250";
   try {
@@ -1378,7 +1381,7 @@ test("admin credit lookup and grants report accurate balances without mixing Pro
 
 test("admin credit grants are idempotent across retries and reject reused IDs with changed payload", async () => {
   const userId="6".repeat(48), otherUserId="5".repeat(48);
-  const headers={authorization:"Bearer test-admin-key",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.111"};
+  const headers={cookie:"vy_owner_session="+ownerSessionToken,host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.111"};
   const requestId="b".repeat(32);
   const auditCountBefore=lists.get("vy:admin:audit")?.length||0;
   const first=responseMock();
@@ -1409,7 +1412,7 @@ test("admin credit grants are idempotent across retries and reject reused IDs wi
 });
 
 test("admin credit endpoint rejects invalid identities, amounts, and non-POST requests", async () => {
-  const headers={authorization:"Bearer test-admin-key",host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.110"};
+  const headers={cookie:"vy_owner_session="+ownerSessionToken,host:"app.example.test",origin:"https://app.example.test","x-real-ip":"192.0.2.110"};
   const invalidId=responseMock();
   await grantCredits({method:"POST",headers,body:{user_id:"bad",credits:10}},invalidId);
   assert.equal(invalidId.statusCode,400);
