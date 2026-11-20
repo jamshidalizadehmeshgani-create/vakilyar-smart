@@ -63,7 +63,10 @@
         "Do not copy this record into legal/corpus.json or mark it human_verified yet.",
         "The Vakilanet page labels its source link 'مشاهده' and points to the exact RRK URL above. The RRK host timed out when opened directly in this retrieval; no official image or PDF was downloaded or inspected.",
         "A further targeted search of RRK for code 29690, Gazette issue 23159, publication date 1403/07/10, and the sending-letter number returned no additional indexed official record. This does not change the verification status.",
-        "The old RRK endpoint is not the only route: a report dated 1403/08/29 identifies a newer Official Gazette portal at https://rrk.ir/ords/r/rrs/rrs-front/home. Direct access to that portal also timed out in this environment. An unofficial rrk-mcp tool was discovered but not installed or adopted; its own published limits state that Gazette PDFs require login/payment and are not supplied. This is discovery only and does not establish authenticity."
+        "The old RRK endpoint is not the only route: a report dated 1403/08/29 identifies a newer Official Gazette portal at https://rrk.ir/ords/r/rrs/rrs-front/home. Direct access to that portal also timed out in this environment. An unofficial rrk-mcp tool was discovered but not installed or adopted; its own published limits state that Gazette PDFs require login/payment and are not supplied. This is discovery only and does not establish authenticity.",
+        "A technical review of the public rrk-mcp repository identified the new RRK APEX search page path https://rrk.ir/ords/r/rrs/rrs-front/ghavanin-moghararat and AJAX path https://rrk.ir/ords/wwv_flow.ajax. These are third-party code-derived technical leads, not official API documentation; direct page retrieval from this environment still timed out, and no record or Gazette image was retrieved.",
+        "The qavanin-mcp public repository was inspected only to understand possible Qavanin retrieval paths and amendment-history capabilities. The official Qavanin precedent page still returned only a transfer page in this environment; no new primary legal text was retrieved.",
+        "Both current third-party packages rrk-mcp and qavanin-mcp declare PolyForm Noncommercial 1.0.0 and require a separate commercial license for commercial use. Because Vakil-Yar is intended as a commercial product, neither package nor its code/dependencies is adopted or installed; no code was copied into this repository."
       ],
       "officialGazetteDirectUrl": "https://www.rrk.ir/Laws/ShowLaw.aspx?Code=29690",
       "officialGazetteDirectUrlDiscovery": "The 'مشاهده' link on the Vakilanet reproduction points to this exact rrk.ir URL.",
@@ -107,6 +110,22 @@
             "corpusAuthority": false
           },
           "status": "official_new_portal_discovered_but_not_retrieved"
+        },
+        {
+          "reviewedOn": "2026-11-21",
+          "target": "technical discovery of RRK APEX and Qavanin public retrieval paths",
+          "rrkApexSearchPage": "https://rrk.ir/ords/r/rrs/rrs-front/ghavanin-moghararat",
+          "rrkApexAjaxEndpoint": "https://rrk.ir/ords/wwv_flow.ajax",
+          "qavaninOfficialPageAttempt": "https://qavanin.ir/Law/TreeText/?IDS=10513086744345305283",
+          "qavaninOfficialPageResult": "Only a transfer page was returned; no legal text was retrieved.",
+          "rrkSearchPageResult": "Direct open timed out in this research environment.",
+          "discoveryBasis": "Public source-code inspection of third-party rrk-mcp and qavanin-mcp repositories; technical leads only.",
+          "licensingFinding": "Both current repositories declare PolyForm Noncommercial 1.0.0 and require separate permission for commercial use.",
+          "adopted": false,
+          "installed": false,
+          "codeCopied": false,
+          "primarySourceRetrieved": false,
+          "status": "technical_routes_discovered_but_no_primary_record_or_image_retrieved"
         }
       ]
     }
