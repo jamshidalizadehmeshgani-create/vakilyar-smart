@@ -9,7 +9,7 @@ const read = file => fs.readFileSync(path.join(root, file), "utf8");
 test("all public entry pages and their internal navigation targets exist", () => {
   const pages = [
     "index.html", "ask-lawyer.html", "lawyer-login.html", "lawyer-panel.html",
-    "admin-lawyers.html", "admin-credits.html", "privacy.html", "terms.html", "user-register.html", "user-login.html", "user-forgot-password.html", "user-reset-password.html"
+    "admin-lawyers.html", "admin-credits.html", "owner.html", "privacy.html", "terms.html", "user-register.html", "user-login.html", "user-forgot-password.html", "user-reset-password.html"
   ];
   const known = new Set(pages);
   for (const page of pages) assert.ok(fs.existsSync(path.join(root, "public", page)), page + " is missing");
