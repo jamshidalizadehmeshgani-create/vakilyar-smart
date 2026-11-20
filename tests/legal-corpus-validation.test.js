@@ -48,6 +48,15 @@ test("rejects duplicate record identifiers even if each record is otherwise vali
   assert.match(result.errors.join("\n"), /شناسه تکراری/);
 });
 
+test("detects identifiers that differ only by case or surrounding whitespace", () => {
+  const result = validateCorpus([
+    record,
+    { ...record, id: " SAMPLE-LAW-ARTICLE-1 " }
+  ], { now });
+  assert.equal(result.valid, false);
+  assert.match(result.errors.join("\\n"), /شناسه تکراری یا هم‌ارز/);
+});
+
 test("reports invalid source metadata with the record index and identifier", () => {
   const result = validateCorpus([{ ...record, sourceUrl: "https://example.com/law" }], { now });
   assert.equal(result.valid, false);
