@@ -168,8 +168,8 @@ test("defaults legal validity checks to the Iran-local date at the UTC day bound
   const current = {
     ...validRecord,
     effectiveFrom: "2026-11-21",
-    verifiedAt: "2026-10-01",
-    amendmentReviewDate: "2026-10-01"
+    verifiedAt: "2026-11-21",
+    amendmentReviewDate: "2026-11-21"
   };
   const result = retrieveLegalSources("تعهد قراردادی مسئولیت مدنی", {
     corpus: [current],
