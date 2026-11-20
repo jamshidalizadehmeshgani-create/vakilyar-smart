@@ -49,6 +49,9 @@ test("user memory is private to the authenticated server-side account and suppor
  assert.equal(lists.get(keyA).length,1);assert.equal(lists.get(keyB),undefined);
  const listA=response();await handler({method:"POST",uid:uidA,body:{action:"list"}},listA);assert.equal(listA.body.count,1);
  const listB=response();await handler({method:"POST",uid:uidB,body:{action:"list"}},listB);assert.equal(listB.body.count,0);
+ const crossUpdate=response();await handler({method:"POST",uid:uidB,body:{action:"update",id:added.body.record.id,title:"دستکاری",content:"نباید تغییر کند"}},crossUpdate);assert.equal(crossUpdate.statusCode,404);
+ const crossDelete=response();await handler({method:"POST",uid:uidB,body:{action:"delete",id:added.body.record.id}},crossDelete);assert.equal(crossDelete.statusCode,404);
+ const stillPrivate=response();await handler({method:"POST",uid:uidA,body:{action:"list"}},stillPrivate);assert.equal(stillPrivate.body.count,1);
  const updated=response();await handler({method:"POST",uid:uidA,body:{action:"update",id:added.body.record.id,title:"عنوان ویرایش‌شده",content:"متن جدید"}},updated);assert.equal(updated.statusCode,200);
  const after=response();await handler({method:"POST",uid:uidA,body:{action:"list"}},after);assert.equal(after.body.records[0].title,"عنوان ویرایش‌شده");
  const deleted=response();await handler({method:"POST",uid:uidA,body:{action:"delete",id:added.body.record.id}},deleted);assert.equal(deleted.statusCode,200);
