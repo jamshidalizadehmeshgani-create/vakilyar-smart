@@ -82,6 +82,15 @@ test("disabled lawyer panel cannot load inboxes or submit replies", () => {
   assert.match(panel,/هیچ پرسشی در این نسخه به وکیل ارجاع داده نمی‌شود/);
 });
 
+test("legal source cards expose official document identity and separate legal dates", () => {
+  const home = read("public/index.html");
+  assert.match(home, /source\\.officialDocumentId\?"شناسه سند رسمی: "/);
+  assert.match(home, /source\\.approvalDate\?"تصویب: "/);
+  assert.match(home, /source\\.publicationDate\?"انتشار: "/);
+  assert.match(home, /source\\.officialGazetteIssue\?"روزنامه رسمی شماره: "/);
+  assert.match(home, /source\\.amendmentReviewDate\?"بازبینی اصلاحات: "/);
+});
+
 test("all public pages declare Persian RTL document metadata", () => {
   const pages = [
     "index.html", "ask-lawyer.html", "lawyer-login.html", "lawyer-panel.html",
