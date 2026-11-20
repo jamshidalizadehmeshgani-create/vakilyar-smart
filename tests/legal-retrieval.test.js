@@ -56,6 +56,17 @@ test("rejects unofficial, insecure, unverified, repealed, expired, and stale rec
   }).status, "no_verified_sources");
 });
 
+test("rejects impossible calendar dates and duplicate document identifiers", () => {
+  assert.equal(validateRecord({ ...validRecord, effectiveFrom: "2026-02-31" }, now), false);
+  const duplicate = { ...validRecord, title: "عنوان تکراری" };
+  const result = retrieveLegalSources("تعهد قراردادی مسئولیت مدنی", {
+    corpus: [validRecord, duplicate],
+    now
+  });
+  assert.equal(result.sources.length, 1);
+  assert.equal(result.sources[0].title, validRecord.title);
+});
+
 test("does not retrieve documents using a single coincidental word", () => {
   const result = retrieveLegalSources("تعهد بسیار", {
     corpus: [validRecord],
