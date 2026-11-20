@@ -23,7 +23,7 @@ button.gold{background:#a98642}button.danger{background:#8a3434}button.secondary
 <main>
 <section id="login-panel" class="panel">
 <h2>ورود مالک</h2>
-<p class="notice">این صفحه فقط برای مالک/مدیر است. کلید مدیریت در مرورگر ذخیره نمی‌شود و فقط تا زمان بازبودن همین صفحه در حافظه موقت نگهداری خواهد شد. کلید را در اختیار دیگران نگذارید.</p>
+<p class="notice">کلید فقط برای ایجاد نشست اولیه ارسال می‌شود؛ پس از ورود، نشست کوتاه‌مدت در کوکی HttpOnly و امن نگهداری می‌شود و جاوااسکریپت به آن دسترسی ندارد.</p>
 <label for="owner-key">کلید محرمانه مدیریت</label><input id="owner-key" type="password" autocomplete="current-password" maxlength="512">
 <button id="connect">ورود امن به فضای مالک</button><p id="login-status" class="hint" role="status" aria-live="polite"></p>
 </section>
@@ -51,10 +51,10 @@ button.gold{background:#a98642}button.danger{background:#8a3434}button.secondary
 </main>
 <script>
 const $=id=>document.getElementById(id);
-let ownerKey="";
+
 function show(active){$("login-panel").classList.toggle("hidden",active);$("workspace").classList.toggle("hidden",!active);}
 async function api(action,data={}){
- const response=await fetch("/api/admin/memory",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json","Authorization":"Bearer "+ownerKey},body:JSON.stringify({action,...data})});
+ const response=await fetch("/api/admin/memory",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,...data})});
  const result=await response.json().catch(()=>({}));
  if(!response.ok)throw new Error(result.error||"درخواست ناموفق بود.");
  return result;
@@ -79,8 +79,7 @@ async function load(){
 $("connect").addEventListener("click",async()=>{
  const key=$("owner-key").value.trim();if(!key){$("login-status").textContent="کلید مدیریت را وارد کن.";return;}
  $("connect").disabled=true;$("login-status").textContent="در حال بررسی دسترسی مالک...";
- ownerKey=key;
- try{await load();show(true);$("owner-key").value="";$("login-status").textContent="";}catch(e){ownerKey="";$("login-status").textContent=e.message;}
+ try{const response=await fetch("/api/admin/session",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"login",key})});const result=await response.json().catch(()=>({}));if(!response.ok)throw new Error(result.error||"ورود انجام نشد.");$("owner-key").value="";await load();show(true);$("login-status").textContent="";}catch(e){$("owner-key").value="";$("login-status").textContent=e.message;}
  finally{$("connect").disabled=false;}
 });
 $("save").addEventListener("click",async()=>{
@@ -91,6 +90,6 @@ $("save").addEventListener("click",async()=>{
  catch(e){$("status").textContent=e.message;}
  finally{$("save").disabled=false;}
 });
-$("refresh").addEventListener("click",async()=>{try{await load();}catch(e){$("status").textContent=e.message;ownerKey="";show(false);}});
-$("disconnect").addEventListener("click",()=>{ownerKey="";$("memories").replaceChildren();$("status").textContent="از فضای مالک خارج شدید.";show(false);});
+$("refresh").addEventListener("click",async()=>{try{await load();}catch(e){$("status").textContent=e.message;show(false);}});
+$("disconnect").addEventListener("click",async()=>{try{await fetch("/api/admin/session",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"logout"})});}catch{}$("memories").replaceChildren();$("status").textContent="از فضای مالک خارج شدید.";show(false);});
 </script></body></html>
