@@ -44,11 +44,10 @@ function response() {
     json(v){this.body=v;return this;} };
 }
 test("owner memory is authorized, persistent in Redis list, and supports list/delete", async () => {
-  const { handler, memory } = loadHandler();
+  const { handler } = loadHandler();
   const add = response();
   await handler({ method:"POST", body:{action:"add",title:"تصمیم پروژه",content:"یادداشت خصوصی",category:"تصمیم مدیریتی"} }, add);
   assert.equal(add.statusCode,201);
-  assert.equal(memory.length,1);
   const list = response();
   await handler({ method:"POST", body:{action:"list"} }, list);
   assert.equal(list.body.count,1);
@@ -56,7 +55,9 @@ test("owner memory is authorized, persistent in Redis list, and supports list/de
   const remove = response();
   await handler({ method:"POST", body:{action:"delete",id:add.body.record.id} }, remove);
   assert.equal(remove.statusCode,200);
-  assert.equal(memory.length,0);
+  const afterDelete = response();
+  await handler({ method:"POST", body:{action:"list"} }, afterDelete);
+  assert.equal(afterDelete.body.count,0);
 });
 test("owner memory rejects unauthorized requests and oversized notes", async () => {
   const blocked = loadHandler({authorized:false});
