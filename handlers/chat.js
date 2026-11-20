@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 const { retrieveLegalSources, buildEvidencePrompt } = require("../lib/legal-retrieval");
-const { normalizeAsOfDate } = require("../lib/jalali-date");
+const { normalizeAsOfDate, getIranTodayIsoDate } = require("../lib/jalali-date");
 const { getAccount, classifyRequest, reserveCredits, refundReservation, commitReservation, consumeIpRateLimit } = require("../lib/quota");
 
 const SYSTEM_PROMPT = `تو «وکیل‌یار هوشمند» هستی؛ دستیار ارائه‌دهنده اطلاعات عمومی و آموزشی حقوقی.
@@ -58,7 +58,7 @@ module.exports = async (req, res) => {
   }
   const countryLabel = typeof requestedCountryInput === "string" ? requestedCountryInput.trim() : "";
   const asOfDateInput = req.body?.as_of_date;
-  const normalizedAsOfDate = asOfDateInput === undefined ? undefined : normalizeAsOfDate(asOfDateInput);
+  const normalizedAsOfDate = asOfDateInput === undefined ? getIranTodayIsoDate() : normalizeAsOfDate(asOfDateInput);
   if (asOfDateInput !== undefined && !normalizedAsOfDate) {
     return res.status(400).json({ code: "INVALID_AS_OF_DATE", error: "تاریخ مبنای بررسی باید تاریخ معتبر شمسی (۱۴۰۵/۰۸/۳۰) یا میلادی (2026-11-21) باشد." });
   }
@@ -133,7 +133,7 @@ module.exports = async (req, res) => {
     try {
       legalRetrieval = foreignRequest
         ? { status: "no_verified_sources", sources: [], evidence: [] }
-        : retrieveLegalSources(message, normalizedAsOfDate ? { asOfDate: normalizedAsOfDate } : {});
+        : retrieveLegalSources(message, { asOfDate: normalizedAsOfDate });
     } catch {
       legalRetrieval = { status: "retrieval_unavailable", sources: [], evidence: [] };
     }
@@ -183,7 +183,7 @@ module.exports = async (req, res) => {
       credits_used: charged,
       credits_remaining: (account.isPro || account.isUnlimited) ? null : remainingCredits,
       legal_evidence_status: legalRetrieval.status,
-      legal_as_of_date: normalizedAsOfDate || new Date().toISOString().slice(0, 10),
+      legal_as_of_date: normalizedAsOfDate,
       sources: legalRetrieval.sources
     });
   } catch (error) {
