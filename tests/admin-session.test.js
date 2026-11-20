@@ -89,3 +89,11 @@ test("owner session rejects invalid origin and wrong bootstrap key", async () =>
   assert.equal(await auth.loginAdmin(wrong, wrongRes), false);
   assert.equal(wrongRes.statusCode, 401);
 });
+
+test("legacy bearer admin key is rejected; only a server-validated owner cookie is accepted", async () => {
+  const { auth } = loadAuth();
+  const legacy = req({ authorization:"Bearer preview-test-key" });
+  const denied = response();
+  assert.equal(await auth.authorizeAdmin(legacy, denied), false);
+  assert.equal(denied.statusCode, 401);
+});
