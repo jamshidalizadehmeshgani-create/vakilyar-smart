@@ -117,6 +117,8 @@ test("owner login accepts configured username and scrypt password hash", async (
   assert.equal(await auth.loginAdmin(login, loginRes), true);
   assert.match(loginRes.headers["Set-Cookie"], /^vy_owner_session=[a-f0-9]{64};/);
   assert.equal([...store.keys()].filter(key => key.startsWith("vy:admin:session:")).length, 1);
+  assert.equal(calls.some(command => command[0] === "SET" && command.includes("43200")), true);
+  assert.equal([...store.keys()].some(key => key.includes("a".repeat(64))), false);
 });
 
 test("bootstrap API key is disabled once owner username/password are configured", async () => {
@@ -131,6 +133,35 @@ test("bootstrap API key is disabled once owner username/password are configured"
   const denied = response();
   assert.equal(await auth.loginAdmin(legacy, denied), false);
   assert.equal(denied.statusCode, 401);
+});
+
+test("owner login rejects empty usernames and malformed password hashes without bootstrap fallback", async () => {
+  const { auth, calls } = loadAuth({
+    ADMIN_USERNAME: "owner-account",
+    ADMIN_PASSWORD_HASH: "not-a-valid-scrypt-hash"
+  });
+  const emptyUsername = req();
+  emptyUsername.body = { username: "", password: "a-long-owner-password", key: "preview-test-key" };
+  const emptyRes = response();
+  assert.equal(await auth.loginAdmin(emptyUsername, emptyRes), false);
+  assert.equal(emptyRes.statusCode, 401);
+  assert.equal(calls.some(command => command[0] === "SET"), false);
+
+  const malformed = req();
+  malformed.body = { username: "owner-account", password: "a-long-owner-password", key: "preview-test-key" };
+  const malformedRes = response();
+  assert.equal(await auth.loginAdmin(malformed, malformedRes), false);
+  assert.equal(malformedRes.statusCode, 401);
+  assert.equal(calls.some(command => command[0] === "SET"), false);
+});
+
+test("owner login rejects cross-site fetch metadata even with matching Origin", async () => {
+  const { auth } = loadAuth();
+  const crossSite = req({ "sec-fetch-site": "cross-site" });
+  crossSite.body = { key: "preview-test-key" };
+  const denied = response();
+  assert.equal(await auth.loginAdmin(crossSite, denied), false);
+  assert.equal(denied.statusCode, 403);
 });
 
 test("partial owner credential configuration fails closed and rejects bootstrap key", async () => {
