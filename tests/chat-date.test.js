@@ -7,7 +7,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 const dateUtils = require("../lib/jalali-date");
 
-function loadChatHandler({ retrievalStatus = "no_verified_sources", evidence = true } = {}) {
+function loadChatHandler({ retrievalStatus = "no_verified_sources", evidence = true, throwRetrieval = false } = {}) {
   const source = fs.readFileSync(path.join(__dirname, "../handlers/chat.js"), "utf8");
   const calls = [];
   const state = { aiCalls: 0, refundCalls: 0, reserveCalls: 0, commitCalls: 0 };
@@ -33,6 +33,7 @@ function loadChatHandler({ retrievalStatus = "no_verified_sources", evidence = t
       if (id === "../lib/legal-retrieval") return {
         retrieveLegalSources(message, options) {
           calls.push({ message, options });
+          if (throwRetrieval) throw new Error("mock retrieval failure");
           const verified = retrievalStatus === "verified_sources";
           return {
             status: retrievalStatus,
@@ -130,6 +131,16 @@ test("chat distinguishes retrieval outage from an empty verified corpus", async 
   assert.equal(res.statusCode, 503);
   assert.equal(res.body.code, "LEGAL_RETRIEVAL_UNAVAILABLE");
   assert.equal(res.body.legal_evidence_status, "retrieval_unavailable");
+  assert.equal(state.aiCalls, 0);
+  assert.equal(state.refundCalls, 1);
+});
+
+test("chat converts retrieval exceptions into a fail-closed response and refunds credits", async () => {
+  const { handler, state } = loadChatHandler({ throwRetrieval: true });
+  const res = response();
+  await handler(request({}), res);
+  assert.equal(res.statusCode, 503);
+  assert.equal(res.body.code, "LEGAL_RETRIEVAL_UNAVAILABLE");
   assert.equal(state.aiCalls, 0);
   assert.equal(state.refundCalls, 1);
 });
