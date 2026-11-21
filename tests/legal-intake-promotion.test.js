@@ -19,8 +19,7 @@ process.env[REGISTRY_ENV] = JSON.stringify(identities.map(identity => ({
   publicKeyPem: identity.publicKey.export({ type: "spki", format: "pem" })
 })));
 
-function signIntake(candidate) {
-  const signedAt = "2026-11-21T11:59:00.000Z";
+function signIntake(candidate, signedAt = "2026-11-21T11:59:00.000Z") {
   const signaturesFor = role => identities.filter(identity => identity.role === role).map(identity => ({
     identityId: identity.identityId, keyId: identity.keyId, signedAt,
     signature: crypto.sign(null, Buffer.from(buildAttestationMessage(candidate, role, identity.identityId, identity.keyId, signedAt)), identity.privateKey).toString("base64")
@@ -125,6 +124,13 @@ test("rejects a revoked public key", () => {
     assert.equal(result.valid, false);
     assert.deepEqual(result.records, []);
   } finally { process.env[REGISTRY_ENV] = previous; }
+});
+
+test("rejects signatures dated before the legal review or approval", () => {
+  const candidate = signIntake(JSON.parse(JSON.stringify(intake)), "2026-11-19T11:59:00.000Z");
+  const result = promoteApprovedIntake(candidate, { today: "2026-11-21", now, existingCorpus: [] });
+  assert.equal(result.valid, false);
+  assert.deepEqual(result.records, []);
 });
 
 test("rejects tampered legal text after reviewers signed the intake", () => {
