@@ -271,6 +271,8 @@ test("evidence prompt includes the retrieved text and warns against invented cit
   assert.match(prompt, /"text":/);
   assert.match(prompt, /"asOfDate":"2026-11-21"/);
   assert.match(prompt, /هیچ ماده یا منبع دیگری نساز/);
+  assert.match(prompt, /نقل‌قول مستقیم و عیناً پیوسته/);
+  assert.match(prompt, /فقط یک گزاره حقوقی مستقل/);
 });
 
 
