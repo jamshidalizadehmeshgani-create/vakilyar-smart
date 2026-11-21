@@ -1543,10 +1543,10 @@ test("chat commits reserved credits only after a valid AI response", async () =>
     }
     return originalFetch(url, options);
   };
+  const restoreLegalRetrieval = installVerifiedLegalRetrievalForChatTest();
   delete require.cache[require.resolve("../handlers/chat")];
   const chat = require("../handlers/chat");
   const res = responseMock();
-  const restoreLegalRetrieval = installVerifiedLegalRetrievalForChatTest();
   try {
     await chat({
       method: "POST",
@@ -1597,10 +1597,10 @@ test("chat refunds reserved credits when the AI provider rejects the request", a
     }
     return originalFetch(url, options);
   };
+  const restoreLegalRetrieval = installVerifiedLegalRetrievalForChatTest();
   delete require.cache[require.resolve("../handlers/chat")];
   const chat = require("../handlers/chat");
   const res = responseMock();
-  const restoreLegalRetrieval = installVerifiedLegalRetrievalForChatTest();
   try {
     await chat({
       method: "POST",
@@ -1643,9 +1643,9 @@ test("chat refunds credits when the provider response contains invalid or oversi
   global.fetch = async (url, options) => String(url) === process.env.AI_API_URL
     ? { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: { unsafe: true } } }] }) }
     : originalFetch(url, options);
+  const restoreLegalRetrieval = installVerifiedLegalRetrievalForChatTest();
   delete require.cache[require.resolve("../handlers/chat")];
   const chat = require("../handlers/chat"), res = responseMock();
-  const restoreLegalRetrieval = installVerifiedLegalRetrievalForChatTest();
   try {
     await chat({
       method: "POST",
@@ -1678,9 +1678,9 @@ test("chat refunds credits when the AI provider returns oversized text", async (
   global.fetch = async (url, options) => String(url) === process.env.AI_API_URL
     ? { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: "x".repeat(24001) } }] }) }
     : originalFetch(url, options);
+  const restoreLegalRetrieval = installVerifiedLegalRetrievalForChatTest();
   delete require.cache[require.resolve("../handlers/chat")];
   const chat = require("../handlers/chat"), res = responseMock();
-  const restoreLegalRetrieval = installVerifiedLegalRetrievalForChatTest();
   try {
     await chat({
       method: "POST",
@@ -1715,9 +1715,9 @@ test("chat refunds reserved credits after an AI provider network timeout", async
     if (String(url) === process.env.AI_API_URL) throw new Error("simulated provider network timeout");
     return originalFetch(url, options);
   };
+  const restoreLegalRetrieval = installVerifiedLegalRetrievalForChatTest();
   delete require.cache[require.resolve("../handlers/chat")];
   const chat = require("../handlers/chat"), res = responseMock();
-  const restoreLegalRetrieval = installVerifiedLegalRetrievalForChatTest();
   try {
     await chat({
       method: "POST",
