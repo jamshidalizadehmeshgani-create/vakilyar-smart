@@ -19,8 +19,9 @@ function loadChatHandler({ retrievalStatus = "no_verified_sources", evidence = t
     console: { error() {} },
     URL,
     AbortSignal,
-    fetch: async () => {
+    fetch: async (_endpoint, options) => {
       state.aiCalls += 1;
+      state.messages = JSON.parse(options.body).messages;
       return {
         ok: true,
         status: 200,
@@ -153,4 +154,6 @@ test("chat calls the model only when verified sources and evidence are both pres
   assert.equal(state.aiCalls, 1);
   assert.equal(state.refundCalls, 0);
   assert.equal(state.commitCalls, 1);
+  assert.deepEqual(state.messages.map(item => item.role), ["system", "user", "user"]);
+  assert.equal(state.messages[1].content, "verified evidence");
 });
