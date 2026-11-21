@@ -1539,7 +1539,7 @@ test("chat commits reserved credits only after a valid AI response", async () =>
   const signature = crypto.createHmac("sha256", process.env.APP_SECRET).update(uid).digest("base64url");
   global.fetch = async (url, options) => {
     if (String(url) === process.env.AI_API_URL) {
-      return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: "پاسخ آزمایشی حقوقی [[source:security-test-source]] [[quote:security-test-source]] «متن رسمی آزمایشی درباره تعهدات قراردادی و مسئولیت مدنی»" } }] }) };
+      return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: "گزیده مستقیم از متن سند (بدون تفسیر حقوقی): [[source:security-test-source]] [[quote:security-test-source]] «متن رسمی آزمایشی درباره تعهدات قراردادی و مسئولیت مدنی»" } }] }) };
     }
     return originalFetch(url, options);
   };
@@ -1558,7 +1558,7 @@ test("chat commits reserved credits only after a valid AI response", async () =>
       body: { consent: true, message: "یک پرسش حقوقی کوتاه درباره مسئولیت مدنی" }
     }, res);
     assert.equal(res.statusCode, 200);
-    assert.equal(res.body.reply, "پاسخ آزمایشی حقوقی [[source:security-test-source]] [[quote:security-test-source]] «متن رسمی آزمایشی درباره تعهدات قراردادی و مسئولیت مدنی»");
+    assert.equal(res.body.reply, "گزیده مستقیم از متن سند (بدون تفسیر حقوقی): [[source:security-test-source]] [[quote:security-test-source]] «متن رسمی آزمایشی درباره تعهدات قراردادی و مسئولیت مدنی»");
     assert.equal(values.get("vy:user:" + uid + ":credits"), "990");
     const commitKeys = [...values.keys()].filter(key => key.startsWith("vy:commit:"));
     assert.ok(commitKeys.length > 0, "successful response must commit the reservation");
