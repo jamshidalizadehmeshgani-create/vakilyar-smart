@@ -167,7 +167,7 @@ test("normalizes Jalali source, review, and article dates into ISO corpus dates"
   candidate.legalReview.amendmentsCheckedThrough = "۱۴۰۵/۰۸/۲۹";
   candidate.promotion.approvedAt = "۱۴۰۵/۰۸/۲۹";
   candidate.articleChecks[0].effectiveFrom = "۱۳۹۸/۱۰/۱۳";
-  const result = promoteApprovedIntake(candidate, { today: "2026-11-21", now, existingCorpus: [] });
+  const result = promoteApprovedIntake(candidate, { today: "2026-11-21", now, existingCorpus: [], verifyHumanAttestation: () => true });
   assert.equal(result.valid, true, result.errors.join("\\n"));
   assert.equal(result.records[0].approvalDate, "2020-01-01");
   assert.equal(result.records[0].publicationDate, "2020-01-02");
