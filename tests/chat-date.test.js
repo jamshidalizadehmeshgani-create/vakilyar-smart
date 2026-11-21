@@ -154,6 +154,6 @@ test("chat calls the model only when verified sources and evidence are both pres
   assert.equal(state.aiCalls, 1);
   assert.equal(state.refundCalls, 0);
   assert.equal(state.commitCalls, 1);
-  assert.deepEqual(state.messages.map(item => item.role), ["system", "user", "user"]);
+  assert.equal(state.messages.map(item => item.role).join(","), "system,user,user");
   assert.equal(state.messages[1].content, "verified evidence");
 });
