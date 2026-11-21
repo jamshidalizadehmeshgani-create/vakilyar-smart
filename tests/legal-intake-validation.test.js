@@ -143,6 +143,19 @@ test("accepts valid Jalali legal dates and normalizes them through the calendar 
   assert.equal(validateIntake(intake, { today: "2026-11-21" }).valid, true);
 });
 
+test("rejects impossible UTC calendar dates and out-of-range clock fields", () => {
+  for (const timestamp of [
+    "2026-02-31T10:00:00Z",
+    "2026-11-21T25:00:00Z",
+    "2026-11-21T10:61:00Z",
+    "2026-11-21T10:00:61Z"
+  ]) {
+    const intake = structuredClone(valid);
+    intake.document.retrievedAtUtc = timestamp;
+    assert.equal(validateIntake(intake, { today: "2026-11-21" }).valid, false, timestamp);
+  }
+});
+
 test("accepts UTC timestamps with optional fractional seconds and rejects nonstandard official ports", () => {
   const withMilliseconds = structuredClone(valid);
   withMilliseconds.document.retrievedAtUtc = "2026-11-20T10:00:00.123Z";
