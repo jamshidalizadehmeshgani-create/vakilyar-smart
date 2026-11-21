@@ -297,6 +297,8 @@ test("answer evidence validator requires verbatim excerpts from the cited retrie
   assert.equal(validateAnswerEvidence(fabricated, sources, evidence).valid, false);
   const mismatched = "ادعا [[source:law-one]] [[quote:law-two]] «آثار اجرای تعهدات قراردادی»";
   assert.equal(validateAnswerEvidence(mismatched, sources, evidence).valid, false);
+  const uncitedQuoteSource = "ادعا [[source:law-one]] [[quote:law-two]] «آثار اجرای تعهدات قراردادی»";
+  assert.equal(validateAnswerEvidence(uncitedQuoteSource, sources, evidence).valid, false);
   const unlinked = "بند اول [[source:law-one]] [[quote:law-one]] «ماده آزمایشی درباره تعهد قراردادی و مسئولیت مدنی»\\n\\nبند دوم بدون نقل قول";
   assert.equal(validateAnswerEvidence(unlinked, sources, evidence).missingQuotes, 1);
   assert.equal(validateAnswerEvidence(valid, [], evidence).valid, false);
