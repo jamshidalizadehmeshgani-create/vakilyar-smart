@@ -152,12 +152,16 @@ module.exports = async (req, res) => {
         reservationId = null;
       }
       const retrievalUnavailable = legalRetrieval?.status === "retrieval_unavailable";
+      const untrustedEvidenceRejected = legalRetrieval?.status === "untrusted_evidence_rejected";
       return res.status(503).json({
         configured: true,
-        code: retrievalUnavailable ? "LEGAL_RETRIEVAL_UNAVAILABLE" : "LEGAL_EVIDENCE_UNAVAILABLE",
+        code: retrievalUnavailable ? "LEGAL_RETRIEVAL_UNAVAILABLE" :
+          untrustedEvidenceRejected ? "UNTRUSTED_LEGAL_EVIDENCE_REJECTED" : "LEGAL_EVIDENCE_UNAVAILABLE",
         error: retrievalUnavailable
           ? "سامانه بازیابی منابع حقوقی موقتاً در دسترس نیست؛ برای جلوگیری از ارائه پاسخ بدون مستند معتبر، پاسخی تولید نشد. اعتبار رزروشده بازگردانده شد."
-          : "در حال حاضر منبع حقوقی رسمیِ تأییدشده و مرتبط برای این پرسش در بانک وکیل‌یار موجود نیست؛ برای جلوگیری از ارائه پاسخ حدسی، پاسخی تولید نشد. اعتبار رزروشده بازگردانده شد.",
+          : untrustedEvidenceRejected
+            ? "محتوای مشکوک یا دارای نویسه‌های پنهان در سند بازیابی‌شده شناسایی و قرنطینه شد؛ برای جلوگیری از اثرگذاری دستورهای نامعتبر، پاسخی تولید نشد. اعتبار رزروشده بازگردانده شد."
+            : "در حال حاضر منبع حقوقی رسمیِ تأییدشده و مرتبط برای این پرسش در بانک وکیل‌یار موجود نیست؛ برای جلوگیری از ارائه پاسخ حدسی، پاسخی تولید نشد. اعتبار رزروشده بازگردانده شد.",
         legal_evidence_status: legalRetrieval?.status || "retrieval_unavailable",
         legal_as_of_date: normalizedAsOfDate,
         sources: []
