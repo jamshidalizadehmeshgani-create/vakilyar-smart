@@ -143,6 +143,15 @@ test("accepts valid Jalali legal dates and normalizes them through the calendar 
   assert.equal(validateIntake(intake, { today: "2026-11-21" }).valid, true);
 });
 
+test("accepts UTC timestamps with optional fractional seconds and rejects nonstandard official ports", () => {
+  const withMilliseconds = structuredClone(valid);
+  withMilliseconds.document.retrievedAtUtc = "2026-11-20T10:00:00.123Z";
+  assert.equal(validateIntake(withMilliseconds, { today: "2026-11-21" }).valid, true);
+  const badPort = structuredClone(valid);
+  badPort.document.officialDownloadUrl = "https://qavanin.ir:8443/Pdfs/1.pdf";
+  assert.equal(validateIntake(badPort, { today: "2026-11-21" }).valid, false);
+});
+
 test("rejects impossible Jalali dates", () => {
   const intake = structuredClone(valid);
   intake.document.officialPublicationDate = "۱۴۰۵/۱۲/۳۰";
