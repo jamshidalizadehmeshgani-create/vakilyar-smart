@@ -66,6 +66,25 @@ test("rejects a PDF response without a PDF signature", async () => {
   }), /امضای فایل/);
 });
 
+test("rejects nonstandard ports and a zero-byte size limit", async () => {
+  await assert.rejects(() => fetchOfficialLegalDocument("https://qavanin.ir:8443/file.pdf", {
+    fetchImpl: async () => response(200, { "content-type": "application/pdf" })
+  }), /رسمی و امن/);
+  await assert.rejects(() => fetchOfficialLegalDocument("https://qavanin.ir/file.pdf", {
+    maxBytes: 0,
+    fetchImpl: async () => response(200, { "content-type": "application/pdf" })
+  }), /سقف حجم نامعتبر/);
+});
+
+test("applies an overall request timeout and reports it clearly", async () => {
+  await assert.rejects(() => fetchOfficialLegalDocument("https://qavanin.ir/file.pdf", {
+    timeoutMs: 10,
+    fetchImpl: async (_url, options) => new Promise((resolve, reject) => {
+      options.signal.addEventListener("abort", () => reject(options.signal.reason), { once: true });
+    })
+  }), /مهلت دریافت سند رسمی/);
+});
+
 test("enforces the response size limit", async () => {
   await assert.rejects(() => fetchOfficialLegalDocument("https://qavanin.ir/file.pdf", {
     maxBytes: 4,
