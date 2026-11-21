@@ -20,9 +20,6 @@ async function main() {
     process.stdout.write(JSON.stringify(result.metadata, null, 2) + "\n");
     console.error("سند دریافت شد؛ تعداد صفحات و تطبیق حقوقی هنوز باید جداگانه بررسی شوند.");
   } catch (error) {
-    if (result) {
-      try { fs.unlinkSync(destination); } catch {}
-    }
     console.error("دریافت رسمی سند تأیید نشد: " + error.message);
     process.exitCode = 1;
   }
