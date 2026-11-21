@@ -7,6 +7,7 @@ const {
   validateRecord,
   retrieveLegalSources,
   validateAnswerCitations,
+  validateAnswerEvidence,
   buildEvidencePrompt
 } = require("../lib/legal-retrieval");
 
@@ -281,4 +282,22 @@ test("answer citation validator accepts only exact retrieved source IDs in every
   assert.equal(validateAnswerCitations("بند اول [[source:source-one]]\n\nبند دوم بدون ارجاع", sources).uncitedParagraphs, 1);
   assert.deepEqual(validateAnswerCitations("پاسخ [[source:invented-source]]", sources).unknownSourceIds, ["invented-source"]);
   assert.equal(validateAnswerCitations("پاسخ [[source:source-one]]", []).valid, false);
+});
+
+test("answer evidence validator requires verbatim excerpts from the cited retrieved source", () => {
+  const sources = [{ id: "law-one" }, { id: "law-two" }];
+  const evidence = [
+    { id: "law-one", text: "متن رسمی ماده آزمایشی درباره تعهد قراردادی و مسئولیت مدنی." },
+    { id: "law-two", text: "متن رسمی دوم درباره آثار اجرای تعهدات قراردادی." }
+  ];
+  const valid = "تعهد قراردادی باید بررسی شود. [[source:law-one]] [[quote:law-one]] «ماده آزمایشی درباره تعهد قراردادی و مسئولیت مدنی»";
+  assert.equal(validateAnswerEvidence(valid, sources, evidence).valid, true);
+  assert.equal(validateAnswerEvidence("ادعا [[source:law-one]]", sources, evidence).missingQuotes, 1);
+  const fabricated = "ادعا [[source:law-one]] [[quote:law-one]] «این عبارت اصلاً در متن رسمی قانون وجود ندارد»";
+  assert.equal(validateAnswerEvidence(fabricated, sources, evidence).valid, false);
+  const mismatched = "ادعا [[source:law-one]] [[quote:law-two]] «آثار اجرای تعهدات قراردادی»";
+  assert.equal(validateAnswerEvidence(mismatched, sources, evidence).valid, false);
+  const unlinked = "بند اول [[source:law-one]] [[quote:law-one]] «ماده آزمایشی درباره تعهد قراردادی و مسئولیت مدنی»\\n\\nبند دوم بدون نقل قول";
+  assert.equal(validateAnswerEvidence(unlinked, sources, evidence).missingQuotes, 1);
+  assert.equal(validateAnswerEvidence(valid, [], evidence).valid, false);
 });
