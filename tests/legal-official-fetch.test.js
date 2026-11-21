@@ -80,7 +80,13 @@ test("applies an overall request timeout and reports it clearly", async () => {
   await assert.rejects(() => fetchOfficialLegalDocument("https://qavanin.ir/file.pdf", {
     timeoutMs: 10,
     fetchImpl: async (_url, options) => new Promise((resolve, reject) => {
-      options.signal.addEventListener("abort", () => reject(options.signal.reason), { once: true });
+      // AbortSignal.timeout uses an unref'ed timer; keep this mock request alive
+      // so the test runner can observe the abort event just like a real socket.
+      const keepAlive = setTimeout(() => reject(new Error("mock request did not abort")), 250);
+      options.signal.addEventListener("abort", () => {
+        clearTimeout(keepAlive);
+        reject(options.signal.reason);
+      }, { once: true });
     })
   }), /مهلت دریافت سند رسمی/);
 });
