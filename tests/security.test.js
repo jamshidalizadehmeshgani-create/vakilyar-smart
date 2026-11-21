@@ -19,7 +19,7 @@ function installVerifiedLegalRetrievalForChatTest() {
       title: "سند حقوقی آزمایشی",
       sourceUrl: "https://qavanin.ir/test",
       officialPublisher: "مرجع رسمی آزمایشی",
-      text: "متن رسمی آزمایشی"
+      text: "متن رسمی آزمایشی درباره تعهدات قراردادی و مسئولیت مدنی"
     }]
   });
   return () => { legalRetrievalModule.retrieveLegalSources = originalRetrieveLegalSources; };
@@ -1539,7 +1539,7 @@ test("chat commits reserved credits only after a valid AI response", async () =>
   const signature = crypto.createHmac("sha256", process.env.APP_SECRET).update(uid).digest("base64url");
   global.fetch = async (url, options) => {
     if (String(url) === process.env.AI_API_URL) {
-      return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: "پاسخ آزمایشی حقوقی [[source:security-test-source]]" } }] }) };
+      return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: "پاسخ آزمایشی حقوقی [[source:security-test-source]] [[quote:security-test-source]] «متن رسمی آزمایشی درباره تعهدات قراردادی و مسئولیت مدنی»" } }] }) };
     }
     return originalFetch(url, options);
   };
