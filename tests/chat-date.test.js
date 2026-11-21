@@ -7,7 +7,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 const dateUtils = require("../lib/jalali-date");
 
-function loadChatHandler({ retrievalStatus = "no_verified_sources", evidence = true, throwRetrieval = false, reply = "پاسخ آزمایشی [[source:verified-test-source]] [[quote:verified-test-source]] «متن رسمی آزمایشی درباره تعهدات قراردادی و مسئولیت مدنی»" } = {}) {
+function loadChatHandler({ retrievalStatus = "no_verified_sources", evidence = true, throwRetrieval = false, reply = "گزیده مستقیم از متن سند (بدون تفسیر حقوقی): [[source:verified-test-source]] [[quote:verified-test-source]] «متن رسمی آزمایشی درباره تعهدات قراردادی و مسئولیت مدنی»" } = {}) {
   const source = fs.readFileSync(path.join(__dirname, "../handlers/chat.js"), "utf8");
   const calls = [];
   const state = { aiCalls: 0, refundCalls: 0, reserveCalls: 0, commitCalls: 0 };
@@ -173,7 +173,7 @@ test("chat rejects model answers with uncited paragraphs and refunds credits", a
 test("chat rejects invented verbatim excerpts and refunds credits", async () => {
   const { handler, state } = loadChatHandler({
     retrievalStatus: "verified_sources",
-    reply: "ادعای حقوقی. [[source:verified-test-source]] [[quote:verified-test-source]] «این نقل قول ساختگی و در متن سند آزمایشی وجود ندارد»"
+    reply: "گزیده مستقیم از متن سند (بدون تفسیر حقوقی): [[source:verified-test-source]] [[quote:verified-test-source]] «این نقل قول ساختگی و در متن سند آزمایشی وجود ندارد»"
   });
   const res = response();
   await handler(request({}), res);
@@ -186,7 +186,7 @@ test("chat rejects invented verbatim excerpts and refunds credits", async () => 
 test("chat rejects fabricated source IDs even when the answer contains a citation marker", async () => {
   const { handler, state } = loadChatHandler({
     retrievalStatus: "verified_sources",
-    reply: "ادعای حقوقی. [[source:invented-source]] [[quote:invented-source]] «متن رسمی آزمایشی درباره تعهدات قراردادی و مسئولیت مدنی»"
+    reply: "گزیده مستقیم از متن سند (بدون تفسیر حقوقی): [[source:invented-source]] [[quote:invented-source]] «متن رسمی آزمایشی درباره تعهدات قراردادی و مسئولیت مدنی»"
   });
   const res = response();
   await handler(request({}), res);
@@ -201,7 +201,7 @@ test("chat calls the model only when verified sources and evidence are both pres
   const res = response();
   await handler(request({}), res);
   assert.equal(res.statusCode, 200);
-  assert.equal(res.body.reply, "پاسخ آزمایشی [[source:verified-test-source]] [[quote:verified-test-source]] «متن رسمی آزمایشی درباره تعهدات قراردادی و مسئولیت مدنی»");
+  assert.equal(res.body.reply, "گزیده مستقیم از متن سند (بدون تفسیر حقوقی): [[source:verified-test-source]] [[quote:verified-test-source]] «متن رسمی آزمایشی درباره تعهدات قراردادی و مسئولیت مدنی»");
   assert.equal(res.body.legal_evidence_status, "verified_sources");
   assert.equal(state.aiCalls, 1);
   assert.equal(state.refundCalls, 0);
