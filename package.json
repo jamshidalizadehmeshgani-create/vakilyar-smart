@@ -11,6 +11,7 @@
     "validate:legal-corpus": "node scripts/validate-legal-corpus.js",
     "validate:legal-intake": "node scripts/validate-legal-intake.js",
     "preview:legal-promotion": "node scripts/preview-legal-promotion.js",
-    "fetch:official-legal-document": "node scripts/fetch-official-legal-document.js"
+    "fetch:official-legal-document": "node scripts/fetch-official-legal-document.js",
+    "prepare:legal-attestation": "node scripts/prepare-legal-attestation.js"
   }
 }
