@@ -313,7 +313,7 @@ test("evidence prompt includes the retrieved text and warns against invented cit
   const prompt = buildEvidencePrompt(result);
   assert.match(prompt, /"text":/);
   assert.match(prompt, /"asOfDate":"2026-11-21"/);
-  assert.match(prompt, /هیچ ماده یا منبع دیگری نساز/);
+  assert.match(prompt, /هیچ ماده یا منبع دیگری را از حافظه اضافه نکن/);
   assert.match(prompt, /گزیده مستقیم از متن سند \(بدون تفسیر حقوقی\)/);
   assert.match(prompt, /هیچ تفسیر، خلاصه‌سازی، بازنویسی، استنتاج، توصیه/);
   assert.match(prompt, /فقط یک گزاره حقوقی مستقل/);
