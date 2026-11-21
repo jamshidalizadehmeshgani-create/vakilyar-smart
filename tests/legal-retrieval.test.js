@@ -6,6 +6,7 @@ const {
   normalizeText,
   validateRecord,
   retrieveLegalSources,
+  validateAnswerCitations,
   buildEvidencePrompt
 } = require("../lib/legal-retrieval");
 
@@ -269,4 +270,15 @@ test("evidence prompt includes the retrieved text and warns against invented cit
   assert.match(prompt, /"text":/);
   assert.match(prompt, /"asOfDate":"2026-11-21"/);
   assert.match(prompt, /هیچ ماده یا منبع دیگری نساز/);
+});
+
+
+test("answer citation validator accepts only exact retrieved source IDs in every paragraph", () => {
+  const sources = [{ id: "source-one" }, { id: "source-two" }];
+  const valid = "مبنای پاسخ از سند اول. [[source:source-one]]\\n\\nاقدام بعدی با سند دوم. [[source:source-two]]";
+  assert.equal(validateAnswerCitations(valid, sources).valid, true);
+  assert.equal(validateAnswerCitations("پاسخ بدون ارجاع", sources).valid, false);
+  assert.equal(validateAnswerCitations("بند اول [[source:source-one]]\\n\\nبند دوم بدون ارجاع", sources).uncitedParagraphs, 1);
+  assert.deepEqual(validateAnswerCitations("پاسخ [[source:invented-source]]", sources).unknownSourceIds, ["invented-source"]);
+  assert.equal(validateAnswerCitations("پاسخ [[source:source-one]]", []).valid, false);
 });
