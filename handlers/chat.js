@@ -1,5 +1,5 @@
 const crypto = require("crypto");
-const { retrieveLegalSources, buildEvidencePrompt, validateAnswerCitations } = require("../lib/legal-retrieval");
+const { retrieveLegalSources, buildEvidencePrompt, validateAnswerEvidence } = require("../lib/legal-retrieval");
 const { normalizeAsOfDate, getIranTodayIsoDate } = require("../lib/jalali-date");
 const { getAccount, classifyRequest, reserveCredits, refundReservation, commitReservation, consumeIpRateLimit } = require("../lib/quota");
 
@@ -199,12 +199,17 @@ module.exports = async (req, res) => {
       return res.status(502).json({ error: "پاسخ موتور هوش مصنوعی نامعتبر یا بیش از حد طولانی بود؛ اعتبار رزروشده بازگردانده شد." });
     }
 
-    // Do not deliver a legal answer unless every paragraph cites one or more
-    // exact source IDs from this retrieval result. This verifies citation
-    // references, not the substantive truth of the model's legal reasoning.
-    const citationCheck = validateAnswerCitations(reply, legalRetrieval.sources);
-    if (!citationCheck.valid) {
+    // Every legal paragraph must cite a retrieved source and carry a verbatim
+    // excerpt found in that exact source's evidence text.
+    const evidenceCheck = validateAnswerEvidence(reply, legalRetrieval.sources, legalRetrieval.evidence);
+    if (!evidenceCheck.valid) {
       if (reservationId) { await refundReservation(account.key, reservationId); reservationId = null; }
+      return res.status(502).json({
+        code: "UNVERIFIED_ANSWER_EVIDENCE",
+        error: "پاسخ تولیدشده فاقد نقل‌قول مستقیم و قابل‌تطبیق با متن منبع است؛ برای جلوگیری از ارائه ادعای حقوقیِ بدون پشتوانه متنی، پاسخ نمایش داده نشد و اعتبار رزروشده بازگردانده شد."
+      });
+    }
+    if (reservationId) { await refundReservation(account.key, reservationId); reservationId = null; }
       return res.status(502).json({
         code: "UNVERIFIED_ANSWER_CITATIONS",
         error: "پاسخ تولیدشده ارجاع قابل‌تطبیق به منابع بازیابی‌شده ندارد؛ برای جلوگیری از ارائه پاسخ حقوقیِ بدون استناد، پاسخ نمایش داده نشد و اعتبار رزروشده بازگردانده شد."
