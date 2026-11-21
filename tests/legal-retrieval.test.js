@@ -36,6 +36,28 @@ test("normalization unifies Arabic and Persian letter variants", () => {
   assert.equal(normalizeText("مسئوليّت كیفری"), normalizeText("مسئولیت کیفری"));
 });
 
+test("normalization unifies Persian, Arabic, and Latin digits", () => {
+  assert.equal(normalizeText("ماده ۱۲۳"), "ماده 123");
+  assert.equal(normalizeText("ماده ١٢٣"), "ماده 123");
+  assert.equal(normalizeText("ماده 123"), "ماده 123");
+});
+
+test("retrieves an article when its number uses a different digit script", () => {
+  const numberedRecord = {
+    ...validRecord,
+    id: "test-article-123",
+    title: "قانون مدنی",
+    articleNumber: "ماده 123",
+    text: "تعهد قراردادی و مسئولیت مدنی در این ماده بررسی می‌شود."
+  };
+  const result = retrieveLegalSources("ماده ۱۲۳ تعهد قراردادی", {
+    corpus: [numberedRecord],
+    now
+  });
+  assert.equal(result.status, "verified_sources");
+  assert.equal(result.sources[0].articleNumber, "ماده 123");
+});
+
 test("retrieves only current human-verified records from allowlisted official domains", () => {
   const result = retrieveLegalSources("تعهد قراردادی مسئولیت مدنی", {
     corpus: [validRecord],
