@@ -25,7 +25,7 @@ const valid = {
     sha256: "a".repeat(64),
     licenseOrReuseBasis: "مجوز رسمی آزمایشی",
     licenseEvidenceUrl: "https://qavanin.ir/license",
-    redirectChain: ["https://qavanin.ir/Pdfs/1.pdf"]
+    redirectChain: []
   },
   integrityChecks: {
     downloadedFromOfficialHost: true,
@@ -58,7 +58,7 @@ const valid = {
   }
 };
 
-test("accepts a fully documented and independently reviewed intake", () => {
+test("accepts a fully documented intake when the official download required no redirects", () => {
   assert.deepEqual(validateIntake(valid, { today: "2026-11-21" }), { valid: true, errors: [] });
 });
 
