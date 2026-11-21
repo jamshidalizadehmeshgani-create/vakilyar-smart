@@ -7,9 +7,10 @@ const path = require("node:path");
 const vm = require("node:vm");
 const dateUtils = require("../lib/jalali-date");
 
-function loadChatHandler() {
+function loadChatHandler({ retrievalStatus = "no_verified_sources", evidence = true } = {}) {
   const source = fs.readFileSync(path.join(__dirname, "../handlers/chat.js"), "utf8");
   const calls = [];
+  const state = { aiCalls: 0, refundCalls: 0, reserveCalls: 0, commitCalls: 0 };
   const module = { exports: null };
   const sandbox = {
     module,
@@ -18,37 +19,45 @@ function loadChatHandler() {
     console: { error() {} },
     URL,
     AbortSignal,
-    fetch: async () => ({
-      ok: true,
-      status: 200,
-      json: async () => ({ choices: [{ message: { content: "پاسخ آزمایشی" } }] })
-    }),
+    fetch: async () => {
+      state.aiCalls += 1;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: "پاسخ آزمایشی" } }] })
+      };
+    },
     require(id) {
       if (id === "crypto") return require("node:crypto");
       if (id === "../lib/legal-retrieval") return {
         retrieveLegalSources(message, options) {
           calls.push({ message, options });
-          return { status: "no_verified_sources", sources: [], evidence: [] };
+          const verified = retrievalStatus === "verified_sources";
+          return {
+            status: retrievalStatus,
+            sources: verified ? [{ id: "verified-test-source", sourceUrl: "https://qavanin.ir/test" }] : [],
+            evidence: verified && evidence ? [{ id: "verified-test-source", text: "متن رسمی آزمایشی" }] : []
+          };
         },
-        buildEvidencePrompt() { return "no verified evidence"; }
+        buildEvidencePrompt() { return "verified evidence"; }
       };
       if (id === "../lib/jalali-date") return {
         normalizeAsOfDate: dateUtils.normalizeAsOfDate,
         getIranTodayIsoDate: () => "2026-11-21"
       };
       if (id === "../lib/quota") return {
-        getAccount: async () => ({ key: "test-account", isPro: false, isUnlimited: true }),
-        classifyRequest: () => 1,
-        reserveCredits: async () => 1,
-        refundReservation: async () => true,
-        commitReservation: async () => 1,
+        getAccount: async () => ({ key: "test-account", isPro: false, isUnlimited: false }),
+        classifyRequest: () => 10,
+        reserveCredits: async () => { state.reserveCalls += 1; return 90; },
+        refundReservation: async () => { state.refundCalls += 1; return 90; },
+        commitReservation: async () => { state.commitCalls += 1; return 1; },
         consumeIpRateLimit: async () => ({ count: 1, limit: 30, windowSeconds: 900 })
       };
       throw new Error("Unexpected dependency: " + id);
     }
   };
   vm.runInNewContext(source, sandbox, { filename: "handlers/chat.js" });
-  return { handler: module.exports, calls };
+  return { handler: module.exports, calls, state };
 }
 
 function response() {
@@ -74,31 +83,74 @@ function request(body) {
   };
 }
 
-test("chat normalizes a supplied Jalali date before legal retrieval", async () => {
-  const { handler, calls } = loadChatHandler();
+test("chat normalizes a supplied Jalali date and blocks generation when no verified source exists", async () => {
+  const { handler, calls, state } = loadChatHandler();
   const res = response();
   await handler(request({ as_of_date: "۱۴۰۵/۰۸/۳۰" }), res);
-  assert.equal(res.statusCode, 200);
+  assert.equal(res.statusCode, 503);
+  assert.equal(res.body.code, "LEGAL_EVIDENCE_UNAVAILABLE");
   assert.equal(calls.length, 1);
   assert.equal(calls[0].options.asOfDate, "2026-11-21");
   assert.equal(res.body.legal_as_of_date, "2026-11-21");
+  assert.equal(state.aiCalls, 0, "model must not be called without verified legal evidence");
+  assert.equal(state.reserveCalls, 1);
+  assert.equal(state.refundCalls, 1, "reserved credits must be refunded");
+  assert.equal(state.commitCalls, 0);
 });
 
-test("chat defaults legal retrieval to the current Iran-local date", async () => {
-  const { handler, calls } = loadChatHandler();
+test("chat defaults legal retrieval to the current Iran-local date and still fails closed", async () => {
+  const { handler, calls, state } = loadChatHandler();
   const res = response();
   await handler(request({}), res);
-  assert.equal(res.statusCode, 200);
+  assert.equal(res.statusCode, 503);
   assert.equal(calls.length, 1);
   assert.equal(calls[0].options.asOfDate, "2026-11-21");
   assert.equal(res.body.legal_as_of_date, "2026-11-21");
+  assert.equal(state.aiCalls, 0);
+  assert.equal(state.refundCalls, 1);
 });
 
 test("chat rejects invalid reference dates before quota or AI work", async () => {
-  const { handler, calls } = loadChatHandler();
+  const { handler, calls, state } = loadChatHandler();
   const res = response();
   await handler(request({ as_of_date: "۱۴۰۵/۱۲/۳۰" }), res);
   assert.equal(res.statusCode, 400);
   assert.equal(res.body.code, "INVALID_AS_OF_DATE");
   assert.equal(calls.length, 0);
+  assert.equal(state.aiCalls, 0);
+  assert.equal(state.reserveCalls, 0);
+  assert.equal(state.refundCalls, 0);
+});
+
+test("chat distinguishes retrieval outage from an empty verified corpus", async () => {
+  const { handler, state } = loadChatHandler({ retrievalStatus: "retrieval_unavailable" });
+  const res = response();
+  await handler(request({}), res);
+  assert.equal(res.statusCode, 503);
+  assert.equal(res.body.code, "LEGAL_RETRIEVAL_UNAVAILABLE");
+  assert.equal(res.body.legal_evidence_status, "retrieval_unavailable");
+  assert.equal(state.aiCalls, 0);
+  assert.equal(state.refundCalls, 1);
+});
+
+test("chat rejects a verified status with empty evidence instead of trusting the status label", async () => {
+  const { handler, state } = loadChatHandler({ retrievalStatus: "verified_sources", evidence: false });
+  const res = response();
+  await handler(request({}), res);
+  assert.equal(res.statusCode, 503);
+  assert.equal(res.body.code, "LEGAL_EVIDENCE_UNAVAILABLE");
+  assert.equal(state.aiCalls, 0);
+  assert.equal(state.refundCalls, 1);
+});
+
+test("chat calls the model only when verified sources and evidence are both present", async () => {
+  const { handler, state } = loadChatHandler({ retrievalStatus: "verified_sources" });
+  const res = response();
+  await handler(request({}), res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.reply, "پاسخ آزمایشی");
+  assert.equal(res.body.legal_evidence_status, "verified_sources");
+  assert.equal(state.aiCalls, 1);
+  assert.equal(state.refundCalls, 0);
+  assert.equal(state.commitCalls, 1);
 });
