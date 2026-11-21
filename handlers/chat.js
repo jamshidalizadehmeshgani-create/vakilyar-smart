@@ -209,12 +209,6 @@ module.exports = async (req, res) => {
         error: "پاسخ تولیدشده فاقد نقل‌قول مستقیم و قابل‌تطبیق با متن منبع است؛ برای جلوگیری از ارائه ادعای حقوقیِ بدون پشتوانه متنی، پاسخ نمایش داده نشد و اعتبار رزروشده بازگردانده شد."
       });
     }
-    if (reservationId) { await refundReservation(account.key, reservationId); reservationId = null; }
-      return res.status(502).json({
-        code: "UNVERIFIED_ANSWER_CITATIONS",
-        error: "پاسخ تولیدشده ارجاع قابل‌تطبیق به منابع بازیابی‌شده ندارد؛ برای جلوگیری از ارائه پاسخ حقوقیِ بدون استناد، پاسخ نمایش داده نشد و اعتبار رزروشده بازگردانده شد."
-      });
-    }
     if (reservationId) {
       const committed = await commitReservation(reservationId);
       if (committed !== 1) throw new Error("Credit reservation could not be committed");
