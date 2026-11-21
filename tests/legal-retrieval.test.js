@@ -89,7 +89,7 @@ test("requires publication identity and an explicit human amendment-history revi
       approvalDate: "2020-01-01",
       publicationDate: "2020-01-02",
       effectiveFrom: "2020-01-03",
-      sourceUrl: "https://example.com/not-official"
+      sourceUrl: "https://qavanin.ir:8443/not-official"
     }] }
   ];
   for (const record of invalidRecords) assert.equal(validateRecord(record, now), false);
@@ -112,6 +112,7 @@ test("rejects unofficial, insecure, unverified, repealed, expired, and stale rec
   const variants = [
     { ...validRecord, sourceUrl: "https://example.com/law" },
     { ...validRecord, sourceUrl: "http://qavanin.ir/law" },
+    { ...validRecord, sourceUrl: "https://qavanin.ir:8443/law" },
     { ...validRecord, verificationStatus: "unreviewed" },
     { ...validRecord, status: "repealed" },
     { ...validRecord, effectiveTo: "2025-01-01" },
