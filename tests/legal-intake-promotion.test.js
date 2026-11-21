@@ -2,8 +2,35 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const crypto = require("node:crypto");
 const { promoteApprovedIntake } = require("../lib/legal-intake-promotion");
+const { REGISTRY_ENV, buildAttestationMessage } = require("../lib/legal-human-attestation");
 
+const identities = [
+  { identityId: "reviewer-a", keyId: "reviewer-a-v1", displayName: "بازبین الف", role: "reviewer" },
+  { identityId: "reviewer-b", keyId: "reviewer-b-v1", displayName: "بازبین ب", role: "reviewer" },
+  { identityId: "approver-a", keyId: "approver-a-v1", displayName: "تأییدکننده الف", role: "approver" },
+  { identityId: "approver-b", keyId: "approver-b-v1", displayName: "تأییدکننده ب", role: "approver" }
+].map(identity => ({ ...identity, ...crypto.generateKeyPairSync("ed25519") }));
+
+process.env[REGISTRY_ENV] = JSON.stringify(identities.map(identity => ({
+  identityId: identity.identityId, keyId: identity.keyId, displayName: identity.displayName,
+  role: identity.role, active: true,
+  publicKeyPem: identity.publicKey.export({ type: "spki", format: "pem" })
+})));
+
+function signIntake(candidate) {
+  const signedAt = "2026-11-21T11:59:00.000Z";
+  const signaturesFor = role => identities.filter(identity => identity.role === role).map(identity => ({
+    identityId: identity.identityId, keyId: identity.keyId, signedAt,
+    signature: crypto.sign(null, Buffer.from(buildAttestationMessage(candidate, role, identity.identityId, identity.keyId, signedAt)), identity.privateKey).toString("base64")
+  }));
+  candidate.humanAttestations = { scheme: "Ed25519", reviewerSignatures: signaturesFor("reviewer"), approverSignatures: signaturesFor("approver") };
+  return candidate;
+}
+function runPromotion(candidate, options = {}) {
+  return promoteApprovedIntake(signIntake(candidate), options);
+}
 const intake = {
   schemaVersion: 1,
   recordStatus: "approved_for_corpus",
@@ -69,25 +96,28 @@ const intake = {
 
 const now = new Date("2026-11-21T12:00:00.000Z");
 
-test("fails closed when no trusted human-attestation verifier is configured", () => {
-  const result = promoteApprovedIntake(intake, { today: "2026-11-21", now, existingCorpus: [] });
-  assert.equal(result.valid, false);
-  assert.deepEqual(result.records, []);
-  assert.match(result.errors.join("\\n"), /احراز هویت و امضای دیجیتال/);
+test("fails closed when the trusted public-key registry is not configured", () => {
+  const previous = process.env[REGISTRY_ENV];
+  delete process.env[REGISTRY_ENV];
+  try {
+    const result = promoteApprovedIntake(intake, { today: "2026-11-21", now, existingCorpus: [] });
+    assert.equal(result.valid, false);
+    assert.deepEqual(result.records, []);
+    assert.match(result.errors.join("\\n"), /امضاهای دیجیتال Ed25519/);
+  } finally { process.env[REGISTRY_ENV] = previous; }
 });
 
-test("rejects a failed human-attestation verification", () => {
-  const result = promoteApprovedIntake(intake, {
-    today: "2026-11-21", now, existingCorpus: [],
-    verifyHumanAttestation: () => false
-  });
+test("rejects tampered legal text after reviewers signed the intake", () => {
+  const candidate = signIntake(JSON.parse(JSON.stringify(intake)));
+  candidate.articleChecks[0].text += " متن دستکاری‌شده";
+  const result = promoteApprovedIntake(candidate, { today: "2026-11-21", now, existingCorpus: [] });
   assert.equal(result.valid, false);
   assert.deepEqual(result.records, []);
-  assert.match(result.errors.join("\\n"), /تأیید مستقل/);
+  assert.match(result.errors.join("\\n"), /امضاهای دیجیتال Ed25519/);
 });
 
 test("creates a validated article-level preview without writing the corpus", () => {
-  const result = promoteApprovedIntake(intake, { today: "2026-11-21", now, existingCorpus: [], verifyHumanAttestation: () => true });
+  const result = runPromotion(intake, { today: "2026-11-21", now, existingCorpus: [] });
   assert.equal(result.valid, true, result.errors.join("\n"));
   assert.equal(result.records.length, 1);
   assert.equal(result.records[0].articleNumber, "ماده ۱");
@@ -98,7 +128,7 @@ test("creates a validated article-level preview without writing the corpus", () 
 test("rejects a missing article-level record even when the intake is approved", () => {
   const candidate = JSON.parse(JSON.stringify(intake));
   candidate.articleChecks = [];
-  const result = promoteApprovedIntake(candidate, { today: "2026-11-21", now, verifyHumanAttestation: () => true });
+  const result = runPromotion(candidate, { today: "2026-11-21", now });
   assert.equal(result.valid, false);
   assert.match(result.errors.join("\n"), /هیچ ماده مستقلاً بررسی‌شده‌ای/);
 });
@@ -107,7 +137,7 @@ test("rejects article ids that differ only by normalization", () => {
   const candidate = JSON.parse(JSON.stringify(intake));
   candidate.articleChecks.push({ ...candidate.articleChecks[0], corpusRecordId: " LAW-001-ARTICLE-1 " });
   candidate.promotion.corpusRecordIds.push(" LAW-001-ARTICLE-1 ");
-  const result = promoteApprovedIntake(candidate, { today: "2026-11-21", now, verifyHumanAttestation: () => true });
+  const result = runPromotion(candidate, { today: "2026-11-21", now });
   assert.equal(result.valid, false);
   assert.match(result.errors.join("\n"), /شناسه مقصد تکراری/);
 });
@@ -119,7 +149,7 @@ test("rejects repealed articles and unresolved article discrepancies", () => {
   ]) {
     const candidate = JSON.parse(JSON.stringify(intake));
     mutate(candidate);
-    const result = promoteApprovedIntake(candidate, { today: "2026-11-21", now, verifyHumanAttestation: () => true });
+    const result = runPromotion(candidate, { today: "2026-11-21", now });
     assert.equal(result.valid, false);
   }
 });
@@ -146,7 +176,7 @@ test("rejects official corpus id collisions", () => {
     effectiveTo: null,
     verifiedAt: "2026-10-01"
   }];
-  const result = promoteApprovedIntake(intake, { today: "2026-11-21", now, existingCorpus: existing, verifyHumanAttestation: () => true });
+  const result = runPromotion(intake, { today: "2026-11-21", now, existingCorpus: existing });
   assert.equal(result.valid, false);
   assert.match(result.errors.join("\n"), /شناسه تکراری/);
 });
@@ -154,7 +184,7 @@ test("rejects official corpus id collisions", () => {
 test("requires every approved destination id to correspond to exactly one article", () => {
   const candidate = JSON.parse(JSON.stringify(intake));
   candidate.promotion.corpusRecordIds = ["law-001-article-1", "unmatched-id"];
-  const result = promoteApprovedIntake(candidate, { today: "2026-11-21", now, verifyHumanAttestation: () => true });
+  const result = runPromotion(candidate, { today: "2026-11-21", now });
   assert.equal(result.valid, false);
 });
 
@@ -167,7 +197,7 @@ test("normalizes Jalali source, review, and article dates into ISO corpus dates"
   candidate.legalReview.amendmentsCheckedThrough = "۱۴۰۵/۰۸/۲۹";
   candidate.promotion.approvedAt = "۱۴۰۵/۰۸/۲۹";
   candidate.articleChecks[0].effectiveFrom = "۱۳۹۸/۱۰/۱۳";
-  const result = promoteApprovedIntake(candidate, { today: "2026-11-21", now, existingCorpus: [], verifyHumanAttestation: () => true });
+  const result = runPromotion(candidate, { today: "2026-11-21", now, existingCorpus: [] });
   assert.equal(result.valid, true, result.errors.join("\\n"));
   assert.equal(result.records[0].approvalDate, "2020-01-01");
   assert.equal(result.records[0].publicationDate, "2020-01-02");
