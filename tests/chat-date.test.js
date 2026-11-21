@@ -7,7 +7,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 const dateUtils = require("../lib/jalali-date");
 
-function loadChatHandler({ retrievalStatus = "no_verified_sources", evidence = true, throwRetrieval = false } = {}) {
+function loadChatHandler({ retrievalStatus = "no_verified_sources", evidence = true, throwRetrieval = false, reply = "پاسخ آزمایشی [[source:verified-test-source]]" } = {}) {
   const source = fs.readFileSync(path.join(__dirname, "../handlers/chat.js"), "utf8");
   const calls = [];
   const state = { aiCalls: 0, refundCalls: 0, reserveCalls: 0, commitCalls: 0 };
@@ -25,7 +25,7 @@ function loadChatHandler({ retrievalStatus = "no_verified_sources", evidence = t
       return {
         ok: true,
         status: 200,
-        json: async () => ({ choices: [{ message: { content: "پاسخ آزمایشی" } }] })
+        json: async () => ({ choices: [{ message: { content: reply } }] })
       };
     },
     require(id) {
@@ -41,7 +41,8 @@ function loadChatHandler({ retrievalStatus = "no_verified_sources", evidence = t
             evidence: verified && evidence ? [{ id: "verified-test-source", text: "متن رسمی آزمایشی" }] : []
           };
         },
-        buildEvidencePrompt() { return "verified evidence"; }
+        buildEvidencePrompt() { return "verified evidence"; },
+        validateAnswerCitations: require("../lib/legal-retrieval").validateAnswerCitations
       };
       if (id === "../lib/jalali-date") return {
         normalizeAsOfDate: dateUtils.normalizeAsOfDate,
@@ -155,12 +156,39 @@ test("chat rejects a verified status with empty evidence instead of trusting the
   assert.equal(state.refundCalls, 1);
 });
 
+test("chat rejects model answers with uncited paragraphs and refunds credits", async () => {
+  const { handler, state } = loadChatHandler({
+    retrievalStatus: "verified_sources",
+    reply: "یک ادعای حقوقی بدون ارجاع"
+  });
+  const res = response();
+  await handler(request({}), res);
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.body.code, "UNVERIFIED_ANSWER_CITATIONS");
+  assert.equal(state.aiCalls, 1);
+  assert.equal(state.refundCalls, 1);
+  assert.equal(state.commitCalls, 0);
+});
+
+test("chat rejects fabricated source IDs even when the answer contains a citation marker", async () => {
+  const { handler, state } = loadChatHandler({
+    retrievalStatus: "verified_sources",
+    reply: "ادعای حقوقی. [[source:invented-source]]"
+  });
+  const res = response();
+  await handler(request({}), res);
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.body.code, "UNVERIFIED_ANSWER_CITATIONS");
+  assert.equal(state.refundCalls, 1);
+  assert.equal(state.commitCalls, 0);
+});
+
 test("chat calls the model only when verified sources and evidence are both present", async () => {
   const { handler, state } = loadChatHandler({ retrievalStatus: "verified_sources" });
   const res = response();
   await handler(request({}), res);
   assert.equal(res.statusCode, 200);
-  assert.equal(res.body.reply, "پاسخ آزمایشی");
+  assert.equal(res.body.reply, "پاسخ آزمایشی [[source:verified-test-source]]");
   assert.equal(res.body.legal_evidence_status, "verified_sources");
   assert.equal(state.aiCalls, 1);
   assert.equal(state.refundCalls, 0);
