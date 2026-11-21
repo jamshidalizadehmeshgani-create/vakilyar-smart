@@ -50,12 +50,18 @@ test("retrieves an article when its number uses a different digit script", () =>
     articleNumber: "ماده 123",
     text: "تعهد قراردادی و مسئولیت مدنی در این ماده بررسی می‌شود."
   };
-  const result = retrieveLegalSources("ماده ۱۲۳ تعهد قراردادی", {
-    corpus: [numberedRecord],
-    now
-  });
-  assert.equal(result.status, "verified_sources");
-  assert.equal(result.sources[0].articleNumber, "ماده 123");
+  for (const query of [
+    "ماده ۱۲۳ تعهد قراردادی",
+    "ماده ١٢٣ تعهد قراردادی",
+    "ماده 123 تعهد قراردادی"
+  ]) {
+    const result = retrieveLegalSources(query, {
+      corpus: [numberedRecord],
+      now
+    });
+    assert.equal(result.status, "verified_sources", query);
+    assert.equal(result.sources[0].articleNumber, "ماده 123", query);
+  }
 });
 
 test("retrieves only current human-verified records from allowlisted official domains", () => {
@@ -239,6 +245,18 @@ test("empty corpus returns no verified evidence and an explicit caution prompt",
   assert.equal(result.status, "no_verified_sources");
   assert.deepEqual(result.sources, []);
   assert.match(buildEvidencePrompt(result), /هیچ متن حقوقی رسمی/);
+});
+
+test("retrieval failures fail closed and never imply that legal evidence was verified", () => {
+  const unavailable = {
+    status: "retrieval_unavailable",
+    sources: [],
+    evidence: []
+  };
+  const prompt = buildEvidencePrompt(unavailable);
+  assert.match(prompt, /هیچ متن حقوقی رسمیِ تأییدشده‌ای/);
+  assert.match(prompt, /هیچ ماده یا منبع دیگری نساز/);
+  assert.match(prompt, /پاسخ مستند به متن رسمی بازیابی‌شده نیست/);
 });
 
 test("evidence prompt includes the retrieved text and warns against invented citations", () => {
