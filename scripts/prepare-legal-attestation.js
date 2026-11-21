@@ -11,7 +11,7 @@ function main(args) {
   const [file, role, identityId, keyId, signedAt] = args;
   const intakePath = path.resolve(process.cwd(), file);
   const intake = JSON.parse(fs.readFileSync(intakePath, "utf8"));
-  if (!/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$/.test(signedAt) ||
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(signedAt) ||
       !Number.isFinite(Date.parse(signedAt)) || Date.parse(signedAt) > Date.now()) {
     throw new Error("زمان امضا باید UTC معتبر و در گذشته یا زمان حال باشد.");
   }
