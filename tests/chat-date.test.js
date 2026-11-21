@@ -170,6 +170,19 @@ test("chat rejects model answers with uncited paragraphs and refunds credits", a
   assert.equal(state.commitCalls, 0);
 });
 
+test("chat rejects invented verbatim excerpts and refunds credits", async () => {
+  const { handler, state } = loadChatHandler({
+    retrievalStatus: "verified_sources",
+    reply: "ادعای حقوقی. [[source:verified-test-source]] [[quote:verified-test-source]] «این نقل قول ساختگی و در متن سند آزمایشی وجود ندارد»"
+  });
+  const res = response();
+  await handler(request({}), res);
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.body.code, "UNVERIFIED_ANSWER_EVIDENCE");
+  assert.equal(state.refundCalls, 1);
+  assert.equal(state.commitCalls, 0);
+});
+
 test("chat rejects fabricated source IDs even when the answer contains a citation marker", async () => {
   const { handler, state } = loadChatHandler({
     retrievalStatus: "verified_sources",
