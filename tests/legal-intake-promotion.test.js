@@ -5,6 +5,8 @@ const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
 const { promoteApprovedIntake } = require("../lib/legal-intake-promotion");
 const { REGISTRY_ENV, buildAttestationMessage } = require("../lib/legal-human-attestation");
+const TODAY = new Date().toISOString().slice(0, 10);
+const now = new Date();
 
 const identities = [
   { identityId: "reviewer-a", keyId: "reviewer-a-v1", displayName: "بازبین الف", role: "reviewer" },
@@ -88,18 +90,16 @@ const intake = {
   promotion: {
     approvedForCorpus: true,
     approvedBy: ["تأییدکننده الف", "تأییدکننده ب"],
-    approvedAt: "2026-11-21",
+    approvedAt: TODAY,
     corpusRecordIds: ["law-001-article-1"]
   }
 };
-
-const now = new Date("2026-11-21T12:00:00.000Z");
 
 test("fails closed when the trusted public-key registry is not configured", () => {
   const previous = process.env[REGISTRY_ENV];
   delete process.env[REGISTRY_ENV];
   try {
-    const result = promoteApprovedIntake(intake, { today: "2026-11-21", now, existingCorpus: [] });
+    const result = promoteApprovedIntake(intake, { today: TODAY, now, existingCorpus: [] });
     assert.equal(result.valid, false);
     assert.deepEqual(result.records, []);
     assert.match(result.errors.join("\\n"), /امضاهای دیجیتال Ed25519/);
@@ -109,7 +109,7 @@ test("fails closed when the trusted public-key registry is not configured", () =
 test("rejects signatures used under the wrong role", () => {
   const candidate = signIntake(JSON.parse(JSON.stringify(intake)));
   candidate.humanAttestations.approverSignatures = candidate.humanAttestations.reviewerSignatures;
-  const result = promoteApprovedIntake(candidate, { today: "2026-11-21", now, existingCorpus: [] });
+  const result = promoteApprovedIntake(candidate, { today: TODAY, now, existingCorpus: [] });
   assert.equal(result.valid, false);
   assert.deepEqual(result.records, []);
 });
@@ -120,7 +120,7 @@ test("rejects a revoked public key", () => {
   registry[0].active = false;
   process.env[REGISTRY_ENV] = JSON.stringify(registry);
   try {
-    const result = runPromotion(JSON.parse(JSON.stringify(intake)), { today: "2026-11-21", now, existingCorpus: [] });
+    const result = runPromotion(JSON.parse(JSON.stringify(intake)), { today: TODAY, now, existingCorpus: [] });
     assert.equal(result.valid, false);
     assert.deepEqual(result.records, []);
   } finally { process.env[REGISTRY_ENV] = previous; }
@@ -128,7 +128,7 @@ test("rejects a revoked public key", () => {
 
 test("rejects signatures dated before the legal review or approval", () => {
   const candidate = signIntake(JSON.parse(JSON.stringify(intake)), "2026-11-19T11:59:00.000Z");
-  const result = promoteApprovedIntake(candidate, { today: "2026-11-21", now, existingCorpus: [] });
+  const result = promoteApprovedIntake(candidate, { today: TODAY, now, existingCorpus: [] });
   assert.equal(result.valid, false);
   assert.deepEqual(result.records, []);
 });
@@ -136,14 +136,14 @@ test("rejects signatures dated before the legal review or approval", () => {
 test("rejects tampered legal text after reviewers signed the intake", () => {
   const candidate = signIntake(JSON.parse(JSON.stringify(intake)));
   candidate.articleChecks[0].text += " متن دستکاری‌شده";
-  const result = promoteApprovedIntake(candidate, { today: "2026-11-21", now, existingCorpus: [] });
+  const result = promoteApprovedIntake(candidate, { today: TODAY, now, existingCorpus: [] });
   assert.equal(result.valid, false);
   assert.deepEqual(result.records, []);
   assert.match(result.errors.join("\\n"), /امضاهای دیجیتال Ed25519/);
 });
 
 test("creates a validated article-level preview without writing the corpus", () => {
-  const result = runPromotion(intake, { today: "2026-11-21", now, existingCorpus: [] });
+  const result = runPromotion(intake, { today: TODAY, now, existingCorpus: [] });
   assert.equal(result.valid, true, result.errors.join("\n"));
   assert.equal(result.records.length, 1);
   assert.equal(result.records[0].articleNumber, "ماده ۱");
@@ -154,7 +154,7 @@ test("creates a validated article-level preview without writing the corpus", () 
 test("rejects a missing article-level record even when the intake is approved", () => {
   const candidate = JSON.parse(JSON.stringify(intake));
   candidate.articleChecks = [];
-  const result = runPromotion(candidate, { today: "2026-11-21", now });
+  const result = runPromotion(candidate, { today: TODAY, now });
   assert.equal(result.valid, false);
   assert.match(result.errors.join("\n"), /هیچ ماده مستقلاً بررسی‌شده‌ای/);
 });
@@ -163,7 +163,7 @@ test("rejects article ids that differ only by normalization", () => {
   const candidate = JSON.parse(JSON.stringify(intake));
   candidate.articleChecks.push({ ...candidate.articleChecks[0], corpusRecordId: " LAW-001-ARTICLE-1 " });
   candidate.promotion.corpusRecordIds.push(" LAW-001-ARTICLE-1 ");
-  const result = runPromotion(candidate, { today: "2026-11-21", now });
+  const result = runPromotion(candidate, { today: TODAY, now });
   assert.equal(result.valid, false);
   assert.match(result.errors.join("\n"), /شناسه مقصد تکراری/);
 });
@@ -175,7 +175,7 @@ test("rejects repealed articles and unresolved article discrepancies", () => {
   ]) {
     const candidate = JSON.parse(JSON.stringify(intake));
     mutate(candidate);
-    const result = runPromotion(candidate, { today: "2026-11-21", now });
+    const result = runPromotion(candidate, { today: TODAY, now });
     assert.equal(result.valid, false);
   }
 });
@@ -202,7 +202,7 @@ test("rejects official corpus id collisions", () => {
     effectiveTo: null,
     verifiedAt: "2026-10-01"
   }];
-  const result = runPromotion(intake, { today: "2026-11-21", now, existingCorpus: existing });
+  const result = runPromotion(intake, { today: TODAY, now, existingCorpus: existing });
   assert.equal(result.valid, false);
   assert.match(result.errors.join("\n"), /شناسه تکراری/);
 });
@@ -210,7 +210,7 @@ test("rejects official corpus id collisions", () => {
 test("requires every approved destination id to correspond to exactly one article", () => {
   const candidate = JSON.parse(JSON.stringify(intake));
   candidate.promotion.corpusRecordIds = ["law-001-article-1", "unmatched-id"];
-  const result = runPromotion(candidate, { today: "2026-11-21", now });
+  const result = runPromotion(candidate, { today: TODAY, now });
   assert.equal(result.valid, false);
 });
 
@@ -221,9 +221,9 @@ test("normalizes Jalali source, review, and article dates into ISO corpus dates"
   candidate.document.officialPublicationDate = "۱۳۹۸/۱۰/۱۲";
   candidate.legalReview.reviewedAt = "۱۴۰۵/۰۸/۲۹";
   candidate.legalReview.amendmentsCheckedThrough = "۱۴۰۵/۰۸/۲۹";
-  candidate.promotion.approvedAt = "۱۴۰۵/۰۸/۲۹";
+  candidate.promotion.approvedAt = TODAY;
   candidate.articleChecks[0].effectiveFrom = "۱۳۹۸/۱۰/۱۳";
-  const result = runPromotion(candidate, { today: "2026-11-21", now, existingCorpus: [] });
+  const result = runPromotion(candidate, { today: TODAY, now, existingCorpus: [] });
   assert.equal(result.valid, true, result.errors.join("\\n"));
   assert.equal(result.records[0].approvalDate, "2020-01-01");
   assert.equal(result.records[0].publicationDate, "2020-01-02");
