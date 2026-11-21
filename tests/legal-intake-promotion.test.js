@@ -89,7 +89,7 @@ const intake = {
   promotion: {
     approvedForCorpus: true,
     approvedBy: ["تأییدکننده الف", "تأییدکننده ب"],
-    approvedAt: "2026-11-20",
+    approvedAt: "2026-11-21",
     corpusRecordIds: ["law-001-article-1"]
   }
 };
