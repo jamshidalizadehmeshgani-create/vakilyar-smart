@@ -191,7 +191,7 @@ test("quarantines retrieved legal text containing high-confidence prompt injecti
 });
 
 test("rejects hidden directional and zero-width controls but preserves Persian ZWNJ", () => {
-  const hiddenText = validRecord.text + "\\u202E" + "متن پنهان";
+  const hiddenText = validRecord.text + "\u202E" + "متن پنهان";
   const hidden = retrieveLegalSources("تعهد قراردادی مسئولیت مدنی", {
     corpus: [{ ...validRecord, text: hiddenText }],
     now
