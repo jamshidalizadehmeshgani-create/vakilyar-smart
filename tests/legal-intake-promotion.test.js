@@ -140,3 +140,20 @@ test("requires every approved destination id to correspond to exactly one articl
   const result = promoteApprovedIntake(candidate, { today: "2026-11-21", now });
   assert.equal(result.valid, false);
 });
+
+
+test("normalizes Jalali source, review, and article dates into ISO corpus dates", () => {
+  const candidate = JSON.parse(JSON.stringify(intake));
+  candidate.document.approvalOrIssueDate = "۱۳۹۸/۱۰/۱۱";
+  candidate.document.officialPublicationDate = "۱۳۹۸/۱۰/۱۲";
+  candidate.legalReview.reviewedAt = "۱۴۰۵/۰۸/۲۹";
+  candidate.legalReview.amendmentsCheckedThrough = "۱۴۰۵/۰۸/۲۹";
+  candidate.promotion.approvedAt = "۱۴۰۵/۰۸/۲۹";
+  candidate.articleChecks[0].effectiveFrom = "۱۳۹۸/۱۰/۱۳";
+  const result = promoteApprovedIntake(candidate, { today: "2026-11-21", now, existingCorpus: [] });
+  assert.equal(result.valid, true, result.errors.join("\\n"));
+  assert.equal(result.records[0].approvalDate, "2020-01-01");
+  assert.equal(result.records[0].publicationDate, "2020-01-02");
+  assert.equal(result.records[0].effectiveFrom, "2020-01-03");
+  assert.equal(result.records[0].verifiedAt, "2026-11-20");
+});
