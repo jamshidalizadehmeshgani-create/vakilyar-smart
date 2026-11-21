@@ -25,7 +25,7 @@ const valid = {
     sha256: "a".repeat(64),
     licenseOrReuseBasis: "مجوز رسمی آزمایشی",
     licenseEvidenceUrl: "https://qavanin.ir/license",
-    redirectChain: "https://qavanin.ir/Pdfs/1.pdf"
+    redirectChain: ["https://qavanin.ir/Pdfs/1.pdf"]
   },
   integrityChecks: {
     downloadedFromOfficialHost: true,
@@ -118,4 +118,16 @@ test("does not accept unresolved legal discrepancies or incomplete article scope
   intake.legalReview.unresolvedDiscrepancies = ["اختلاف متن"];
   intake.legalReview.articleRangeReviewed = "";
   assert.equal(validateIntake(intake, { today: "2026-11-21" }).valid, false);
+});
+
+test("rejects non-official redirect hops and approvers who also performed legal review", () => {
+  const badRedirect = structuredClone(valid);
+  badRedirect.document.redirectChain = ["https://qavanin.ir/start", "https://example.com/final"];
+  assert.equal(validateIntake(badRedirect, { today: "2026-11-21" }).valid, false);
+
+  const nonIndependent = structuredClone(valid);
+  nonIndependent.promotion.approvedBy = ["بازبین الف", "تأییدکننده ب"];
+  const result = validateIntake(nonIndependent, { today: "2026-11-21" });
+  assert.equal(result.valid, false);
+  assert.match(result.errors.join("\\n"), /باید از بازبینان حقوقی مستقل باشند/);
 });
