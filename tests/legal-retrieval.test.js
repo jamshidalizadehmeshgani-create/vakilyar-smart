@@ -255,7 +255,7 @@ test("retrieval failures fail closed and never imply that legal evidence was ver
   };
   const prompt = buildEvidencePrompt(unavailable);
   assert.match(prompt, /هیچ متن حقوقی رسمیِ تأییدشده‌ای/);
-  assert.match(prompt, /هیچ ماده یا منبع دیگری نساز/);
+  assert.match(prompt, /شماره ماده، رأی، مهلت، ضمانت اجرا یا وضعیت اعتبار قانون را حدس نزن/);
   assert.match(prompt, /پاسخ مستند به متن رسمی بازیابی‌شده نیست/);
 });
 
