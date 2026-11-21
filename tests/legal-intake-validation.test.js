@@ -131,3 +131,20 @@ test("rejects non-official redirect hops and approvers who also performed legal 
   assert.equal(result.valid, false);
   assert.match(result.errors.join("\\n"), /باید از بازبینان حقوقی مستقل باشند/);
 });
+
+
+test("accepts valid Jalali legal dates and normalizes them through the calendar utility", () => {
+  const intake = structuredClone(valid);
+  intake.document.approvalOrIssueDate = "۱۳۹۸/۱۰/۱۱";
+  intake.document.officialPublicationDate = "۱۳۹۸/۱۰/۱۲";
+  intake.legalReview.reviewedAt = "۱۴۰۵/۰۸/۲۹";
+  intake.legalReview.amendmentsCheckedThrough = "۱۴۰۵/۰۸/۲۹";
+  intake.promotion.approvedAt = "۱۴۰۵/۰۸/۲۹";
+  assert.equal(validateIntake(intake, { today: "2026-11-21" }).valid, true);
+});
+
+test("rejects impossible Jalali dates", () => {
+  const intake = structuredClone(valid);
+  intake.document.officialPublicationDate = "۱۴۰۵/۱۲/۳۰";
+  assert.equal(validateIntake(intake, { today: "2026-11-21" }).valid, false);
+});
