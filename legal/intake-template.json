@@ -59,10 +59,10 @@
     }
   ],
   "humanAttestations": {
-    "scheme": "pending_trusted_identity_integration",
+    "scheme": "Ed25519",
     "reviewerSignatures": [],
     "approverSignatures": [],
-    "note": "امضای دیجیتال معتبر و کلیدهای عمومی مورد اعتماد باید پیش از ارتقا از طریق سامانه احراز هویت بررسی شوند؛ نام و چک‌باکس به‌تنهایی کافی نیست."
+    "note": "برای هر بازبین و تأییدکننده یک امضای Ed25519 مستقل لازم است. هر امضا باید با کلید خصوصی همان شخص و روی پیام canonical تولیدشده برای همین پرونده ایجاد شود؛ کلید خصوصی هرگز در سرور یا مخزن قرار نمی‌گیرد."
   },
   "promotion": {
     "approvedForCorpus": false,
