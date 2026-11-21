@@ -69,8 +69,25 @@ const intake = {
 
 const now = new Date("2026-11-21T12:00:00.000Z");
 
-test("creates a validated article-level preview without writing the corpus", () => {
+test("fails closed when no trusted human-attestation verifier is configured", () => {
   const result = promoteApprovedIntake(intake, { today: "2026-11-21", now, existingCorpus: [] });
+  assert.equal(result.valid, false);
+  assert.deepEqual(result.records, []);
+  assert.match(result.errors.join("\\n"), /احراز هویت و امضای دیجیتال/);
+});
+
+test("rejects a failed human-attestation verification", () => {
+  const result = promoteApprovedIntake(intake, {
+    today: "2026-11-21", now, existingCorpus: [],
+    verifyHumanAttestation: () => false
+  });
+  assert.equal(result.valid, false);
+  assert.deepEqual(result.records, []);
+  assert.match(result.errors.join("\\n"), /تأیید مستقل/);
+});
+
+test("creates a validated article-level preview without writing the corpus", () => {
+  const result = promoteApprovedIntake(intake, { today: "2026-11-21", now, existingCorpus: [], verifyHumanAttestation: () => true });
   assert.equal(result.valid, true, result.errors.join("\n"));
   assert.equal(result.records.length, 1);
   assert.equal(result.records[0].articleNumber, "ماده ۱");
@@ -81,7 +98,7 @@ test("creates a validated article-level preview without writing the corpus", () 
 test("rejects a missing article-level record even when the intake is approved", () => {
   const candidate = JSON.parse(JSON.stringify(intake));
   candidate.articleChecks = [];
-  const result = promoteApprovedIntake(candidate, { today: "2026-11-21", now });
+  const result = promoteApprovedIntake(candidate, { today: "2026-11-21", now, verifyHumanAttestation: () => true });
   assert.equal(result.valid, false);
   assert.match(result.errors.join("\n"), /هیچ ماده مستقلاً بررسی‌شده‌ای/);
 });
@@ -90,7 +107,7 @@ test("rejects article ids that differ only by normalization", () => {
   const candidate = JSON.parse(JSON.stringify(intake));
   candidate.articleChecks.push({ ...candidate.articleChecks[0], corpusRecordId: " LAW-001-ARTICLE-1 " });
   candidate.promotion.corpusRecordIds.push(" LAW-001-ARTICLE-1 ");
-  const result = promoteApprovedIntake(candidate, { today: "2026-11-21", now });
+  const result = promoteApprovedIntake(candidate, { today: "2026-11-21", now, verifyHumanAttestation: () => true });
   assert.equal(result.valid, false);
   assert.match(result.errors.join("\n"), /شناسه مقصد تکراری/);
 });
@@ -102,7 +119,7 @@ test("rejects repealed articles and unresolved article discrepancies", () => {
   ]) {
     const candidate = JSON.parse(JSON.stringify(intake));
     mutate(candidate);
-    const result = promoteApprovedIntake(candidate, { today: "2026-11-21", now });
+    const result = promoteApprovedIntake(candidate, { today: "2026-11-21", now, verifyHumanAttestation: () => true });
     assert.equal(result.valid, false);
   }
 });
@@ -129,7 +146,7 @@ test("rejects official corpus id collisions", () => {
     effectiveTo: null,
     verifiedAt: "2026-10-01"
   }];
-  const result = promoteApprovedIntake(intake, { today: "2026-11-21", now, existingCorpus: existing });
+  const result = promoteApprovedIntake(intake, { today: "2026-11-21", now, existingCorpus: existing, verifyHumanAttestation: () => true });
   assert.equal(result.valid, false);
   assert.match(result.errors.join("\n"), /شناسه تکراری/);
 });
@@ -137,7 +154,7 @@ test("rejects official corpus id collisions", () => {
 test("requires every approved destination id to correspond to exactly one article", () => {
   const candidate = JSON.parse(JSON.stringify(intake));
   candidate.promotion.corpusRecordIds = ["law-001-article-1", "unmatched-id"];
-  const result = promoteApprovedIntake(candidate, { today: "2026-11-21", now });
+  const result = promoteApprovedIntake(candidate, { today: "2026-11-21", now, verifyHumanAttestation: () => true });
   assert.equal(result.valid, false);
 });
 
