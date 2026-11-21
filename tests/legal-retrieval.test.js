@@ -316,7 +316,7 @@ test("evidence prompt includes the retrieved text and warns against invented cit
   assert.match(prompt, /هیچ ماده یا منبع دیگری را از حافظه اضافه نکن/);
   assert.match(prompt, /گزیده مستقیم از متن سند \(بدون تفسیر حقوقی\)/);
   assert.match(prompt, /هیچ تفسیر، خلاصه‌سازی، بازنویسی، استنتاج، توصیه/);
-  assert.match(prompt, /فقط یک گزاره حقوقی مستقل/);
+  assert.match(prompt, /دقیقاً یک شناسه source و یک نقل‌قول/);
 });
 
 
