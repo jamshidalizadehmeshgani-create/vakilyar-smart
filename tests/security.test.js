@@ -3,6 +3,28 @@ const assert = require("node:assert/strict");
 const crypto = require("crypto");
 const fs = require("node:fs");
 
+const legalRetrievalModule = require("../lib/legal-retrieval");
+const originalRetrieveLegalSources = legalRetrievalModule.retrieveLegalSources;
+function installVerifiedLegalRetrievalForChatTest() {
+  legalRetrievalModule.retrieveLegalSources = () => ({
+    status: "verified_sources",
+    sources: [{
+      id: "security-test-source",
+      title: "سند حقوقی آزمایشی",
+      sourceUrl: "https://qavanin.ir/test",
+      officialPublisher: "مرجع رسمی آزمایشی"
+    }],
+    evidence: [{
+      id: "security-test-source",
+      title: "سند حقوقی آزمایشی",
+      sourceUrl: "https://qavanin.ir/test",
+      officialPublisher: "مرجع رسمی آزمایشی",
+      text: "متن رسمی آزمایشی"
+    }]
+  });
+  return () => { legalRetrievalModule.retrieveLegalSources = originalRetrieveLegalSources; };
+}
+
 process.env.UPSTASH_REDIS_REST_URL = "https://redis.test";
 process.env.UPSTASH_REDIS_REST_TOKEN = "test-token";
 process.env.ADMIN_API_KEY = "test-admin-key";
@@ -1517,13 +1539,14 @@ test("chat commits reserved credits only after a valid AI response", async () =>
   const signature = crypto.createHmac("sha256", process.env.APP_SECRET).update(uid).digest("base64url");
   global.fetch = async (url, options) => {
     if (String(url) === process.env.AI_API_URL) {
-      return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: "پاسخ آزمایشی حقوقی" } }] }) };
+      return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: "پاسخ آزمایشی حقوقی [[source:security-test-source]]" } }] }) };
     }
     return originalFetch(url, options);
   };
   delete require.cache[require.resolve("../handlers/chat")];
   const chat = require("../handlers/chat");
   const res = responseMock();
+  const restoreLegalRetrieval = installVerifiedLegalRetrievalForChatTest();
   try {
     await chat({
       method: "POST",
@@ -1535,12 +1558,13 @@ test("chat commits reserved credits only after a valid AI response", async () =>
       body: { consent: true, message: "یک پرسش حقوقی کوتاه درباره مسئولیت مدنی" }
     }, res);
     assert.equal(res.statusCode, 200);
-    assert.equal(res.body.reply, "پاسخ آزمایشی حقوقی");
+    assert.equal(res.body.reply, "پاسخ آزمایشی حقوقی [[source:security-test-source]]");
     assert.equal(values.get("vy:user:" + uid + ":credits"), "990");
     const commitKeys = [...values.keys()].filter(key => key.startsWith("vy:commit:"));
     assert.ok(commitKeys.length > 0, "successful response must commit the reservation");
     assert.ok(commitKeys.every(key => !values.has(key.replace("vy:commit:", "vy:reservation:"))));
   } finally {
+    restoreLegalRetrieval();
     global.fetch = originalFetch;
     delete require.cache[require.resolve("../handlers/chat")];
     for (const [key, value] of Object.entries(previous)) {
@@ -1576,6 +1600,7 @@ test("chat refunds reserved credits when the AI provider rejects the request", a
   delete require.cache[require.resolve("../handlers/chat")];
   const chat = require("../handlers/chat");
   const res = responseMock();
+  const restoreLegalRetrieval = installVerifiedLegalRetrievalForChatTest();
   try {
     await chat({
       method: "POST",
@@ -1594,6 +1619,7 @@ test("chat refunds reserved credits when the AI provider rejects the request", a
     assert.ok(refundKeys.length > 0, "provider failure must record an idempotent refund");
     assert.ok(refundKeys.every(key => !values.has(key.replace("vy:refund:", "vy:reservation:"))));
   } finally {
+    restoreLegalRetrieval();
     global.fetch = originalFetch;
     console.error = originalConsoleError;
     delete require.cache[require.resolve("../handlers/chat")];
@@ -1619,6 +1645,7 @@ test("chat refunds credits when the provider response contains invalid or oversi
     : originalFetch(url, options);
   delete require.cache[require.resolve("../handlers/chat")];
   const chat = require("../handlers/chat"), res = responseMock();
+  const restoreLegalRetrieval = installVerifiedLegalRetrievalForChatTest();
   try {
     await chat({
       method: "POST",
@@ -1630,6 +1657,7 @@ test("chat refunds credits when the provider response contains invalid or oversi
     assert.equal(values.get("vy:user:" + uid + ":credits"), "1000");
     assert.ok([...values.keys()].some(key => key.startsWith("vy:refund:")));
   } finally {
+    restoreLegalRetrieval();
     global.fetch = originalFetch;
     delete require.cache[require.resolve("../handlers/chat")];
     for (const [key, value] of Object.entries(previous)) {
@@ -1652,6 +1680,7 @@ test("chat refunds credits when the AI provider returns oversized text", async (
     : originalFetch(url, options);
   delete require.cache[require.resolve("../handlers/chat")];
   const chat = require("../handlers/chat"), res = responseMock();
+  const restoreLegalRetrieval = installVerifiedLegalRetrievalForChatTest();
   try {
     await chat({
       method: "POST",
@@ -1663,6 +1692,7 @@ test("chat refunds credits when the AI provider returns oversized text", async (
     assert.equal(values.get("vy:user:" + uid + ":credits"), "1000");
     assert.ok([...values.keys()].some(key => key.startsWith("vy:refund:")));
   } finally {
+    restoreLegalRetrieval();
     global.fetch = originalFetch;
     delete require.cache[require.resolve("../handlers/chat")];
     for (const [key, value] of Object.entries(previous)) {
@@ -1687,6 +1717,7 @@ test("chat refunds reserved credits after an AI provider network timeout", async
   };
   delete require.cache[require.resolve("../handlers/chat")];
   const chat = require("../handlers/chat"), res = responseMock();
+  const restoreLegalRetrieval = installVerifiedLegalRetrievalForChatTest();
   try {
     await chat({
       method: "POST",
@@ -1697,6 +1728,7 @@ test("chat refunds reserved credits after an AI provider network timeout", async
     assert.equal(values.get("vy:user:" + uid + ":credits"), "1000");
     assert.ok([...values.keys()].some(key => key.startsWith("vy:refund:")));
   } finally {
+    restoreLegalRetrieval();
     global.fetch = originalFetch;
     delete require.cache[require.resolve("../handlers/chat")];
     for (const [key, value] of Object.entries(previous)) {
