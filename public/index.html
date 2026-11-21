@@ -121,7 +121,7 @@ sendBtn.addEventListener("click",async()=>{
     const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message,consent:true,legal_scope:"iran",as_of_date:document.getElementById("as-of-date").value||undefined})});
     const data=await response.json();
     if(!response.ok) throw new Error(data.error||"خطا در دریافت پاسخ");
-    answerEl.textContent=data.reply.replace(/\[\[source:([^\]\r\n]{1,180})\]\]/gu,"[منبع: $1]");
+    answerEl.textContent=data.reply.replace(/\[\[source:([^\]\r\n]{1,180})\]\]/gu,"[منبع: $1]").replace(/\[\[quote:([^\]\r\n]{1,180})\]\]/gu,"[نقل‌قول مستقیم از منبع: $1]");
     renderSources(data.sources);
     const evidenceNotice=data.legal_evidence_status==="verified_sources"
       ?"منابع حقوقی رسمی از بانک تأییدشده بازیابی شد."
