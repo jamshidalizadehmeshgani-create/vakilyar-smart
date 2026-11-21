@@ -13,10 +13,12 @@
     "officialSourcePageUrl": null,
     "officialDownloadUrl": null,
     "retrievedAtUtc": null,
+    "redirectChain": null,
     "retrievedBy": null,
     "originalFilename": null,
     "mimeType": null,
     "byteLength": null,
+    "pageCount": null,
     "sha256": null,
     "licenseOrReuseBasis": null,
     "licenseEvidenceUrl": null
