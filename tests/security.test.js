@@ -1558,7 +1558,7 @@ test("chat commits reserved credits only after a valid AI response", async () =>
       body: { consent: true, message: "یک پرسش حقوقی کوتاه درباره مسئولیت مدنی" }
     }, res);
     assert.equal(res.statusCode, 200);
-    assert.equal(res.body.reply, "پاسخ آزمایشی حقوقی [[source:security-test-source]]");
+    assert.equal(res.body.reply, "پاسخ آزمایشی حقوقی [[source:security-test-source]] [[quote:security-test-source]] «متن رسمی آزمایشی درباره تعهدات قراردادی و مسئولیت مدنی»");
     assert.equal(values.get("vy:user:" + uid + ":credits"), "990");
     const commitKeys = [...values.keys()].filter(key => key.startsWith("vy:commit:"));
     assert.ok(commitKeys.length > 0, "successful response must commit the reservation");
