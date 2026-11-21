@@ -137,6 +137,31 @@ module.exports = async (req, res) => {
     } catch {
       legalRetrieval = { status: "retrieval_unavailable", sources: [], evidence: [] };
     }
+    // A legal answer must never be generated from model memory alone.
+    // Require both a verified retrieval status and non-empty source/evidence
+    // arrays before contacting the model. This is a deterministic fail-closed
+    // gate, not merely an instruction embedded in the prompt.
+    const hasVerifiedEvidence = legalRetrieval?.status === "verified_sources" &&
+      Array.isArray(legalRetrieval.sources) && legalRetrieval.sources.length > 0 &&
+      Array.isArray(legalRetrieval.evidence) && legalRetrieval.evidence.length > 0;
+    if (!hasVerifiedEvidence) {
+      if (reservationId) {
+        await refundReservation(account.key, reservationId);
+        reservationId = null;
+      }
+      const retrievalUnavailable = legalRetrieval?.status === "retrieval_unavailable";
+      return res.status(503).json({
+        configured: true,
+        code: retrievalUnavailable ? "LEGAL_RETRIEVAL_UNAVAILABLE" : "LEGAL_EVIDENCE_UNAVAILABLE",
+        error: retrievalUnavailable
+          ? "سامانه بازیابی منابع حقوقی موقتاً در دسترس نیست؛ برای جلوگیری از ارائه پاسخ بدون مستند معتبر، پاسخی تولید نشد. اعتبار رزروشده بازگردانده شد."
+          : "در حال حاضر منبع حقوقی رسمیِ تأییدشده و مرتبط برای این پرسش در بانک وکیل‌یار موجود نیست؛ برای جلوگیری از ارائه پاسخ حدسی، پاسخی تولید نشد. اعتبار رزروشده بازگردانده شد.",
+        legal_evidence_status: legalRetrieval?.status || "retrieval_unavailable",
+        legal_as_of_date: normalizedAsOfDate,
+        sources: []
+      });
+    }
+
     const evidencePrompt = buildEvidencePrompt(legalRetrieval);
     const upstream = await fetch(endpoint, {
       method: "POST",
