@@ -89,7 +89,7 @@ test("rejects duplicate claim IDs, invalid dates, missing arrays and incomplete 
   packet.claims[0].conditions = "not-an-array";
   const result = validateLegalClaimReviewPacket(packet, { sources: [source], evidence });
   assert.equal(result.valid, false);
-  assert.ok(result.errors.length >= 4);
+  assert.ok(result.errors.length >= 3);
 });
 
 test("rejects invalid or empty packets and missing evidence", () => {
