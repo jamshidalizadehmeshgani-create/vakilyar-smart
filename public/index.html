@@ -100,7 +100,7 @@ function renderSources(sources){
     item.className="source-item";
     const link=document.createElement("a");
     link.href=url.href;link.target="_blank";link.rel="noopener noreferrer";
-    link.textContent=(source.title||"سند حقوقی")+(source.articleNumber?" — "+source.articleNumber:"");
+    link.textContent=(source.id?"[منبع: "+source.id+"] ":"")+(source.title||"سند حقوقی")+(source.articleNumber?" — "+source.articleNumber:"");
     const meta=document.createElement("div");
     meta.className="source-meta";
     meta.textContent=[source.officialPublisher,source.sourceType,source.officialDocumentId?"شناسه سند رسمی: "+source.officialDocumentId:"",source.approvalDate?"تصویب: "+source.approvalDate:"",source.publicationDate?"انتشار: "+source.publicationDate:"",source.officialGazetteIssue?"روزنامه رسمی شماره: "+source.officialGazetteIssue:"",source.effectiveFrom?"اعتبار از "+source.effectiveFrom:"",source.effectiveTo?"اعتبار تا "+source.effectiveTo:"",source.asOfDate?"تاریخ مبنا: "+source.asOfDate:"",source.amendmentReviewDate?"بازبینی اصلاحات: "+source.amendmentReviewDate:"",source.verifiedAt?"بازبینی انسانی: "+source.verifiedAt:""].filter(Boolean).join(" · ");
@@ -121,11 +121,15 @@ sendBtn.addEventListener("click",async()=>{
     const response=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message,consent:true,legal_scope:"iran",as_of_date:document.getElementById("as-of-date").value||undefined})});
     const data=await response.json();
     if(!response.ok) throw new Error(data.error||"خطا در دریافت پاسخ");
-    answerEl.textContent=data.reply;
+    answerEl.textContent=data.reply.replace(/\[\[source:([^\]\r\n]{1,180})\]\]/gu,"[منبع: $1]").replace(/\[\[quote:([^\]\r\n]{1,180})\]\]/gu,"[نقل‌قول مستقیم از منبع: $1]");
     renderSources(data.sources);
     const evidenceNotice=data.legal_evidence_status==="verified_sources"
       ?"منابع حقوقی رسمی از بانک تأییدشده بازیابی شد."
-      :"برای این پرسش منبع رسمیِ تأییدشده‌ای از بانک داخلی بازیابی نشد؛ پاسخ را مستند به متن رسمی تلقی نکنید و پیش از اقدام، منبع رسمی را بررسی کنید.";
+      :data.legal_evidence_status==="retrieval_unavailable"
+        ?"بازیابی منابع حقوقی به‌دلیل خطای فنی انجام نشد؛ هیچ استنادی قابل تأیید نیست. پاسخ را مستند به متن رسمی تلقی نکنید."
+        :data.legal_evidence_status==="no_verified_sources"
+          ?"در بانک داخلی منبع رسمیِ تأییدشده‌ای برای این پرسش یافت نشد؛ پاسخ را مستند به متن رسمی تلقی نکنید و پیش از اقدام، منبع رسمی را بررسی کنید."
+          :"وضعیت منابع حقوقی نامشخص است؛ تا بررسی منبع رسمی به پاسخ استناد نکنید.";
     statusEl.textContent=evidenceNotice+(typeof data.credits_remaining==="number"?" اعتبار باقی‌مانده: "+data.credits_remaining+" واحد.":"");
   }catch(e){answerEl.textContent=e.message||"خطای ارتباطی رخ داد.";}
   finally{sendBtn.disabled=false;}

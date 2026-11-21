@@ -104,12 +104,17 @@
           "url": "https://amagestate.com/legal/amendment-article-1-civil-code-law-promulgation/",
           "role": "secondary_transcription_with_document_metadata_and_official_document_link",
           "note": "صفحه ثانویه فراداده تصویب ۱۳۷۰/۰۸/۱۴، ابلاغ ۱۳۷۰/۰۹/۰۳، مرجع تصویب مجلس و مرجع ابلاغ رئیس‌جمهور را نمایش می‌دهد؛ پایان متن، تصویب مجلس در ۱۳۷۰/۰۸/۱۴ و تأیید شورای نگهبان در ۱۳۷۰/۰۸/۲۱ را ذکر می‌کند. پیوند «مشاهده سند» به https://qavanin.ir/Pdfs/letters/1311.pdf می‌رسد. خود PDF رسمی هنوز خوانده و با نسخه ثانویه مقابله نشده است."
+        },
+        {
+          "url": "https://rc.majlis.ir/fa/law/show/91969",
+          "role": "official_parliamentary_source_link_discovered_via_secondary_record",
+          "note": "صفحه ماده ۲۶ قانون مدنی در یک پایگاه حقوقی ثالث، پیوند این شناسه را به مرکز پژوهش‌های مجلس شورای اسلامی به‌عنوان متن قانون اصلاح موادی از قانون مدنی مصوب ۱۳۷۰/۰۸/۱۴ معرفی می‌کند. تلاش مستقیم برای بازکردن مقصد رسمی در ۲۰۲۶/۱۱/۲۱ با timeout ناموفق بود؛ بنابراین وجود پیوند رسمی یک سرنخ معتبر برای بازیابی است، اما محتوای صفحه، شناسه سند، فراداده انتشار و تطبیق متن هنوز احراز نشده و هیچ متن از این مسیر وارد corpus نمی‌شود."
         }
       ],
       "officialGazetteIssue": null,
       "officialDocumentId": null,
       "officialSourceUrl": null,
-      "verificationStatus": "official_full_text_and_gazette_metadata_not_yet_retrieved",
+      "verificationStatus": "official_parliamentary_link_discovered_but_direct_retrieval_and_gazette_metadata_pending",
       "reviewNotes": [
         "فهرست مواد فوق سرنخ پژوهشی استخراج‌شده از نسخه‌های ثانویه است و جامعیت/دقت آن هنوز تأیید رسمی نشده است.",
         "تاریخ اصلاح ماده ۱۰۴۳ در بعضی بازنشرها متفاوت درج شده؛ متن ابلاغی و روزنامه رسمی باید ملاک باشد.",
@@ -118,7 +123,23 @@
         "پیوند qavanin.ir/Pdfs/letters/1311.pdf از صفحه ثانویه به دست آمد، اما دریافت مستقیم آن ناموفق بود؛ شماره ۱۳۱۱ در نام مسیر فایل به‌عنوان شناسه سند یا شماره روزنامه رسمی تفسیر نمی‌شود.",
         "بازبینی متن کامل صفحه ثانویه آماگ‌استیت دامنه مواد را اصلاح کرد: فهرست قبلی ناقص بود. فهرست فعلی ۵۰ شماره/شناسه ماده یا ماده مکرر را در بر می‌گیرد، شامل مواد اصلاحی، الحاقی و صریحاً حذف‌شده؛ این فهرست همچنان ثانویه است و تا تطبیق PDF رسمی، جامعیت/صحت آن قطعی تلقی نمی‌شود.",
         "فرامتن صفحه ثانویه تاریخ تصویب مجلس ۱۳۷۰/۰۸/۱۴، تأیید شورای نگهبان ۱۳۷۰/۰۸/۲۱ و ابلاغ ادعایی ۱۳۷۰/۰۹/۰۳ را از هم جدا می‌کند. هیچ‌یک از این تاریخ‌ها به‌جای تاریخ انتشار روزنامه رسمی یا تاریخ لازم‌الاجرا شدن ثبت نمی‌شود."
-      ]
+      ],
+      "blockers": [
+        "پیوند به صفحه مرکز پژوهش‌های مجلس شورای اسلامی با شناسه 91969 از یک منبع ثانویه کشف شد، اما مقصد رسمی در بررسی مستقیم timeout شد؛ متن و فراداده انتشار باید مستقیماً دریافت و با روزنامه رسمی مقابله شود.",
+        "تلاش مجدد مستقیم در ۲۰۲۶/۱۱/۲۱ برای PDF رسمی Qavanin با خطای Internal Error/URL not accessible و برای صفحه مرکز پژوهش‌های مجلس با Timeout مواجه شد؛ هیچ محتوای این دو مقصد به‌عنوان متن رسمی تأیید نشده است."
+      ],
+      "lastRetrievalAttempt": {
+        "attemptedAt": "2026-11-21",
+        "urls": [
+          "https://qavanin.ir/Pdfs/letters/1311.pdf",
+          "https://rc.majlis.ir/fa/law/show/91969"
+        ],
+        "result": {
+          "qavaninPdf": "web_fetch_internal_error_url_not_accessible",
+          "majlisPage": "web_fetch_timeout"
+        },
+        "disposition": "no_official_file_downloaded_no_text_verified_no_corpus_ingestion"
+      }
     },
     {
       "id": "civil-code-article-1041-amendment-1381",

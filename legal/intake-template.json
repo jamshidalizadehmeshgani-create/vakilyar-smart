@@ -13,10 +13,12 @@
     "officialSourcePageUrl": null,
     "officialDownloadUrl": null,
     "retrievedAtUtc": null,
+    "redirectChain": [],
     "retrievedBy": null,
     "originalFilename": null,
     "mimeType": null,
     "byteLength": null,
+    "pageCount": null,
     "sha256": null,
     "licenseOrReuseBasis": null,
     "licenseEvidenceUrl": null
@@ -45,7 +47,23 @@
     "reviewOutcome": "not_reviewed"
   },
   "amendmentDocuments": [],
-  "articleChecks": [],
+  "articleChecks": [
+    {
+      "corpusRecordId": null,
+      "articleNumber": null,
+      "text": null,
+      "status": "not_reviewed",
+      "effectiveFrom": null,
+      "effectiveTo": null,
+      "unresolvedDiscrepancies": []
+    }
+  ],
+  "humanAttestations": {
+    "scheme": "Ed25519",
+    "reviewerSignatures": [],
+    "approverSignatures": [],
+    "note": "برای هر بازبین و تأییدکننده یک امضای Ed25519 مستقل لازم است. هر امضا باید با کلید خصوصی همان شخص و روی پیام canonical تولیدشده برای همین پرونده ایجاد شود؛ کلید خصوصی هرگز در سرور یا مخزن قرار نمی‌گیرد."
+  },
   "promotion": {
     "approvedForCorpus": false,
     "approvedBy": [],
