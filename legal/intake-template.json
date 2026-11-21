@@ -47,7 +47,17 @@
     "reviewOutcome": "not_reviewed"
   },
   "amendmentDocuments": [],
-  "articleChecks": [],
+  "articleChecks": [
+    {
+      "corpusRecordId": null,
+      "articleNumber": null,
+      "text": null,
+      "status": "not_reviewed",
+      "effectiveFrom": null,
+      "effectiveTo": null,
+      "unresolvedDiscrepancies": []
+    }
+  ],
   "promotion": {
     "approvedForCorpus": false,
     "approvedBy": [],
