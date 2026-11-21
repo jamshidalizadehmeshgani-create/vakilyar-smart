@@ -125,7 +125,11 @@ sendBtn.addEventListener("click",async()=>{
     renderSources(data.sources);
     const evidenceNotice=data.legal_evidence_status==="verified_sources"
       ?"منابع حقوقی رسمی از بانک تأییدشده بازیابی شد."
-      :"برای این پرسش منبع رسمیِ تأییدشده‌ای از بانک داخلی بازیابی نشد؛ پاسخ را مستند به متن رسمی تلقی نکنید و پیش از اقدام، منبع رسمی را بررسی کنید.";
+      :data.legal_evidence_status==="retrieval_unavailable"
+        ?"بازیابی منابع حقوقی به‌دلیل خطای فنی انجام نشد؛ هیچ استنادی قابل تأیید نیست. پاسخ را مستند به متن رسمی تلقی نکنید."
+        :data.legal_evidence_status==="no_verified_sources"
+          ?"در بانک داخلی منبع رسمیِ تأییدشده‌ای برای این پرسش یافت نشد؛ پاسخ را مستند به متن رسمی تلقی نکنید و پیش از اقدام، منبع رسمی را بررسی کنید."
+          :"وضعیت منابع حقوقی نامشخص است؛ تا بررسی منبع رسمی به پاسخ استناد نکنید.";
     statusEl.textContent=evidenceNotice+(typeof data.credits_remaining==="number"?" اعتبار باقی‌مانده: "+data.credits_remaining+" واحد.":"");
   }catch(e){answerEl.textContent=e.message||"خطای ارتباطی رخ داد.";}
   finally{sendBtn.disabled=false;}
