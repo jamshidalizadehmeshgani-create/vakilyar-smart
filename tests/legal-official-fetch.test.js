@@ -60,6 +60,12 @@ test("rejects non-official source URLs and unsupported content types", async () 
   }), /نوع محتوای پاسخ/);
 });
 
+test("rejects partial-content responses so an incomplete legal document cannot be accepted", async () => {
+  await assert.rejects(() => fetchOfficialLegalDocument("https://qavanin.ir/file.pdf", {
+    fetchImpl: async () => response(206, { "content-type": "application/pdf" })
+  }), /فقط پاسخ HTTP 200 پذیرفته می‌شود/);
+});
+
 test("rejects a PDF response without a PDF signature", async () => {
   await assert.rejects(() => fetchOfficialLegalDocument("https://qavanin.ir/file.pdf", {
     fetchImpl: async () => response(200, { "content-type": "application/pdf" }, Buffer.from("not a pdf"))
