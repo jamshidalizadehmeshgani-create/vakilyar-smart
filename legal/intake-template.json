@@ -58,6 +58,12 @@
       "unresolvedDiscrepancies": []
     }
   ],
+  "humanAttestations": {
+    "scheme": "pending_trusted_identity_integration",
+    "reviewerSignatures": [],
+    "approverSignatures": [],
+    "note": "امضای دیجیتال معتبر و کلیدهای عمومی مورد اعتماد باید پیش از ارتقا از طریق سامانه احراز هویت بررسی شوند؛ نام و چک‌باکس به‌تنهایی کافی نیست."
+  },
   "promotion": {
     "approvedForCorpus": false,
     "approvedBy": [],
