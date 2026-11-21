@@ -191,7 +191,7 @@ test("chat rejects fabricated source IDs even when the answer contains a citatio
   const res = response();
   await handler(request({}), res);
   assert.equal(res.statusCode, 502);
-  assert.equal(res.body.code, "UNVERIFIED_ANSWER_CITATIONS");
+  assert.equal(res.body.code, "UNVERIFIED_ANSWER_EVIDENCE");
   assert.equal(state.refundCalls, 1);
   assert.equal(state.commitCalls, 0);
 });
