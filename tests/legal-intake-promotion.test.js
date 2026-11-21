@@ -107,6 +107,26 @@ test("fails closed when the trusted public-key registry is not configured", () =
   } finally { process.env[REGISTRY_ENV] = previous; }
 });
 
+test("rejects signatures used under the wrong role", () => {
+  const candidate = signIntake(JSON.parse(JSON.stringify(intake)));
+  candidate.humanAttestations.approverSignatures = candidate.humanAttestations.reviewerSignatures;
+  const result = promoteApprovedIntake(candidate, { today: "2026-11-21", now, existingCorpus: [] });
+  assert.equal(result.valid, false);
+  assert.deepEqual(result.records, []);
+});
+
+test("rejects a revoked public key", () => {
+  const previous = process.env[REGISTRY_ENV];
+  const registry = JSON.parse(previous);
+  registry[0].active = false;
+  process.env[REGISTRY_ENV] = JSON.stringify(registry);
+  try {
+    const result = runPromotion(JSON.parse(JSON.stringify(intake)), { today: "2026-11-21", now, existingCorpus: [] });
+    assert.equal(result.valid, false);
+    assert.deepEqual(result.records, []);
+  } finally { process.env[REGISTRY_ENV] = previous; }
+});
+
 test("rejects tampered legal text after reviewers signed the intake", () => {
   const candidate = signIntake(JSON.parse(JSON.stringify(intake)));
   candidate.articleChecks[0].text += " متن دستکاری‌شده";
